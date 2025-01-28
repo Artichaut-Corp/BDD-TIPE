@@ -44,7 +44,7 @@ std::vector<Token> Lexer::get_tokens()
             return v;
         }
     }
-    
+
     return this->tokens;
 }
 
@@ -80,6 +80,28 @@ std::optional<Errors::Error> Lexer::identify_first()
         break;
     // 32th is space, already ignored
     // Read until the next '"' and identify as a string
+    //
+    case 39: // c'est '
+    {
+        std::string str = "";
+        std::advance(it, 1);
+        while (*it != 32) {
+            if (curr_token > input_string.length()) {
+                return std::make_optional(Error(ErrorType::SynxtaxError, "", line,
+                    curr_token,
+                    ERROR_STRING_WITH_NO_DELIMETER));
+            }
+
+            str.push_back(*it);
+
+            std::advance(it, 1);
+            curr_token++;
+        }
+
+        // Skip 2 (last " included)
+        curr_token += 2;
+        t.create_token(STRING_LITT_T, str);
+    } break;
     case '"': {
         std::string str = "";
         std::advance(it, 1);
@@ -98,7 +120,7 @@ std::optional<Errors::Error> Lexer::identify_first()
 
         // Skip 2 (last " included)
         curr_token += 2;
-        t.create_token(STRING_T, str);
+        t.create_token(STRING_LITT_T, str);
     } break;
     // Operators, either mathematical or logical
     case '*':
@@ -114,6 +136,7 @@ std::optional<Errors::Error> Lexer::identify_first()
     // Punctuation
     case ',':
     case ';':
+    case '.':
         t.create_token(PUNCT_T, std::to_string(*it));
         curr_token++;
         break;
@@ -127,7 +150,7 @@ std::optional<Errors::Error> Lexer::identify_first()
 
         } while (
             std::isdigit(*it)); // OR is . if I implement floating point numbers
-        t.create_token(NUMBER_T, num);
+        t.create_token(NUM_LITT_T, num);
     } break;
     // Letters, ignoring character's case
     case 65 ... 90:
@@ -172,50 +195,48 @@ std::variant<Token, Errors::Error> Lexer::match_keyword(Token t,
 {
     std::variant<Token, Errors::Error> variant;
     std::string keywd = Utils::to_uppercase(str);
-    if (keywd == "LET")
-        t.create_token(LET_T);
-    else if (keywd == "DATA")
-        t.create_token(DATA_T);
-    else if (keywd == "READ")
-        t.create_token(READ_T);
-    else if (keywd == "RESTORE")
-        t.create_token(RESTORE_T);
-    else if (keywd == "IF")
-        t.create_token(IF_T);
-    else if (keywd == "THEN")
-        t.create_token(THEN_T);
-    else if (keywd == "ELSE")
-        t.create_token(ELSE_T);
-    else if (keywd == "FOR")
-        t.create_token(FOR_T);
-    else if (keywd == "TO")
-        t.create_token(TO_T);
-    else if (keywd == "STEP")
-        t.create_token(THEN_T);
-    else if (keywd == "WHILE")
-        t.create_token(WHILE_T);
-    else if (keywd == "WEND")
-        t.create_token(WEND_T);
-    else if (keywd == "REPEAT")
-        t.create_token(REPEAT_T);
-    else if (keywd == "UNTIL")
-        t.create_token(UNTIL_T);
-    else if (keywd == "DO")
-        t.create_token(DO_T);
-    else if (keywd == "LOOP")
-        t.create_token(LOOP_T);
+    if (keywd == "SELECT")
+        t.create_token(SELECT_T);
+    else if (keywd == "FROM")
+        t.create_token(FROM_T);
+    else if (keywd == "WHERE")
+        t.create_token(WHERE_T);
+    else if (keywd == "AS")
+        t.create_token(AS_T);
+    else if (keywd == "GROUP")
+        t.create_token(GROUP_T);
+    else if (keywd == "BY")
+        t.create_token(BY_T);
+    else if (keywd == "HAVING")
+        t.create_token(HAVING_T);
+    else if (keywd == "ORDER")
+        t.create_token(ORDER_T);
+    else if (keywd == "JOIN")
+        t.create_token(JOIN_T);
     else if (keywd == "ON")
         t.create_token(ON_T);
-    else if (keywd == "GOTO")
-        t.create_token(GOTO_T);
-    else if (keywd == "GOSUB")
-        t.create_token(GOSUB_T);
-    else if (keywd == "RETURN")
-        t.create_token(RETURN_T);
-    else if (keywd == "LIST")
-        t.create_token(LIST_T);
-    else if (keywd == "PRINT")
-        t.create_token(PRINT_T);
+    else if (keywd == "LEFT")
+        t.create_token(LEFT_T);
+    else if (keywd == "RIGHT")
+        t.create_token(RIGHT_T);
+    else if (keywd == "INNER")
+        t.create_token(INNER_T);
+    else if (keywd == "OUTER")
+        t.create_token(OUTER_T);
+    else if (keywd == "SET")
+        t.create_token(SET_T);
+    else if (keywd == "INSERT")
+        t.create_token(INSERT_T);
+    else if (keywd == "INTO")
+        t.create_token(INTO_T);
+    else if (keywd == "DELETE")
+        t.create_token(DELETE_T);
+    else if (keywd == "CREATE")
+        t.create_token(CREATE_T);
+    else if (keywd == "DROP")
+        t.create_token(DROP_T);
+    else if (keywd == "TABLE")
+        t.create_token(TABLE_T);
     else {
         return match_identifier(t, str);
     }
@@ -229,20 +250,20 @@ std::variant<Token, Errors::Error> Lexer::match_identifier(Token t, std::string 
     auto it = str.end();
 
     std::variant<Token, Errors::Error> variant;
-
+    /*
     if (*it == '$') {
         t.create_token(STR_VAR_T, str);
     } else if (*it == '%') {
         t.create_token(NUM_VAR_T, str);
-    } else if (*it == ':') {
-        t.create_token(LABEL_T, str);
     } else {
         // return err
         // variant = errors::Error(errors::ErrorType::LexerError, "Identifiers
         // Doesnt Have A Closing Mark", line, errors::ERROR_UNEXPECTED_IDENTIFIER);
         // return variant;
-        t.create_token(VAR_DECL_T, str);
     }
+    */
+    t.create_token(VAR_NAME_T, str);
+
 
     variant = t;
     return variant;
