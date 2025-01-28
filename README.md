@@ -1,18 +1,17 @@
 # BDD-TIPE 
-----------
 
-description, 
+Projet de base de donnée
 
 Structure du projet
 -------------------
 
-    ├─ src/             application source code 
-    │  ├─ parser/       SQL parser
+    ├─ src/             Code source de l'application 
+    │  ├─ parser/       Parser SQL 
     │  ├─               etc
     │  ├─ 
     │  └─
-    ├─  test/           tests
-    └─  lib/            external dependencies
+    ├─  test/           Tests
+    └─  lib/            Dépendences Extérieures
 
 
 
