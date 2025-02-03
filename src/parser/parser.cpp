@@ -1,40 +1,28 @@
 #include "parser.h"
 
 #include "parser/ast_types.h"
-#include <cstdio>
+#include <memory>
+#include <string>
 
 namespace Compiler::Parsing {
 
-Parser::Parser(Lexing::TokenType file_start)
+Parser::Parser(Lexing::TokenType file_start, std::string input)
     : tree(Tree(file_start))
 {
+
+    this->tokenizer = std::unique_ptr<Lexing::Tokenizer>(new Lexing::Tokenizer(input, 1));
 }
 
 void Parser::parse()
 {
-    if (t.IsEmpty()) {
+    if (tokenizer->isEmpty()) {
         return;
     }
 
-    bool VerifPunct = false;
-    switch (t.peek().token ) {
-        case SELECT_T :
-            tree.AddNode(tree.GetRoot(), Select)
-        case PUNCT_T :
-            switch (PUNCT_T){
-                case ".":
+    switch (tokenizer->peek()->token) {
 
-                case ";":
-                    VerifPunct = true;
-                case ",":
-            }
-        Case
     default:
         break;
-    }
-    if (!VerifPunct){
-        printf("pas de ; à la fin de la requête") ;
-        return;
     }
 }
 

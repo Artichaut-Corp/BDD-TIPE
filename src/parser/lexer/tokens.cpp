@@ -28,11 +28,19 @@ void Token::create_token(const TokenType type)
 
 void Token::print() { std::printf("%d:%s ", token, value.c_str()); }
 
-std::ostream& operator<<(std::ostream& os, const Token& t)
+std::ostream& operator<<(std::ostream& os, const Token& tok)
 {
-    os << "[" << t.token << "::" << (t.value == "" ? "NONE" : t.value) << "]";
+    os << "(" ;
+
+    os << tok.token << " | ";
+
+    std::string val = tok.value;
+    val == "" ? os << "NONE" : os << val;
+
+    os << ")";
 
     return os;
 }
+
 
 } // namespace Compiler::Lexing
