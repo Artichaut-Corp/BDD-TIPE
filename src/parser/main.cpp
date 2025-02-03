@@ -46,7 +46,7 @@ std::string eval(std::string input)
     }
 
     Tokenizer tokenizer = Tokenizer(input, 1);
-
+    
     tokenizer.printAll();
         
     return input;

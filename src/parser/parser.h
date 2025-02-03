@@ -1,5 +1,6 @@
-#include "parser/ast_types.h"
+#include "lexer/tokenizer.h"
 #include "lexer/tokens.h"
+#include "parser/ast_types.h"
 
 #include <vector>
 
@@ -10,12 +11,14 @@ namespace Compiler::Parsing {
 
 class Parser {
 private:
-  Tree tree;
+    Tree tree;
+    Lexing::Tokenizer t;
+
 public:
     Parser(Lexing::TokenType file_start);
     ~Parser();
 
-    void parse(std::vector<Lexing::Token>);
+    void parse();
 };
 } // namespace Compiler::Parsing
 

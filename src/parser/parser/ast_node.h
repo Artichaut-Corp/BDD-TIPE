@@ -10,17 +10,17 @@
 
 namespace Compiler::Parsing {
   
+template <typename T>
 class AstNode {
     private:
-        NodeType type;
-        Lexing::Token token;
+        T type;
         
         std::vector<std::unique_ptr<AstNode>> children;
 
     public:
         AstNode(NodeType type, Lexing::Token token)
             : type(type)
-            , token(token)
+            , 
         {
         }
 

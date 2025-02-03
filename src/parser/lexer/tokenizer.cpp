@@ -45,6 +45,9 @@ Tokenizer::Tokenizer(std::string line, int l_number)
         this->tokens = tokens;
     }
 }
+bool Tokenizer::IsEmpty() const{
+    return tokens.empty();
+}
 
 Tokenizer::~Tokenizer()
 {

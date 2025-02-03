@@ -1,6 +1,7 @@
 #include "parser.h"
 
 #include "parser/ast_types.h"
+#include <cstdio>
 
 namespace Compiler::Parsing {
 
@@ -9,16 +10,31 @@ Parser::Parser(Lexing::TokenType file_start)
 {
 }
 
-void Parser::parse(std::vector<Lexing::Token> tokens)
+void Parser::parse()
 {
-    if (tokens.empty()) {
+    if (t.IsEmpty()) {
         return;
     }
 
-    switch (tokens.front().token) {
+    bool VerifPunct = false;
+    switch (t.peek().token ) {
+        case SELECT_T :
+            tree.AddNode(tree.GetRoot(), Select)
+        case PUNCT_T :
+            switch (PUNCT_T){
+                case ".":
 
+                case ";":
+                    VerifPunct = true;
+                case ",":
+            }
+        Case
     default:
         break;
+    }
+    if (!VerifPunct){
+        printf("pas de ; à la fin de la requête") ;
+        return;
     }
 }
 

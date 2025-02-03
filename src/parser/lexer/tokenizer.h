@@ -21,7 +21,7 @@ private:
 public:
     Token next(void);
     Token peek(void) const;
-
+    bool IsEmpty(void) const;
     void printAll(void) const;
 
     void setLine(const std::string& line);
