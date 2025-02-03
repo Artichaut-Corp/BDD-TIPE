@@ -142,7 +142,6 @@ public:
         } else {
             HEAD = std::nullopt;
         }
-
     }
 
     bool is_empty()
@@ -152,7 +151,10 @@ public:
 
     void print_all()
     {
-        std::optional<ListNode<U>*> current = get_head();
+        std::optional<ListNode<U>*> current = get_head().value_or(nullptr);
+
+        if (!HEAD.has_value())
+            return;
 
         // Tant que l'on a pas atteint
         while (current != std::nullopt) {

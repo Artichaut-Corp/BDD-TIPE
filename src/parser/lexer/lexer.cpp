@@ -22,9 +22,6 @@ Lexer::Lexer(std::string str, int line)
     : input_string(str)
     , line(line)
 {
-
-    // auto list = Utils::LinkedList<Token>();
-
     this->curr_token = 0;
     this->tokens = std::unique_ptr<Utils::LinkedList<Token>>(new Utils::LinkedList<Token>);
 }
@@ -52,7 +49,6 @@ std::unique_ptr<Utils::LinkedList<Token>> Lexer::get_tokens()
     std::optional<Errors::Error> err;
 
     for (;;) {
-
         if (this->curr_token >= this->input_string.length()) {
             return std::move(this->tokens);
         }
@@ -207,7 +203,7 @@ std::optional<Errors::Error> Lexer::identify_first()
     this->input_string = this->input_string.substr(this->curr_token);
 
     // Reset Counter
-    //curr_token = 0;
+    curr_token = 0;
 
     // Return no syntax err
     return err;

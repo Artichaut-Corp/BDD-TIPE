@@ -43,7 +43,6 @@ TEST_F(LinkedListTest, AdvanceAndDiscard)
 TEST_F(LinkedListTest, EmptyList)
 {
     ASSERT_FALSE(l0->is_empty());
-
     while (!l0->is_empty()) {
         l0.get()->advance();
     }

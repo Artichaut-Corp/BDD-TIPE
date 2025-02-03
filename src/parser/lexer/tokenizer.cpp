@@ -31,9 +31,9 @@ bool Tokenizer::isEmpty()
     return this->tokens == nullptr;
 }
 
-void Tokenizer::printAll(void)
+void Tokenizer::printAll() 
 {
-    tokens->print_all();
+  tokens->print_all();
 }
 
 void Tokenizer::setLine(const std::string& line)
@@ -44,22 +44,25 @@ void Tokenizer::setLine(const std::string& line)
 }
 
 Tokenizer::Tokenizer(std::string line, int l_number)
-: l(line, l_number)
+    : l(line, l_number)
 {
-    auto tokens = l.get_tokens();
+    auto tok = l.get_tokens();
 
     auto list = Utils::LinkedList<Token>();
 
-    if (!tokens->is_empty()) {
+    tok->print_all();
+    list.print_all();
 
-        while (!tokens->is_empty()) {
-            // Not safe, should check what's inside
+    while (!tok->is_empty()) {
+        // Not safe, should check what's inside
 
-            if (tokens->get_first().has_value())
-                list.append(tokens->get_first().value());
-        }
-        this->tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
+        if (tok->get_first().has_value())
+            list.append(tok->get_first().value());
+
+        tok->advance();
     }
+
+    this->tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
 }
 
 Tokenizer::~Tokenizer()

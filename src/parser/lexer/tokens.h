@@ -1,5 +1,5 @@
-#include <string>
 #include <ostream>
+#include <string>
 
 #ifndef TOKENS_H
 #define TOKENS_H
@@ -46,7 +46,6 @@ enum TokenType {
     // Identifiers
     VAR_NAME_T,
 };
-
 
 class Token {
 public:
