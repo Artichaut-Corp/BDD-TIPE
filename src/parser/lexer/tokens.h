@@ -1,4 +1,5 @@
 #include <string>
+#include <ostream>
 
 #ifndef TOKENS_H
 #define TOKENS_H
@@ -62,6 +63,8 @@ public:
 
     Token(TokenType type, std::string value = "");
 };
+
+std::ostream& operator<<(std::ostream& os, const Token& tok);
 
 } // namespace Compiler::Lexing
 

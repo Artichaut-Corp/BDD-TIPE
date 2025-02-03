@@ -1,21 +1,25 @@
 #include "parser.h"
 
 #include "parser/ast_types.h"
+#include <memory>
+#include <string>
 
 namespace Compiler::Parsing {
 
-Parser::Parser(Lexing::TokenType file_start)
+Parser::Parser(Lexing::TokenType file_start, std::string input)
     : tree(Tree(file_start))
 {
+
+    this->tokenizer = std::unique_ptr<Lexing::Tokenizer>(new Lexing::Tokenizer(input, 1));
 }
 
-void Parser::parse(std::vector<Lexing::Token> tokens)
+void Parser::parse()
 {
-    if (tokens.empty()) {
+    if (tokenizer->isEmpty()) {
         return;
     }
 
-    switch (tokens.front().token) {
+    switch (tokenizer->peek()->token) {
 
     default:
         break;

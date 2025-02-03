@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -17,35 +18,57 @@
 
 namespace Compiler::Lexing {
 
-// Beaucoup à changer ici aussi
-
 Lexer::Lexer(std::string str, int line)
+    : input_string(str)
+    , line(line)
 {
-    this->input_string = str;
-    this->line = line;
+
+    // auto list = Utils::LinkedList<Token>();
+
+    this->curr_token = 0;
+    this->tokens = std::unique_ptr<Utils::LinkedList<Token>>(new Utils::LinkedList<Token>);
+}
+
+Lexer::Lexer(const Lexer& other)
+    : input_string(other.input_string)
+    , line(other.line)
+    , curr_token(other.curr_token)
+{
+    auto list = Utils::LinkedList<Token>();
+
+    while (!other.tokens->is_empty()) {
+
+        if (other.tokens->get_first().has_value())
+            list.append(other.tokens->get_first().value());
+    }
+
+    this->tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
 }
 
 Lexer::~Lexer() { return; }
 
-std::vector<Token> Lexer::get_tokens()
+std::unique_ptr<Utils::LinkedList<Token>> Lexer::get_tokens()
 {
     std::optional<Errors::Error> err;
 
     for (;;) {
+
         if (this->curr_token >= this->input_string.length()) {
-            return this->tokens;
+            return std::move(this->tokens);
         }
 
         err = identify_first();
 
         if (err.has_value()) {
             err->print_all_info();
-            std::vector<Token> v;
-            return v;
+
+            Utils::LinkedList<Token> l;
+
+            return std::unique_ptr<Utils::LinkedList<Token>>(&l);
         }
     }
 
-    return this->tokens;
+    return std::move(this->tokens);
 }
 
 // Given a string, returns the first identifier and adds it to the Object
@@ -178,13 +201,13 @@ std::optional<Errors::Error> Lexer::identify_first()
     } // End Switch
 
     // Store the token
-    this->tokens.push_back(t);
+    this->tokens->append(t);
 
     // Cut until the next token
     this->input_string = this->input_string.substr(this->curr_token);
 
     // Reset Counter
-    curr_token = 0;
+    //curr_token = 0;
 
     // Return no syntax err
     return err;
@@ -264,7 +287,6 @@ std::variant<Token, Errors::Error> Lexer::match_identifier(Token t, std::string 
     */
     t.create_token(VAR_NAME_T, str);
 
-
     variant = t;
     return variant;
 }
@@ -274,7 +296,10 @@ void Lexer::setLine(const std::string& line)
     this->input_string = line;
     this->line = 0;
     this->curr_token = 0;
-    this->tokens.clear();
+
+    auto list = Utils::LinkedList<Token>();
+
+    this->tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
 }
 
 inline std::string Lexer::cut_until_whitespace(std::string str)

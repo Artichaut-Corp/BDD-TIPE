@@ -1,5 +1,5 @@
 #include <string>
-#include <vector>
+#include <memory>
 
 #include "lexer.h"
 #include "tokens.h"
@@ -16,17 +16,18 @@ private:
 
     int position = 0;
     int line;
-    std::vector<Token> tokens;
+    std::unique_ptr<Utils::LinkedList<Token>> tokens = nullptr;
 
 public:
-    Token next(void);
-    Token peek(void) const;
+    std::unique_ptr<Token>  next(void);
+    std::unique_ptr<Token>  peek(void) const;
 
-    void printAll(void) const;
+    bool isEmpty();
+
+    void printAll(void);
 
     void setLine(const std::string& line);
 
-    Tokenizer() = default;
     Tokenizer(std::string line, int l_number);
 
     ~Tokenizer();
