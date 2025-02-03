@@ -15,7 +15,7 @@ private:
     std::vector<std::unique_ptr<Node>>childrens;
 
 public:
-    Node<T>(T ast_type)
+    Node(T ast_type)
     {
         this->type = ast_type;
         this->childrens = std::vector<std::unique_ptr<Node>>();
@@ -30,6 +30,8 @@ public:
     void AddNode(Node<T>& parent);
 
     void Traverse(Node<T>& root);
+
+    
 };
 } 
 #endif

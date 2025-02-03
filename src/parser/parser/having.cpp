@@ -3,7 +3,7 @@
 
 namespace Compiler::Parsing {
 
-std::ostream& operator<<(std::ostream& os, From s)
+std::ostream& operator<<(std::ostream& os, Having s)
 {
     os << "Having";
 

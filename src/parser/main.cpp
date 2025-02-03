@@ -4,7 +4,6 @@
 #include <string>
 
 #include "lexer/tokenizer.h"
-#include "parser/tree.h"
 
 using namespace Compiler;
 using namespace Compiler::Lexing;

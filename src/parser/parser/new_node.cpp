@@ -33,7 +33,8 @@ void Node<T>::PrintTreePref()
     std::cout << " ) ";
 };
 
-std::ostream& operator<<(std::ostream& os, Node& t)
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const Node<T>& t)
 {
     os << t.type;
 

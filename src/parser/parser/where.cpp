@@ -3,10 +3,11 @@
 
 namespace Compiler::Parsing {
 
-std::ostream& operator<<(std::ostream& os, From s)
+std::ostream& operator<<(std::ostream& os,const Where& s)
 {
     os << "Where";
 
     return os;
 };
+
 } // namespace parsing

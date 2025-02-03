@@ -355,4 +355,3 @@ size_t Lexer::find_whitespace(std::string str, size_t pos)
 }
 
 } // namespace Compiler::Lexing
-

@@ -1,6 +1,6 @@
 #include "lexer/tokens.h"
 #include "lexer/tokenizer.h"
-#include "parser/ast_types.h"
+
 #include <memory>
 #include <string>
 
@@ -11,7 +11,6 @@ namespace Compiler::Parsing {
 
 class Parser {
 private:
-    Tree tree;
     std::unique_ptr<Lexing::Tokenizer> tokenizer;
 
 public:

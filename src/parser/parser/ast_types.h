@@ -86,23 +86,25 @@ public:
 class Join {
 
 private:
-    std::vector<param_join> param;
 
 public:
     Join(std::vector<param_join> param_join)
         : param(param_join)
     {
     }
+    std::vector<param_join> param;
 };
 class BinaryExpression {
 
 private:
-    std::vector<param_binary_expr> param;
 public:
+    std::vector<param_binary_expr> param;
+
     BinaryExpression(std::vector<param_binary_expr> param_binary)
         : param(param_binary)
     {
     }
+    
 };
 class Limit {
 

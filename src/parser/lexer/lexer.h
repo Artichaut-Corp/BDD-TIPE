@@ -3,6 +3,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <memory>
 
 #include "tokens.h"
 
@@ -15,16 +16,40 @@
 namespace Compiler::Lexing {
 
 class Lexer {
+
 private:
     int line {};
     int curr_token {};
 
     std::string input_string;
-    std::vector<Token> tokens;
+
+    std::unique_ptr<Utils::LinkedList<Token>> tokens;
 
 public:
+    //Lexer() = default;
+
     Lexer(std::string str, int line);
-    Lexer() = default;
+
+    Lexer(const Lexer& other);
+
+    Lexer& operator=(const Lexer& rhs)
+    {
+
+        auto list = Utils::LinkedList<Token>();
+
+
+            while (!rhs.tokens->is_empty())
+            {
+                // Not safe, should check what's inside
+                list.append(rhs.tokens->get_first().value());
+            }
+
+
+        this->tokens =  std::unique_ptr<Utils::LinkedList<Token>>(&list);
+
+        return *this;
+
+    }
 
     ~Lexer();
 
@@ -43,7 +68,7 @@ public:
 
     std::optional<Errors::Error> identify_first();
 
-    std::vector<Token> get_tokens();
+    std::unique_ptr<Utils::LinkedList<Token>> get_tokens();
 };
 
 } // namespace Compiler::Lexing
