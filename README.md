@@ -18,8 +18,9 @@ Structure du projet
 TODO
 ----
 
-- Général -> définir la syntaxe 
-- Lexer -> modifier les constantes
-- Parser -> réécrire la logique et toutes les structures
+- Parser -> réécrire toutes les structures: plutôt Ok, il reste des constructeurs et des champs à implémenter selon 
+https://www.sqlite.org/lang_keywords.html
+- Parser -> écrire les tests relatifs à toutes ces structures 
+- Parser -> créer les méthode et implémenter la fonction Parser::Parse()
 
 - Le reste -> Implémentation à voir

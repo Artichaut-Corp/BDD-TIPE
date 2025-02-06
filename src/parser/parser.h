@@ -1,5 +1,10 @@
-#include "lexer/tokens.h"
 #include "lexer/tokenizer.h"
+#include "lexer/tokens.h"
+
+#include "parser/ddl.h"
+#include "parser/dml.h"
+#include "parser/expression.h"
+#include "parser/node.h"
 
 #include <memory>
 #include <string>

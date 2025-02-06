@@ -1,0 +1,198 @@
+#include <memory>
+#include <vector>
+
+#include "expression.h"
+
+#ifndef DML_H
+
+#define DML_H
+
+namespace Compiler::Parsing {
+
+enum class JoinType { LEFT,
+    RIGHT };
+
+enum class ConstraintType { UNIQUE,
+    NOT_NULL,
+    FOREIGN_KEY };
+
+// Sous-types utilisés par les statements ci-dessous
+
+class Assignment {
+    ColumnName m_Column;
+    Expr m_Expr;
+};
+
+// The item after 'order' or 'group'
+class ByItem {
+    Expr m_Expr;
+
+    bool m_Desc;
+};
+
+class GroupByClause {
+    std::vector<ByItem> m_Items;
+};
+
+class HavingClause {
+    Expr m_Expr;
+};
+
+class OnCondition {
+    std::unique_ptr<BinaryExpression> m_Expr;
+
+public:
+    OnCondition(BinaryExpression* expr)
+        : m_Expr(std::unique_ptr<BinaryExpression>(expr))
+    {
+    }
+};
+
+class Join {
+    JoinType m_Type;
+
+    // Left Table
+    std::unique_ptr<Expr> m_Left;
+
+    // Right Table
+    std::unique_ptr<Expr> m_Right;
+
+    std::unique_ptr<OnCondition> m_On;
+
+    // Could implement using clause
+
+public:
+    Join(JoinType type, Expr* left, Expr* right, OnCondition* on)
+        : m_Type(type)
+        , m_Left(std::unique_ptr<Expr>(left))
+        , m_Right(std::unique_ptr<Expr>(right))
+        , m_On(std::unique_ptr<OnCondition>(on))
+    {
+    }
+};
+
+class SelectField {
+    // If '*' false then Expr is true
+    bool m_WildCard;
+
+    // If Expr is false then m_WildCard is true
+    Expr m_Field;
+};
+
+class FieldsList {
+    std::vector<SelectField> m_Fields;
+};
+
+class TableRefsClause {
+    std::unique_ptr<Join> m_Table;
+
+public:
+    TableRefsClause(Join* table)
+        : m_Table(std::unique_ptr<Join>(table))
+    {
+    }
+};
+
+class Limit {
+    std::unique_ptr<Expr> m_Count;
+    std::unique_ptr<Expr> m_Offset;
+};
+
+class OrderByClause {
+    std::vector<ByItem> m_Items;
+};
+
+class WhereClause {
+    std::unique_ptr<BinaryExpression> m_Condition;
+
+public:
+    WhereClause(BinaryExpression* cond)
+        : m_Condition(std::unique_ptr<BinaryExpression>(cond))
+    {
+    }
+};
+
+/* Statements permettant de modifier les données (DML)
+ * Chaque classe contient les informations qui lui sont relatives
+ * et une méthode qui prendra le flux de token pour créer un nouveau statement
+ */
+// DELETE FROM ..
+class DeleteStmt {
+    // TODO: preciser si c'est tout ce que l'on autorise
+    // https://www.sqlite.org/lang_delete.html
+    std::unique_ptr<TableName> m_Table;
+
+    std::optional<std::unique_ptr<WhereClause>> m_Where;
+
+public:
+    DeleteStmt(TableName* table, WhereClause* where)
+    {
+        m_Table = std::unique_ptr<TableName>(table);
+        m_Where = std::make_optional<std::unique_ptr<WhereClause>>(where);
+    }
+
+    static std::unique_ptr<DeleteStmt> ParseDelete();
+};
+
+// INSERT INTO
+class InsertStmt {
+    bool m_Replace;
+
+    // ..
+    std::unique_ptr<TableRefsClause> m_Table;
+
+    // ( .., .., )
+    std::optional<std::vector<ColumnName>> m_Colums;
+
+    // TODO préciser ici, trois cas à bien traiter
+
+    /*
+     * - DEFAULT
+     * - VALUES
+     * - SELECT
+     *   voir https://www.sqlite.org/lang_insert.html
+     */
+
+    // VALUES
+
+    // Could add select
+};
+
+// UPDATE
+class UpdateStmt {
+    // TODO
+};
+
+// SELECT ..
+class SelectStmt {
+    // Disctinct or not
+    bool m_Distinct;
+
+    // * or a list of attributes
+    std::unique_ptr<FieldsList> m_Fields;
+
+    // FROM .. (may have joins)
+    std::unique_ptr<TableRefsClause> m_From;
+
+    // WHERE expr
+    std::optional<std::unique_ptr<WhereClause>> m_Where;
+
+    // GROUP BY
+    std::optional<std::unique_ptr<GroupByClause>> m_GroupBy;
+
+    // HAVING expr
+    std::optional<std::unique_ptr<HavingClause>> m_Having;
+
+    // ORDER BY
+    std::optional<std::unique_ptr<OrderByClause>> m_OrderBy;
+
+    // LIMIT
+    std::optional<std::unique_ptr<Limit>> m_Limit;
+
+public:
+    SelectStmt() { }
+};
+} // namespace parsing
+
+#endif // !DML_H
+
