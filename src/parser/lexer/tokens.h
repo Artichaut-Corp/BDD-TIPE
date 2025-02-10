@@ -12,32 +12,54 @@ enum TokenType {
     EOF_T,
 
     // Keywords
+
+    // DML
     SELECT_T,
+    UPDATE_T,
+    INSERT_T,
+    DELETE_T,
     FROM_T,
+    SET_T,
+    INTO_T,
     WHERE_T,
-    AS_T,
     GROUP_T,
     BY_T,
     HAVING_T,
     ORDER_T,
+    LIMIT_T,
+    VALUES_T,
+    DEFAULT_T,
+
+    // Joins
     JOIN_T,
     ON_T,
     LEFT_T,
     RIGHT_T,
     INNER_T,
     OUTER_T,
-    SET_T,
-    INSERT_T,
-    INTO_T,
-    DELETE_T,
+    FULL_T,
+
+    // DDL
     CREATE_T,
+    RENAME_T,
     DROP_T,
+    ALTER_T,
     TABLE_T,
+    DATABASE_T,
+    UNIQUE_T,
+    NOT_T,
+    NULL_T,
+    FOREIGN_T,
+    PRIMARY_T,
+    KEY_T,
+
     // Operators
     EQ_OP_T,
     PUNCT_T,
     OP_T,
     ENDL_T,
+    LPAREN_T,
+    RPAREN_T,
 
     // Expression
     STRING_LITT_T,
@@ -49,12 +71,12 @@ enum TokenType {
 
 class Token {
 public:
-    TokenType token;
-    std::string value;
+    TokenType m_Token;
+    std::string m_Value;
 
-    void create_token(const TokenType type, const std::string& value);
+    void createToken(const TokenType type, const std::string& value);
 
-    void create_token(const TokenType type);
+    void createToken(const TokenType type);
 
     void print();
 

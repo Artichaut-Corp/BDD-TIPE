@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -11,10 +12,6 @@ namespace Compiler::Parsing {
 
 enum class JoinType { LEFT,
     RIGHT };
-
-enum class ConstraintType { UNIQUE,
-    NOT_NULL,
-    FOREIGN_KEY };
 
 // Sous-types utilisés par les statements ci-dessous
 
@@ -131,31 +128,55 @@ public:
         m_Where = std::make_optional<std::unique_ptr<WhereClause>>(where);
     }
 
-    static std::unique_ptr<DeleteStmt> ParseDelete();
+    static DeleteStmt* ParseDelete()
+    {
+        //  PlaceHolder !
+        auto table = new TableName("city");
+
+        return new DeleteStmt(table, nullptr);
+    }
 };
 
 // INSERT INTO
 class InsertStmt {
-    bool m_Replace;
+    // Default Values
+    bool m_Default;
 
-    // ..
-    std::unique_ptr<TableRefsClause> m_Table;
+    // Table to insert into
+    std::unique_ptr<TableName> m_Table;
 
-    // ( .., .., )
-    std::optional<std::vector<ColumnName>> m_Colums;
+    // Define and optional order ( .., .., )
+    std::optional<std::vector<ColumnName>> m_Order;
 
-    // TODO préciser ici, trois cas à bien traiter
-
-    /*
-     * - DEFAULT
-     * - VALUES
-     * - SELECT
-     *   voir https://www.sqlite.org/lang_insert.html
-     */
+    // Data, un autre type pourrait probablement
+    //  mieux convenir
+    std::optional<std::vector<std::vector<Expr>>> m_Data;
 
     // VALUES
 
-    // Could add select
+public:
+    // Default Case
+    InsertStmt(TableName* name, bool def = true)
+        : m_Table(name)
+        , m_Default(def)
+
+    {
+    }
+
+    InsertStmt(TableName* name, bool def, std::vector<std::vector<Expr>> data)
+        : m_Table(name)
+        , m_Default(def)
+        , m_Data(data)
+    {
+    }
+
+    InsertStmt(TableName* name, bool def, std::vector<ColumnName> order, std::vector<std::vector<Expr>> data)
+        : m_Table(name)
+        , m_Default(def)
+        , m_Data(data)
+        , m_Order(order)
+    {
+    }
 };
 
 // UPDATE
@@ -177,17 +198,19 @@ class SelectStmt {
     // WHERE expr
     std::optional<std::unique_ptr<WhereClause>> m_Where;
 
+    // LIMIT
+    std::optional<std::unique_ptr<Limit>> m_Limit;
+
+    // ORDER BY
+    std::optional<std::unique_ptr<OrderByClause>> m_OrderBy;
+
+    // Ces deux là s'utilisent avec les fonctions qu'on implémente pas pour l'instant
+
     // GROUP BY
     std::optional<std::unique_ptr<GroupByClause>> m_GroupBy;
 
     // HAVING expr
     std::optional<std::unique_ptr<HavingClause>> m_Having;
-
-    // ORDER BY
-    std::optional<std::unique_ptr<OrderByClause>> m_OrderBy;
-
-    // LIMIT
-    std::optional<std::unique_ptr<Limit>> m_Limit;
 
 public:
     SelectStmt() { }
@@ -195,4 +218,3 @@ public:
 } // namespace parsing
 
 #endif // !DML_H
-

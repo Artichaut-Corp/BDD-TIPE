@@ -4,7 +4,7 @@
 
 using namespace Compiler::Parsing;
 
-// DELETE FROM city;
+// DELETE FROM ville;
 TEST(DeleteStmtTest, BasicDelete)
 {
     auto table = new TableName("city");
@@ -14,7 +14,7 @@ TEST(DeleteStmtTest, BasicDelete)
     Node delete_stmt = Node(del);
 }
 
-// DELETE FROM city WHERE name='Vannes';
+// DELETE FROM ville WHERE name='Vannes';
 TEST(DeleteStmtTest, DeleteWithCond)
 {
     auto left = new ColumnName("name");

@@ -19,44 +19,44 @@
 namespace Compiler::Lexing {
 
 Lexer::Lexer(std::string str, int line)
-    : input_string(str)
-    , line(line)
+    : m_InputString(str)
+    , m_Line(line)
+    , m_CurrToken(0)
 {
-    this->curr_token = 0;
-    this->tokens = std::unique_ptr<Utils::LinkedList<Token>>(new Utils::LinkedList<Token>);
+    this->m_Tokens = std::unique_ptr<Utils::LinkedList<Token>>(new Utils::LinkedList<Token>);
 }
 
 Lexer::Lexer(const Lexer& other)
-    : input_string(other.input_string)
-    , line(other.line)
-    , curr_token(other.curr_token)
+    : m_InputString(other.m_InputString)
+    , m_Line(other.m_Line)
+    , m_CurrToken(other.m_CurrToken)
 {
     auto list = Utils::LinkedList<Token>();
 
-    while (!other.tokens->is_empty()) {
+    while (!other.m_Tokens->is_empty()) {
 
-        if (other.tokens->get_first().has_value())
-            list.append(other.tokens->get_first().value());
+        if (other.m_Tokens->get_first().has_value())
+            list.append(other.m_Tokens->get_first().value());
     }
 
-    this->tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
+    this->m_Tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
 }
 
 Lexer::~Lexer() { return; }
 
-std::unique_ptr<Utils::LinkedList<Token>> Lexer::get_tokens()
+std::unique_ptr<Utils::LinkedList<Token>> Lexer::getTokens()
 {
     std::optional<Errors::Error> err;
 
     for (;;) {
-        if (this->curr_token >= this->input_string.length()) {
-            return std::move(this->tokens);
+        if (this->m_CurrToken >= this->m_InputString.length()) {
+            return std::move(this->m_Tokens);
         }
 
-        err = identify_first();
+        err = identifyFirst();
 
         if (err.has_value()) {
-            err->print_all_info();
+            err->printAllInfo();
 
             Utils::LinkedList<Token> l;
 
@@ -64,23 +64,23 @@ std::unique_ptr<Utils::LinkedList<Token>> Lexer::get_tokens()
         }
     }
 
-    return std::move(this->tokens);
+    return std::move(this->m_Tokens);
 }
 
 // Given a string, returns the first identifier and adds it to the Object
 // property
-std::optional<Errors::Error> Lexer::identify_first()
+std::optional<Errors::Error> Lexer::identifyFirst()
 {
     using namespace Errors;
 
     Token t {};
     std::optional<Error> err = std::nullopt;
-    auto it = std::begin(this->input_string); // it != std::end(input); it++) {
+    auto it = std::begin(this->m_InputString); // it != std::end(input); it++) {
 
     // Ignore all spaces
     while (isspace(*it)) {
         std::advance(it, 1);
-        curr_token++;
+        m_CurrToken++;
     }
 
     // Then identify the first character
@@ -89,13 +89,13 @@ std::optional<Errors::Error> Lexer::identify_first()
     // ignored and handled in default case EOF and Newline are meant to stop
     // parsing the line or the file
     case 2:
-        t.create_token(START_T);
+        t.createToken(START_T);
         break;
     case 3:
-        t.create_token(EOF_T);
+        t.createToken(EOF_T);
         break;
     case '\n':
-        t.create_token(ENDL_T);
+        t.createToken(ENDL_T);
         break;
     // 32th is space, already ignored
     // Read until the next '"' and identify as a string
@@ -105,41 +105,49 @@ std::optional<Errors::Error> Lexer::identify_first()
         std::string str = "";
         std::advance(it, 1);
         while (*it != 32) {
-            if (curr_token > input_string.length()) {
-                return std::make_optional(Error(ErrorType::SynxtaxError, "", line,
-                    curr_token,
+            if (m_CurrToken > m_InputString.length()) {
+                return std::make_optional(Error(ErrorType::SynxtaxError, "", m_Line,
+                    m_CurrToken,
                     ERROR_STRING_WITH_NO_DELIMETER));
             }
 
             str.push_back(*it);
 
             std::advance(it, 1);
-            curr_token++;
+            m_CurrToken++;
         }
 
         // Skip 2 (last " included)
-        curr_token += 2;
-        t.create_token(STRING_LITT_T, str);
+        m_CurrToken += 2;
+        t.createToken(STRING_LITT_T, str);
     } break;
+    case '(':
+        t.createToken(LPAREN_T);
+        m_CurrToken++;
+        break;
+    case ')':
+        t.createToken(RPAREN_T);
+        m_CurrToken++;
+        break;
     case '"': {
         std::string str = "";
         std::advance(it, 1);
         while (*it != '"') {
-            if (curr_token > input_string.length()) {
-                return std::make_optional(Error(ErrorType::SynxtaxError, "", line,
-                    curr_token,
+            if (m_CurrToken > m_InputString.length()) {
+                return std::make_optional(Error(ErrorType::SynxtaxError, "", m_Line,
+                    m_CurrToken,
                     ERROR_STRING_WITH_NO_DELIMETER));
             }
 
             str.push_back(*it);
 
             std::advance(it, 1);
-            curr_token++;
+            m_CurrToken++;
         }
 
         // Skip 2 (last " included)
-        curr_token += 2;
-        t.create_token(STRING_LITT_T, str);
+        m_CurrToken += 2;
+        t.createToken(STRING_LITT_T, str);
     } break;
     // Operators, either mathematical or logical
     case '*':
@@ -149,15 +157,15 @@ std::optional<Errors::Error> Lexer::identify_first()
     case '>':
     case '=':
     case '/':
-        t.create_token(EQ_OP_T, std::to_string(*it));
-        curr_token++;
+        t.createToken(EQ_OP_T, std::to_string(*it));
+        m_CurrToken++;
         break;
     // Punctuation
     case ',':
     case ';':
     case '.':
-        t.create_token(PUNCT_T, std::to_string(*it));
-        curr_token++;
+        t.createToken(PUNCT_T, std::to_string(*it));
+        m_CurrToken++;
         break;
     // Numbers from 0 to 9
     case 49 ... 57: {
@@ -165,11 +173,11 @@ std::optional<Errors::Error> Lexer::identify_first()
         do {
             num.push_back(*it);
             std::advance(it, 1);
-            curr_token++;
+            m_CurrToken++;
 
         } while (
             std::isdigit(*it)); // OR is . if I implement floating point numbers
-        t.create_token(NUM_LITT_T, num);
+        t.createToken(NUM_LITT_T, num);
     } break;
     // Letters, ignoring character's case
     case 65 ... 90:
@@ -178,10 +186,10 @@ std::optional<Errors::Error> Lexer::identify_first()
         while (std::isalpha(*it) || *it == '%' || *it == '$' || *it == ':') {
             keyword.push_back(*it);
             std::advance(it, 1);
-            curr_token++;
+            m_CurrToken++;
         }
 
-        std::variant<Token, Error> token_or_err = match_keyword(t, keyword);
+        std::variant<Token, Error> token_or_err = matchKeyword(t, keyword);
 
         if (std::holds_alternative<Error>(token_or_err)) {
             return std::get<Error>(token_or_err);
@@ -192,96 +200,109 @@ std::optional<Errors::Error> Lexer::identify_first()
     // In default case just add the token
     default:
         err = std::make_optional(Error(ErrorType::SynxtaxError,
-            "Unexpected Character Found", line,
-            curr_token, ERROR_UNEXPECTED_IDENTIFIER));
+            "Unexpected Character Found", m_Line,
+            m_CurrToken, ERROR_UNEXPECTED_IDENTIFIER));
     } // End Switch
 
     // Store the token
-    this->tokens->append(t);
+    this->m_Tokens->append(t);
 
     // Cut until the next token
-    this->input_string = this->input_string.substr(this->curr_token);
+    this->m_InputString = this->m_InputString.substr(this->m_CurrToken);
 
     // Reset Counter
-    curr_token = 0;
+    m_CurrToken = 0;
 
     // Return no syntax err
     return err;
 }
 
-std::variant<Token, Errors::Error> Lexer::match_keyword(Token t,
+std::variant<Token, Errors::Error> Lexer::matchKeyword(Token t,
     std::string str)
 {
     std::variant<Token, Errors::Error> variant;
     std::string keywd = Utils::to_uppercase(str);
     if (keywd == "SELECT")
-        t.create_token(SELECT_T);
-    else if (keywd == "FROM")
-        t.create_token(FROM_T);
-    else if (keywd == "WHERE")
-        t.create_token(WHERE_T);
-    else if (keywd == "AS")
-        t.create_token(AS_T);
-    else if (keywd == "GROUP")
-        t.create_token(GROUP_T);
-    else if (keywd == "BY")
-        t.create_token(BY_T);
-    else if (keywd == "HAVING")
-        t.create_token(HAVING_T);
-    else if (keywd == "ORDER")
-        t.create_token(ORDER_T);
-    else if (keywd == "JOIN")
-        t.create_token(JOIN_T);
-    else if (keywd == "ON")
-        t.create_token(ON_T);
-    else if (keywd == "LEFT")
-        t.create_token(LEFT_T);
-    else if (keywd == "RIGHT")
-        t.create_token(RIGHT_T);
-    else if (keywd == "INNER")
-        t.create_token(INNER_T);
-    else if (keywd == "OUTER")
-        t.create_token(OUTER_T);
-    else if (keywd == "SET")
-        t.create_token(SET_T);
+        t.createToken(SELECT_T);
+    else if (keywd == "UPDATE")
+        t.createToken(UPDATE_T);
     else if (keywd == "INSERT")
-        t.create_token(INSERT_T);
-    else if (keywd == "INTO")
-        t.create_token(INTO_T);
+        t.createToken(INSERT_T);
     else if (keywd == "DELETE")
-        t.create_token(DELETE_T);
+        t.createToken(DELETE_T);
+    else if (keywd == "FROM")
+        t.createToken(FROM_T);
+    else if (keywd == "SET")
+        t.createToken(SET_T);
+    else if (keywd == "INTO")
+        t.createToken(INTO_T);
+    else if (keywd == "WHERE")
+        t.createToken(WHERE_T);
+    else if (keywd == "GROUP")
+        t.createToken(GROUP_T);
+    else if (keywd == "BY")
+        t.createToken(BY_T);
+    else if (keywd == "HAVING")
+        t.createToken(HAVING_T);
+    else if (keywd == "ORDER")
+        t.createToken(ORDER_T);
+    else if (keywd == "LIMIT")
+        t.createToken(LIMIT_T);
+    else if (keywd == "VALUES")
+        t.createToken(VALUES_T);
+    else if (keywd == "DEFAULT")
+        t.createToken(DEFAULT_T);
+    else if (keywd == "JOIN")
+        t.createToken(JOIN_T);
+    else if (keywd == "ON")
+        t.createToken(ON_T);
+    else if (keywd == "LEFT")
+        t.createToken(LEFT_T);
+    else if (keywd == "RIGHT")
+        t.createToken(RIGHT_T);
+    else if (keywd == "INNER")
+        t.createToken(INNER_T);
+    else if (keywd == "OUTER")
+        t.createToken(OUTER_T);
+    else if (keywd == "FULL")
+        t.createToken(FULL_T);
     else if (keywd == "CREATE")
-        t.create_token(CREATE_T);
+        t.createToken(CREATE_T);
+    else if (keywd == "RENAME")
+        t.createToken(RENAME_T);
     else if (keywd == "DROP")
-        t.create_token(DROP_T);
+        t.createToken(DROP_T);
+    else if (keywd == "ALTER")
+        t.createToken(ALTER_T);
     else if (keywd == "TABLE")
-        t.create_token(TABLE_T);
+        t.createToken(TABLE_T);
+    else if (keywd == "DATABASE")
+        t.createToken(DATABASE_T);
+    else if (keywd == "UNIQUE")
+        t.createToken(UNIQUE_T);
+    else if (keywd == "NOT")
+        t.createToken(NOT_T);
+    else if (keywd == "NULL")
+        t.createToken(NULL_T);
+    else if (keywd == "FOREIGN")
+        t.createToken(FOREIGN_T);
+    else if (keywd == "PRIMARY")
+        t.createToken(PRIMARY_T);
+    else if (keywd == "KEY")
+        t.createToken(KEY_T);
     else {
-        return match_identifier(t, str);
+        return matchIdentifier(t, str);
     }
 
     variant = t;
     return variant;
 }
 
-std::variant<Token, Errors::Error> Lexer::match_identifier(Token t, std::string str)
+std::variant<Token, Errors::Error> Lexer::matchIdentifier(Token t, std::string str)
 {
-    auto it = str.end();
-
     std::variant<Token, Errors::Error> variant;
-    /*
-    if (*it == '$') {
-        t.create_token(STR_VAR_T, str);
-    } else if (*it == '%') {
-        t.create_token(NUM_VAR_T, str);
-    } else {
-        // return err
-        // variant = errors::Error(errors::ErrorType::LexerError, "Identifiers
-        // Doesnt Have A Closing Mark", line, errors::ERROR_UNEXPECTED_IDENTIFIER);
-        // return variant;
-    }
-    */
-    t.create_token(VAR_NAME_T, str);
+
+    t.createToken(VAR_NAME_T, str);
 
     variant = t;
     return variant;
@@ -289,26 +310,26 @@ std::variant<Token, Errors::Error> Lexer::match_identifier(Token t, std::string 
 
 void Lexer::setLine(const std::string& line)
 {
-    this->input_string = line;
-    this->line = 0;
-    this->curr_token = 0;
+    this->m_InputString = line;
+    this->m_Line = 0;
+    this->m_CurrToken = 0;
 
     auto list = Utils::LinkedList<Token>();
 
-    this->tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
+    this->m_Tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
 }
 
-inline std::string Lexer::cut_until_whitespace(std::string str)
+inline std::string Lexer::cutUntilWhitespace(std::string str)
 {
-    str.erase(str.begin(), str.begin() + find_whitespace(str));
+    str.erase(str.begin(), str.begin() + findWhitespace(str));
     return str;
 }
 
 // Split a string into a vec on each whitespace
-std::vector<std::string> Lexer::split_string_on_whitespace(
+std::vector<std::string> Lexer::splitStringOnWhitespace(
     const std::string line, std::vector<std::string> res)
 {
-    size_t first_ws = find_whitespace(Utils::trim(line));
+    size_t first_ws = findWhitespace(Utils::trim(line));
 
     std::cout << "\"" << line << "\""
               << "\n";
@@ -328,12 +349,12 @@ std::vector<std::string> Lexer::split_string_on_whitespace(
     std::cout << token << "\n";
     res.push_back(token);
 
-    return split_string_on_whitespace(cut_until_whitespace(line), res);
+    return splitStringOnWhitespace(cutUntilWhitespace(line), res);
 }
 
 // Returns the first whitespace-like char in a string until a given position.
 // If nothing is found, return string::npos instead
-size_t Lexer::find_whitespace(std::string str, size_t pos)
+size_t Lexer::findWhitespace(std::string str, size_t pos)
 {
     size_t i = 1;
     for (char c : str) {

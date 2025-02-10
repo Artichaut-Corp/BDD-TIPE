@@ -1,14 +1,14 @@
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
-#include <memory>
 
 #include "tokens.h"
 
-#include "../utils.h"
 #include "../errors.h"
+#include "../utils.h"
 
 #ifndef LEXER_H
 #define LEXER_H
@@ -18,16 +18,27 @@ namespace Compiler::Lexing {
 class Lexer {
 
 private:
-    int line {};
-    int curr_token {};
+    int m_Line {};
+    int m_CurrToken {};
 
-    std::string input_string;
+    std::string m_InputString;
 
-    std::unique_ptr<Utils::LinkedList<Token>> tokens;
+    std::unique_ptr<Utils::LinkedList<Token>> m_Tokens;
+
+    size_t findWhitespace(const std::string str, size_t pos = 0);
+
+    std::string cutUntilWhitespace(std::string str);
+
+    std::vector<std::string> splitStringOnWhitespace(
+        const std::string line, std::vector<std::string> res);
+
+    std::variant<Token, Errors::Error> matchKeyword(Token t, std::string str);
+
+    std::variant<Token, Errors::Error> matchIdentifier(Token t, std::string str);
+
+    std::optional<Errors::Error> identifyFirst();
 
 public:
-    //Lexer() = default;
-
     Lexer(std::string str, int line);
 
     Lexer(const Lexer& other);
@@ -37,38 +48,21 @@ public:
 
         auto list = Utils::LinkedList<Token>();
 
+        while (!rhs.m_Tokens->is_empty()) {
+            // Not safe, should check what's inside
+            list.append(rhs.m_Tokens->get_first().value());
+        }
 
-            while (!rhs.tokens->is_empty())
-            {
-                // Not safe, should check what's inside
-                list.append(rhs.tokens->get_first().value());
-            }
-
-
-        this->tokens =  std::unique_ptr<Utils::LinkedList<Token>>(&list);
+        this->m_Tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
 
         return *this;
-
     }
 
     ~Lexer();
 
-    size_t find_whitespace(const std::string str, size_t pos = 0);
-
-    std::string cut_until_whitespace(std::string str);
-
     void setLine(const std::string& line);
 
-    std::vector<std::string> split_string_on_whitespace(
-        const std::string line, std::vector<std::string> res);
-
-    std::variant<Token, Errors::Error> match_keyword(Token t, std::string str);
-
-    std::variant<Token, Errors::Error> match_identifier(Token t, std::string str);
-
-    std::optional<Errors::Error> identify_first();
-
-    std::unique_ptr<Utils::LinkedList<Token>> get_tokens();
+    std::unique_ptr<Utils::LinkedList<Token>> getTokens();
 };
 
 } // namespace Compiler::Lexing

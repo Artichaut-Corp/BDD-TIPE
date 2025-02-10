@@ -8,21 +8,24 @@
 
 #include <memory>
 #include <string>
+#include <variant>
 
 #ifndef PARSER_H
 #define PARSER_H
 
 namespace Compiler::Parsing {
 
+using Statement = std::variant<SelectStmt, InsertStmt, UpdateStmt, DeleteStmt>;
+
 class Parser {
 private:
-    std::unique_ptr<Lexing::Tokenizer> tokenizer;
+    std::unique_ptr<Lexing::Tokenizer> m_Tokenizer;
 
 public:
     Parser(Lexing::TokenType file_start, std::string input);
     ~Parser();
 
-    void parse();
+    Node<Statement>* Parse();
 };
 } // namespace Compiler::Parsing
 

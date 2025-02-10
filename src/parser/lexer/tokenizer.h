@@ -12,11 +12,11 @@ namespace Compiler::Lexing {
 // Interface accessing tokens
 class Tokenizer {
 private:
-    Lexer l;
+    Lexer m_Lexer;
 
-    int position = 0;
-    int line;
-    std::unique_ptr<Utils::LinkedList<Token>> tokens = nullptr;
+    int m_Position = 0;
+    int m_Line;
+    std::unique_ptr<Utils::LinkedList<Token>> m_Tokens = nullptr;
 
 public:
     std::unique_ptr<Token>  next(void);

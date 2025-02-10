@@ -6,35 +6,35 @@ namespace Compiler::Lexing {
 
 Token::Token(TokenType type, std::string value)
 {
-    this->token = type;
-    this->value = value;
+    this->m_Token = type;
+    this->m_Value = value;
 }
 
-void Token::create_token(const TokenType type, const std::string& value)
+void Token::createToken(const TokenType type, const std::string& value)
 {
-    this->token = type;
-    this->value = value;
+    this->m_Token = type;
+    this->m_Value = value;
 
     return;
 }
 
-void Token::create_token(const TokenType type)
+void Token::createToken(const TokenType type)
 {
-    this->token = type;
-    this->value = std::string();
+    this->m_Token = type;
+    this->m_Value = std::string();
 
     return;
 }
 
-void Token::print() { std::printf("%d:%s ", token, value.c_str()); }
+void Token::print() { std::printf("%d:%s ", m_Token, m_Value.c_str()); }
 
 std::ostream& operator<<(std::ostream& os, const Token& tok)
 {
     os << "(" ;
 
-    os << tok.token << " | ";
+    os << tok.m_Token << " | ";
 
-    std::string val = tok.value;
+    std::string val = tok.m_Value;
     val == "" ? os << "NONE" : os << val;
 
     os << ")";

@@ -31,49 +31,49 @@ enum class ErrorType { ParserError,
     RuntimeError,
     SynxtaxWarning };
 
-class InterpreterInternalError : public std::exception {
+class ParserInternalError : public std::exception {
 public:
     std::string err()
     {
-        return "Interpreter Encontered An Internal Error";
+        return "Parser Encontered An Internal Error";
     }
 };
 
-class Error : InterpreterInternalError {
+class Error : ParserInternalError {
 private:
-    ErrorType type;
-    ErrorCode error_code;
-    std::string file;
-    std::string message;
-    std::string snipppet;
-    int line;
-    int col;
+    ErrorType m_Type;
+    ErrorCode m_ErrorCode;
+    std::string m_File;
+    std::string m_Message;
+    std::string m_Snipppet;
+    int m_Line;
+    int m_Col;
 
 public:
     Error() = default;
 
     Error(ErrorType type, std::string message, int line, int col, ErrorCode code)
-    {
-        this->type = type;
-        this->message = message;
-        this->line = line;
-        this->col = col;
-        this->error_code = code;
-    }
-
-    void print_light()
+        : m_Type(type)
+        , m_Message(message)
+        , m_Line(line)
+        , m_Col(col)
+        , m_ErrorCode(code)
     {
     }
 
-    void print_all_info()
+    void printLight()
+    {
+    }
+
+    void printAllInfo()
     {
         try {
             std::cout << "ERROR "
-                      << "[[ " << error_code.first << " ]] - " << error_code.second;
-            std::cout << " at line " << line << " and column " << col << std::endl;
-            std::cout << message << std::endl;
-        } catch (InterpreterInternalError) {
-            throw InterpreterInternalError();
+                      << "[[ " << m_ErrorCode.first << " ]] - " << m_ErrorCode.second;
+            std::cout << " at line " << m_Line << " and column " << m_Col << std::endl;
+            std::cout << m_Message << std::endl;
+        } catch (ParserInternalError) {
+            throw ParserInternalError();
         }
     }
 }; // class Error

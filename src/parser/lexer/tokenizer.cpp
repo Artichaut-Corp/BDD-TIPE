@@ -11,9 +11,9 @@ namespace Compiler::Lexing {
 
 std::unique_ptr<Token> Tokenizer::next(void)
 {
-    std::optional<Token> t = tokens->get_first();
+    std::optional<Token> t = m_Tokens->get_first();
 
-    tokens->advance();
+    m_Tokens->advance();
 
     return t.has_value() ? std::unique_ptr<Token>(&t.value()) : nullptr;
 }
@@ -21,32 +21,32 @@ std::unique_ptr<Token> Tokenizer::next(void)
 std::unique_ptr<Token> Tokenizer::peek(void) const
 {
 
-    std::optional<Token> t = tokens->get_first();
+    std::optional<Token> t = m_Tokens->get_first();
 
     return t.has_value() ? std::unique_ptr<Token>(&t.value()) : nullptr;
 }
 
 bool Tokenizer::isEmpty()
 {
-    return this->tokens == nullptr;
+    return this->m_Tokens == nullptr;
 }
 
 void Tokenizer::printAll() 
 {
-  tokens->print_all();
+  m_Tokens->print_all();
 }
 
 void Tokenizer::setLine(const std::string& line)
 {
-    this->l.setLine(line);
-    this->line += 1;
-    this->position = 0;
+    this->m_Lexer.setLine(line);
+    this->m_Line += 1;
+    this->m_Position = 0;
 }
 
 Tokenizer::Tokenizer(std::string line, int l_number)
-    : l(line, l_number)
+    : m_Lexer(line, l_number)
 {
-    auto tok = l.get_tokens();
+    auto tok = m_Lexer.getTokens();
 
     auto list = Utils::LinkedList<Token>();
 
@@ -62,7 +62,7 @@ Tokenizer::Tokenizer(std::string line, int l_number)
         tok->advance();
     }
 
-    this->tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
+    this->m_Tokens = std::unique_ptr<Utils::LinkedList<Token>>(&list);
 }
 
 Tokenizer::~Tokenizer()

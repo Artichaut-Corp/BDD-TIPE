@@ -16,6 +16,10 @@ class DatabaseOption {
     int m_Code;
 };
 
+enum class ConstraintType { UNIQUE,
+    NOT_NULL,
+    FOREIGN_KEY };
+
 class AlterTableSpec { };
 class ColumnDef { };
 

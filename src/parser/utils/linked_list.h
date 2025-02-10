@@ -11,19 +11,19 @@ template <typename T>
 class ListNode {
 
 public:
-    std::optional<ListNode*> next = std::nullopt;
+    std::optional<ListNode*> m_Next = std::nullopt;
 
-    T data;
+    T m_Data;
 
     ListNode() = default;
     ListNode(T data)
     {
-        this->data = data;
+        this->m_Data = data;
     }
 
     void set_next(ListNode* data)
     {
-        this->next = std::make_optional(data);
+        this->m_Next = std::make_optional(data);
     }
 };
 
@@ -76,11 +76,11 @@ public:
         ListNode<U>* new_node = new ListNode<U>(data);
         ListNode<U>* current = get_head().value_or(nullptr);
 
-        while (current->next.has_value()) {
-            current = current->next.value();
+        while (current->m_Next.has_value()) {
+            current = current->m_Next.value();
         }
 
-        current->next = std::make_optional(new_node);
+        current->m_Next = std::make_optional(new_node);
 
         return;
     }
@@ -93,13 +93,13 @@ public:
         int pos = 0;
 
         do {
-            current = *current->next.value();
+            current = *current->m_Next.value();
             if (++pos >= indice) {
                 break;
             }
-        } while (current->next.has_value());
+        } while (current->m_Next.has_value());
 
-        current->next = std::make_optional(new_node);
+        current->m_Next = std::make_optional(new_node);
 
         return;
     }
@@ -109,36 +109,36 @@ public:
         ListNode<U>* current = get_head().value_or(nullptr);
 
         int pos = 0;
-        while (current->next != std::nullopt) {
-            current = current->next.value();
+        while (current->m_Next != std::nullopt) {
+            current = current->m_Next.value();
             if (++pos >= indice) {
                 break;
             }
         }
 
-        return std::make_optional(current->data);
+        return std::make_optional(current->m_Data);
     }
 
     std::optional<U> get_first() const
     {
-        return HEAD.has_value() ? std::make_optional(HEAD.value()->data) : std::nullopt;
+        return HEAD.has_value() ? std::make_optional(HEAD.value()->m_Data) : std::nullopt;
     }
 
     std::optional<U> get_last()
     {
         ListNode<U>* current = get_head().value_or(nullptr);
-        while (current->next != std::nullopt) {
-            current = current->next.value();
+        while (current->m_Next != std::nullopt) {
+            current = current->m_Next.value();
         }
-        return std::make_optional(current->data);
+        return std::make_optional(current->m_Data);
     }
 
     void advance()
     {
         ListNode<U>* current = get_head().value_or(nullptr);
 
-        if (current->next != std::nullopt) {
-            HEAD = std::make_optional(current->next.value());
+        if (current->m_Next != std::nullopt) {
+            HEAD = std::make_optional(current->m_Next.value());
         } else {
             HEAD = std::nullopt;
         }
@@ -158,8 +158,8 @@ public:
 
         // Tant que l'on a pas atteint
         while (current != std::nullopt) {
-            std::cout << current.value()->data << "-> ";
-            current = current.value()->next;
+            std::cout << current.value()->m_Data << "-> ";
+            current = current.value()->m_Next;
         }
         std::cout << "NULL\n";
         return;
