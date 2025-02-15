@@ -2,11 +2,15 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <variant>
 
+#include "errors.h"
 #include "lexer/tokenizer.h"
+#include "parser.h"
 
 using namespace Compiler;
-using namespace Compiler::Lexing;
+
+using namespace Compiler::Parsing;
 
 namespace Compiler {
 
@@ -44,8 +48,14 @@ std::string eval(std::string input)
         return "\0";
     }
 
-    Tokenizer* tokenizer = new Tokenizer(input, 1);
+    Parser* parser = new Parsing::Parser(input);
 
+    auto n = parser->Parse();
+
+    if (std::holds_alternative<Errors::Error>(n)) {
+        Errors::Error e = std::get<Errors::Error>(n);
+        e.printAllInfo();
+    }
     return input;
 }
 

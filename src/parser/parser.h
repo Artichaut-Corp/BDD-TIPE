@@ -15,17 +15,20 @@
 
 namespace Compiler::Parsing {
 
-using Statement = std::variant<SelectStmt, InsertStmt, UpdateStmt, DeleteStmt>;
+using Statement = std::variant<SelectStmt*, InsertStmt*, UpdateStmt*, DeleteStmt*>;
 
 class Parser {
 private:
+public:
     std::unique_ptr<Lexing::Tokenizer> m_Tokenizer;
 
-public:
-    Parser(Lexing::TokenType file_start, std::string input);
-    ~Parser();
+    Parser(std::string input);
 
-    Node<Statement>* Parse();
+    ~Parser()
+    {
+    }
+
+    [[nodiscard]] std::variant<Statement*, Errors::Error> Parse();
 };
 } // namespace Compiler::Parsing
 

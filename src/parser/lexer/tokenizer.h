@@ -1,5 +1,5 @@
-#include <string>
 #include <memory>
+#include <string>
 
 #include "lexer.h"
 #include "tokens.h"
@@ -19,8 +19,8 @@ private:
     std::unique_ptr<Utils::LinkedList<Token>> m_Tokens = nullptr;
 
 public:
-    std::unique_ptr<Token>  next(void);
-    std::unique_ptr<Token>  peek(void) const;
+    Token next(void);
+    Token peek(void) const;
 
     bool isEmpty();
 

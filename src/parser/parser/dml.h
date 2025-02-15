@@ -1,7 +1,8 @@
-#include <cstddef>
+#include <assert.h>
 #include <memory>
 #include <vector>
 
+#include "../lexer/tokenizer.h"
 #include "expression.h"
 
 #ifndef DML_H
@@ -107,6 +108,11 @@ public:
         : m_Condition(std::unique_ptr<BinaryExpression>(cond))
     {
     }
+
+    static WhereClause* ParseWhere(Lexing::Tokenizer* t)
+    {
+        return new WhereClause(BinaryExpression::ParseBinaryExpression(t));
+    }
 };
 
 /* Statements permettant de modifier les données (DML)
@@ -128,12 +134,42 @@ public:
         m_Where = std::make_optional<std::unique_ptr<WhereClause>>(where);
     }
 
-    static DeleteStmt* ParseDelete()
+    static DeleteStmt* ParseDelete(Lexing::Tokenizer* t)
     {
-        //  PlaceHolder !
-        auto table = new TableName("city");
+        // Juste pour s'assurer. Attention, on passe ici au prochain élément
+        assert(t->next().m_Token == Lexing::DELETE_T);
 
-        return new DeleteStmt(table, nullptr);
+        auto next = t->next();
+
+        if (next.m_Token != Lexing::FROM_T) {
+            throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected 'FROM' after 'DELETE'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+        }
+
+        next = t->next();
+
+        TableName* table;
+
+        if (next.m_Token == Lexing::STRING_LITT_T || next.m_Token == Lexing::VAR_NAME_T) {
+
+            table = new TableName(next.m_Value);
+
+        } else {
+
+            throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected table name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+        }
+
+        next = t->next();
+
+        if (next.m_Token == Lexing::SEMI_COLON_T) {
+
+            return new DeleteStmt(table, nullptr);
+
+        } else if (next.m_Token == Lexing::WHERE_T) {
+            return new DeleteStmt(table, WhereClause::ParseWhere(t));
+
+        } else {
+            throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected ';' at the end", 0, 0, Errors::ERROR_ENDLINE);
+        }
     }
 };
 

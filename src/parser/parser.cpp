@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "errors.h"
 
 #include <memory>
 #include <string>
@@ -10,30 +11,38 @@
 
 namespace Compiler::Parsing {
 
-Parser::Parser(Lexing::TokenType file_start, std::string input)
+Parser::Parser(std::string input)
 {
-
     this->m_Tokenizer = std::unique_ptr<Lexing::Tokenizer>(new Lexing::Tokenizer(input, 1));
 }
 
-Node<Statement>* Parser::Parse()
+std::variant<Statement*, Errors::Error> Parser::Parse()
 {
+
+    std::variant<Statement*, Errors::Error> node;
+
     if (m_Tokenizer->isEmpty()) {
-        return nullptr;
+        node = Errors::Error();
+        return node;
     }
 
-    switch (m_Tokenizer->peek()->m_Token) {
+    m_Tokenizer->printAll();
 
-    case Lexing::DELETE_T: {
-        DeleteStmt* r = DeleteStmt::ParseDelete();
-    } break;
-    default:
-        UNIMPLEMENTED();
-        break;
+    try {
+        switch (m_Tokenizer->peek().m_Token) {
+
+        case Lexing::DELETE_T: {
+            Statement r = DeleteStmt::ParseDelete(m_Tokenizer.get());
+        } break;
+        default:
+            UNIMPLEMENTED();
+            break;
+        }
+    } catch (Errors::Error& e) {
+        node = e;
     }
 
-    // A CHANGER ABSOLUMENT
-    return nullptr;
+    return node;
 }
 
 } // namespace Compiler::Parsing

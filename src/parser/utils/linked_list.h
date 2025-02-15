@@ -15,7 +15,6 @@ public:
 
     T m_Data;
 
-    ListNode() = default;
     ListNode(T data)
     {
         this->m_Data = data;
@@ -54,6 +53,12 @@ public:
 
     ~LinkedList()
     {
+        std::optional<ListNode<U>*> current = get_head().value_or(nullptr);
+
+        if (current == nullptr)
+            return;
+
+        delete current.value();
     }
 
     void append(U data)

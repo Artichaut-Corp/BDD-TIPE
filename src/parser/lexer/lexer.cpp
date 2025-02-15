@@ -104,7 +104,7 @@ std::optional<Errors::Error> Lexer::identifyFirst()
     {
         std::string str = "";
         std::advance(it, 1);
-        while (*it != 32) {
+        while (*it != 39) {
             if (m_CurrToken > m_InputString.length()) {
                 return std::make_optional(Error(ErrorType::SynxtaxError, "", m_Line,
                     m_CurrToken,
@@ -117,7 +117,7 @@ std::optional<Errors::Error> Lexer::identifyFirst()
             m_CurrToken++;
         }
 
-        // Skip 2 (last " included)
+        // Skip 2 (last ' included)
         m_CurrToken += 2;
         t.createToken(STRING_LITT_T, str);
     } break;
@@ -153,21 +153,34 @@ std::optional<Errors::Error> Lexer::identifyFirst()
     case '*':
     case '+':
     case '-':
+        t.createToken(MATH_OP_T, std::string { *it });
+        m_CurrToken++;
+        break;
     case '<':
     case '>':
     case '=':
     case '/':
-        t.createToken(EQ_OP_T, std::to_string(*it));
+    case '!':
+    case '&':
+    case '|':
+
+        t.createToken(EQ_OP_T, std::string { *it });
         m_CurrToken++;
         break;
     // Punctuation
     case ',':
-    case ';':
-    case '.':
-        t.createToken(PUNCT_T, std::to_string(*it));
+        t.createToken(COMMA_T);
         m_CurrToken++;
         break;
-    // Numbers from 0 to 9
+    case ';':
+        t.createToken(SEMI_COLON_T);
+        m_CurrToken++;
+        break;
+    case '.':
+        t.createToken(DOT_T);
+        m_CurrToken++;
+        break;
+    // Numbers from 0 to 9. FLOATS NOT IMPLEMENTED
     case 49 ... 57: {
         std::string num = "";
         do {
@@ -282,6 +295,14 @@ std::variant<Token, Errors::Error> Lexer::matchKeyword(Token t,
         t.createToken(UNIQUE_T);
     else if (keywd == "NOT")
         t.createToken(NOT_T);
+    else if (keywd == "IS")
+        t.createToken(IS_T);
+    else if (keywd == "DISTINCT")
+        t.createToken(DISTINCT_T);
+    else if (keywd == "AND")
+        t.createToken(AND_T);
+    else if (keywd == "OR")
+        t.createToken(OR_T);
     else if (keywd == "NULL")
         t.createToken(NULL_T);
     else if (keywd == "FOREIGN")
