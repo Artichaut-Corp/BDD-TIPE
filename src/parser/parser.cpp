@@ -34,6 +34,15 @@ std::variant<Statement*, Errors::Error> Parser::Parse()
         case Lexing::DELETE_T: {
             Statement r = DeleteStmt::ParseDelete(m_Tokenizer.get());
         } break;
+        case Lexing::INSERT_T: {
+            Statement r = InsertStmt::ParseInsert(m_Tokenizer.get());
+        } break;
+        case Lexing::UPDATE_T: {
+            Statement r = UpdateStmt::ParseUpdate(m_Tokenizer.get());
+        } break;
+        case Lexing::SELECT_T: {
+            Statement r = SelectStmt::ParseSelect(m_Tokenizer.get());
+        } break;
         default:
             UNIMPLEMENTED();
             break;

@@ -26,7 +26,10 @@ enum TokenType {
     BY_T,
     HAVING_T,
     ORDER_T,
+    ASC_T,
+    DESC_T,
     LIMIT_T,
+    OFFSET_T,
     VALUES_T,
     DEFAULT_T,
 
@@ -38,6 +41,7 @@ enum TokenType {
     INNER_T,
     OUTER_T,
     FULL_T,
+    CROSS_T,
 
     // DDL
     CREATE_T,

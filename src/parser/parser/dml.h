@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <assert.h>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "../lexer/tokenizer.h"
@@ -11,8 +13,18 @@
 
 namespace Compiler::Parsing {
 
-enum class JoinType { LEFT,
-    RIGHT };
+enum class JoinType {
+    DEFAULT_J,
+    INNER_J,
+    LEFT_J,
+    LEFT_OUTER_J,
+    RIGHT_J,
+    RIGHT_OUTER_J,
+    FULL_J,
+    CROSS_J,
+};
+
+std::variant<JoinType, Errors::Error> ParseJoinType(Lexing::Tokenizer* t);
 
 // Sous-types utilisés par les statements ci-dessous
 
@@ -26,6 +38,13 @@ class ByItem {
     Expr m_Expr;
 
     bool m_Desc;
+
+public:
+    ByItem(Expr expr, bool desc)
+        : m_Expr(expr)
+        , m_Desc(desc)
+    {
+    }
 };
 
 class GroupByClause {
@@ -71,15 +90,91 @@ public:
 
 class SelectField {
     // If '*' false then Expr is true
-    bool m_WildCard;
+    bool m_WildCard = false;
 
     // If Expr is false then m_WildCard is true
-    Expr m_Field;
+    std::optional<ColumnName> m_Field;
+
+public:
+    SelectField() = default;
+
+    SelectField(bool wildcard, ColumnName* field)
+        : m_WildCard(wildcard)
+    {
+        if (field == nullptr)
+            m_Field = std::nullopt;
+        else
+            m_Field = *field;
+    }
+
+    SelectField(ColumnName* field)
+        : m_WildCard(false)
+        , m_Field(*field)
+    {
+    }
+
+    static std::variant<SelectField*, Errors::Error> ParseSelectField(Lexing::Tokenizer* t);
+
+    std::string Print() const
+    {
+        std::string res;
+
+        if (m_WildCard)
+            res = "WildCard";
+        else {
+            if (m_Field.has_value())
+                res = m_Field.value().Print();
+            else
+                res = "bizzarre";
+        }
+
+        return res;
+    }
 };
+
+std::ostream& operator<<(std::ostream& os, const SelectField& select_field);
 
 class FieldsList {
     std::vector<SelectField> m_Fields;
+
+    void AddField(SelectField* s)
+    {
+        m_Fields.emplace_back(*s);
+    }
+
+public:
+    // Cas de *
+    FieldsList(bool def)
+    {
+        m_Fields = std::vector<SelectField>();
+
+        m_Fields.emplace_back(SelectField());
+    }
+
+    FieldsList()
+    {
+        m_Fields = std::vector<SelectField>();
+    }
+
+    static std::variant<FieldsList*, Errors::Error> ParseFieldsList(Lexing::Tokenizer* t);
+
+    std::string Print() const
+    {
+        std::string res;
+
+        for (SelectField e : m_Fields) {
+            for (char c : e.Print()) {
+                res.push_back(c);
+            }
+            res.push_back(',');
+            res.push_back(' ');
+        }
+
+        return res;
+    }
 };
+
+std::ostream& operator<<(std::ostream& os, const FieldsList& fields_list);
 
 class TableRefsClause {
     std::unique_ptr<Join> m_Table;
@@ -94,10 +189,38 @@ public:
 class Limit {
     std::unique_ptr<Expr> m_Count;
     std::unique_ptr<Expr> m_Offset;
+
+public:
+    Limit(int count)
+        : m_Count(new LitteralValue<int>(ColumnType::INTEGER_C, count))
+        , m_Offset(new LitteralValue<int>(ColumnType::INTEGER_C, 0))
+    {
+    }
+
+    Limit(int count, int offset)
+        : m_Count(new LitteralValue<int>(ColumnType::INTEGER_C, count))
+        , m_Offset(new LitteralValue<int>(ColumnType::INTEGER_C, offset))
+    {
+    }
+
+    static std::variant<Limit*, Errors::Error> ParseLimit(Lexing::Tokenizer* t);
 };
 
 class OrderByClause {
     std::vector<ByItem> m_Items;
+
+    void AddItem(ByItem* b)
+    {
+        m_Items.push_back(*b);
+    }
+
+public:
+    OrderByClause()
+    {
+        m_Items.reserve(1);
+    }
+
+    static std::variant<OrderByClause*, Errors::Error> ParseOrderBy(Lexing::Tokenizer* t);
 };
 
 class WhereClause {
@@ -109,68 +232,32 @@ public:
     {
     }
 
-    static WhereClause* ParseWhere(Lexing::Tokenizer* t)
-    {
-        return new WhereClause(BinaryExpression::ParseBinaryExpression(t));
-    }
+    static WhereClause* ParseWhere(Lexing::Tokenizer* t);
 };
 
 /* Statements permettant de modifier les données (DML)
  * Chaque classe contient les informations qui lui sont relatives
  * et une méthode qui prendra le flux de token pour créer un nouveau statement
  */
+
 // DELETE FROM ..
 class DeleteStmt {
-    // TODO: preciser si c'est tout ce que l'on autorise
     // https://www.sqlite.org/lang_delete.html
-    std::unique_ptr<TableName> m_Table;
 
+    // Table à supprimer
+    std::unique_ptr<Expr> m_Table;
+
+    // Conditions
     std::optional<std::unique_ptr<WhereClause>> m_Where;
 
 public:
-    DeleteStmt(TableName* table, WhereClause* where)
+    DeleteStmt(Expr* table, WhereClause* where)
     {
-        m_Table = std::unique_ptr<TableName>(table);
+        m_Table = std::unique_ptr<Expr>(table);
         m_Where = std::make_optional<std::unique_ptr<WhereClause>>(where);
     }
 
-    static DeleteStmt* ParseDelete(Lexing::Tokenizer* t)
-    {
-        // Juste pour s'assurer. Attention, on passe ici au prochain élément
-        assert(t->next().m_Token == Lexing::DELETE_T);
-
-        auto next = t->next();
-
-        if (next.m_Token != Lexing::FROM_T) {
-            throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected 'FROM' after 'DELETE'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
-        }
-
-        next = t->next();
-
-        TableName* table;
-
-        if (next.m_Token == Lexing::STRING_LITT_T || next.m_Token == Lexing::VAR_NAME_T) {
-
-            table = new TableName(next.m_Value);
-
-        } else {
-
-            throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected table name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
-        }
-
-        next = t->next();
-
-        if (next.m_Token == Lexing::SEMI_COLON_T) {
-
-            return new DeleteStmt(table, nullptr);
-
-        } else if (next.m_Token == Lexing::WHERE_T) {
-            return new DeleteStmt(table, WhereClause::ParseWhere(t));
-
-        } else {
-            throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected ';' at the end", 0, 0, Errors::ERROR_ENDLINE);
-        }
-    }
+    static DeleteStmt* ParseDelete(Lexing::Tokenizer* t);
 };
 
 // INSERT INTO
@@ -213,11 +300,16 @@ public:
         , m_Order(order)
     {
     }
+
+    static InsertStmt* ParseInsert(Lexing::Tokenizer* t);
 };
 
 // UPDATE
 class UpdateStmt {
     // TODO
+    //
+public:
+    static UpdateStmt* ParseUpdate(Lexing::Tokenizer* t);
 };
 
 // SELECT ..
@@ -228,8 +320,14 @@ class SelectStmt {
     // * or a list of attributes
     std::unique_ptr<FieldsList> m_Fields;
 
-    // FROM .. (may have joins)
+    /*
+    // FROM .. (may have joins), pas utilisé tant que l'on ne parse pas les JOIN
     std::unique_ptr<TableRefsClause> m_From;
+
+    remplacé par m_Table ci dessous
+    */
+
+    std::unique_ptr<TableName> m_Table;
 
     // WHERE expr
     std::optional<std::unique_ptr<WhereClause>> m_Where;
@@ -249,7 +347,33 @@ class SelectStmt {
     std::optional<std::unique_ptr<HavingClause>> m_Having;
 
 public:
-    SelectStmt() { }
+    SelectStmt(bool distinct, FieldsList* fields_list, TableName* table)
+        : m_Distinct(distinct)
+        , m_Fields(std::unique_ptr<FieldsList>(fields_list))
+        //, m_From(std::make_unique<TableRefsClause>(tables))
+        , m_Table(std::unique_ptr<TableName>(table))
+        , m_Where(std::nullopt)
+        , m_Limit(std::nullopt)
+        , m_OrderBy(std::nullopt)
+        , m_GroupBy(std::nullopt)
+        , m_Having(std::nullopt)
+    {
+    }
+
+    SelectStmt(bool distinct, FieldsList* fields_list, TableName* table, WhereClause* where, Limit* limit, OrderByClause* order_by)
+        : m_Distinct(distinct)
+        , m_Fields(std::unique_ptr<FieldsList>(fields_list))
+        //, m_From(std::make_unique<TableRefsClause>(tables))
+        , m_Table(std::unique_ptr<TableName>(table))
+        , m_Where(std::unique_ptr<WhereClause>(where))
+        , m_Limit(std::unique_ptr<Limit>(limit))
+        , m_OrderBy(std::unique_ptr<OrderByClause>(order_by))
+        , m_GroupBy(std::nullopt)
+        , m_Having(std::nullopt)
+    {
+    }
+
+    static SelectStmt* ParseSelect(Lexing::Tokenizer* t);
 };
 } // namespace parsing
 

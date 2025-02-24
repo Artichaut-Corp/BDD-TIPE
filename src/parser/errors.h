@@ -8,10 +8,10 @@ namespace Compiler::Errors {
 
 typedef std::pair<int, std::string> ErrorCode;
 
-const ErrorCode ERROR_TESTING_ERROR = std::pair(0, "testing errors");
+const ErrorCode ERROR_UNIMPLEMENTED = std::pair(0, "Feature Unimplemented");
 const ErrorCode ERROR_STRING_TYPE = std::pair(1, "Expected String Type");
 const ErrorCode ERROR_INT_TYPE = std::pair(2, "Expected String Type");
-const ErrorCode ERROR_ENDLINE = std::pair(3, "Unexpected endline");
+const ErrorCode ERROR_ENDLINE = std::pair(3, "Expected Endline");
 const ErrorCode ERROR_NO_LABEL = std::pair(4, "Using Undefined Label");
 const ErrorCode ERROR_VAR = std::pair(5, "Using Undefined Variable");
 const ErrorCode ERROR_UNEXPECTED_IDENTIFIER = std::pair(6, "Undeclared Indentifiers");
@@ -21,16 +21,16 @@ const ErrorCode ERROR_EXPECTED_IDENTIFIER = std::pair(9, "Expected an identifier
 const ErrorCode ERROR_EXPECTED_ENDLINE = std::pair(9, "Expected an endline marker");
 const ErrorCode ERROR_UNEXPECTED_SYMBOL = std::pair(10, "Unexpected symbol was encountred");
 const ErrorCode ERROR_EXPECTED_SYMBOL = std::pair(11, "Expected a symbol");
+const ErrorCode ERROR_EXPECTED_EXPRESSION = std::pair(12, "Expected an expression");
 // Etc, I'll make them on need
-const ErrorCode ERROR_TESTING = std::pair(12, "testing errors");
 const ErrorCode ERROR_TESTIN = std::pair(13, "testing errors");
 const ErrorCode ERROR_TESTI = std::pair(14, "testing errors");
 const ErrorCode ERROR_TEST = std::pair(15, "testing errors");
 
 enum class ErrorType { ParserError,
-    SynxtaxError,
+    SyntaxError,
     RuntimeError,
-    SynxtaxWarning };
+    SyntaxWarning };
 
 class ParserInternalError : public std::exception {
 public:

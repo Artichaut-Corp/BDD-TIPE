@@ -1,3 +1,4 @@
+#include <format>
 #include <memory>
 #include <optional>
 #include <string>
@@ -27,7 +28,11 @@ enum class ColumnType { NULL_C,
     REAL_C,
     TEXT_C };
 
-class Expr { };
+class Expr {
+    virtual std::string Print() const { return this->Print(); };
+};
+
+std::ostream& operator<<(std::ostream& os, const Expr& select_field);
 
 template <typename T>
 class LitteralValue : public Expr {
@@ -43,85 +48,120 @@ public:
     }
 };
 
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const LitteralValue<T>& litt_val);
+
 class SchemaName : public Expr {
     std::string m_Name;
-
-    std::optional<std::string> m_TableName;
-
-    std::optional<std::string> m_ColumnName;
 
 public:
     SchemaName(std::string name)
         : m_Name(name)
-        , m_TableName(std::nullopt)
-        , m_ColumnName(std::nullopt)
-
     {
     }
 
-    SchemaName(std::string name, std::string table_name)
-        : m_Name(name)
-        , m_TableName(table_name)
-        , m_ColumnName(std::nullopt)
+    static SchemaName* ParseSchemaName(Lexing::Tokenizer* t);
 
+    std::string Print() const override
     {
+        return m_Name;
     }
-
-    SchemaName(std::string name, std::string table_name, std::string column_name)
-        : m_Name(name)
-        , m_TableName(table_name)
-        , m_ColumnName(column_name)
-
-    {
-    }
-
-    static Expr* ParseSchemaName(Lexing::Tokenizer* t);
 };
 
-class TableName : public Expr {
-    std::string m_TableName;
+std::ostream& operator<<(std::ostream& os, const SchemaName& schema);
 
-    std::optional<std::string> m_ColumnName;
+class TableName : public Expr {
+
+    std::string m_Name;
+
+    std::optional<std::string> m_SchemaName;
 
 public:
     // One constructor for only a table name
     TableName(std::string name)
-        : m_TableName(name)
-        , m_ColumnName(std::nullopt)
+        : m_Name(name)
+        , m_SchemaName(std::nullopt)
     {
     }
 
     // One constructor for schema AND table names
-    TableName(std::string name, std::string column_name)
-        : m_TableName(name)
-        , m_ColumnName(column_name)
+    TableName(std::string name, std::string schema_name)
+        : m_Name(name)
+        , m_SchemaName(schema_name)
     {
     }
 
-    static Expr* ParseTableName(Lexing::Tokenizer* t);
+    static TableName* ParseTableName(Lexing::Tokenizer* t);
+
+    std::string Print() const override
+
+    {
+        std::string res;
+        if (m_SchemaName.has_value())
+            res = std::format("{}.{}", m_Name, m_SchemaName.value());
+        else
+            res = m_Name;
+
+        return res;
+    }
 };
+
+std::ostream& operator<<(std::ostream& os, const TableName& table);
 
 class ColumnName : public Expr {
     std::string m_Name;
 
+    std::optional<std::string> m_TableName;
+
+    std::optional<std::string> m_SchemaName;
+
 public:
     ColumnName() = default;
+
     ColumnName(std::string name)
         : m_Name(name)
+        , m_TableName(std::nullopt)
+        , m_SchemaName(std::nullopt)
     {
     }
 
-    static Expr* ParseColumnName(Lexing::Tokenizer* t);
+    ColumnName(std::string name, std::string table)
+        : m_Name(name)
+        , m_TableName(table)
+        , m_SchemaName(std::nullopt)
+    {
+    }
+
+    ColumnName(std::string name, std::string table, std::string schema)
+        : m_Name(name)
+        , m_TableName(table)
+        , m_SchemaName(schema)
+    {
+    }
+
+    static ColumnName* ParseColumnName(Lexing::Tokenizer* t);
+
+    std::string Print() const override
+    {
+
+        std::string res;
+        if (m_SchemaName.has_value())
+            res = std::format("{}.{}.{}", m_SchemaName.value(), m_TableName.value(), m_Name);
+        else if (m_TableName.has_value())
+            res = std::format("{}.{}", m_TableName.value(), m_Name);
+        else
+            res = m_Name;
+
+        return res;
+    }
 };
+
+std::ostream& operator<<(std::ostream& os, const ColumnName& column);
 
 class BinaryExpression : Expr {
     // Cas Récursifs
-    std::optional<std::unique_ptr<BinaryExpression>> m_Lhs;
-    std::optional<std::unique_ptr<BinaryExpression>> m_Rhs;
-
-    // Cas de base
-    std::optional<std::unique_ptr<Expr>> m_ExprLeft;
-    std::optional<std::unique_ptr<Expr>> m_ExprRight;
+    std::optional<std::unique_ptr<Expr>> m_Lhs;
+    std::optional<std::unique_ptr<Expr>> m_Rhs;
 
     // Opérateur
     std::optional<LogicalOperator> m_Op;
@@ -130,30 +170,15 @@ public:
     // Cas de base, expression seulement
     BinaryExpression(Expr* expr)
         : m_Op(std::nullopt)
-        , m_ExprLeft(std::nullopt)
-        , m_ExprRight(expr)
         , m_Lhs(std::nullopt)
-        , m_Rhs(std::nullopt)
-    {
-    }
-
-    // Cas récursif simple, probablement pas nécessaire
-    BinaryExpression(Expr* exprLeft, LogicalOperator op, Expr* exprRight)
-        : m_Op(op)
-        , m_ExprLeft(exprLeft)
-        , m_ExprRight(exprRight)
-        , m_Lhs(std::nullopt)
-        , m_Rhs(std::nullopt)
+        , m_Rhs(expr)
     {
     }
 
     // Un ou deux cas récursifs: a = b OR b = c
-    BinaryExpression(Expr* exprLeft, BinaryExpression* lhs, LogicalOperator op,
-        Expr* exprRight,
-        BinaryExpression* rhs)
+    BinaryExpression(Expr* lhs, LogicalOperator op,
+        Expr* rhs)
         : m_Op(op)
-        , m_ExprLeft(exprLeft)
-        , m_ExprRight(exprRight)
         , m_Lhs(lhs)
         , m_Rhs(rhs)
     {
@@ -161,6 +186,8 @@ public:
 
     static BinaryExpression* ParseBinaryExpression(Lexing::Tokenizer* t);
 };
+
+std::ostream& operator<<(std::ostream& os, const BinaryExpression& binary_expr);
 
 } // namespace parsing
 

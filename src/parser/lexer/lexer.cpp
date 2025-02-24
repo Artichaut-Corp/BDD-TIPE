@@ -106,7 +106,7 @@ std::optional<Errors::Error> Lexer::identifyFirst()
         std::advance(it, 1);
         while (*it != 39) {
             if (m_CurrToken > m_InputString.length()) {
-                return std::make_optional(Error(ErrorType::SynxtaxError, "", m_Line,
+                return std::make_optional(Error(ErrorType::SyntaxError, "", m_Line,
                     m_CurrToken,
                     ERROR_STRING_WITH_NO_DELIMETER));
             }
@@ -134,7 +134,7 @@ std::optional<Errors::Error> Lexer::identifyFirst()
         std::advance(it, 1);
         while (*it != '"') {
             if (m_CurrToken > m_InputString.length()) {
-                return std::make_optional(Error(ErrorType::SynxtaxError, "", m_Line,
+                return std::make_optional(Error(ErrorType::SyntaxError, "", m_Line,
                     m_CurrToken,
                     ERROR_STRING_WITH_NO_DELIMETER));
             }
@@ -212,7 +212,7 @@ std::optional<Errors::Error> Lexer::identifyFirst()
     } break;
     // In default case just add the token
     default:
-        err = std::make_optional(Error(ErrorType::SynxtaxError,
+        err = std::make_optional(Error(ErrorType::SyntaxError,
             "Unexpected Character Found", m_Line,
             m_CurrToken, ERROR_UNEXPECTED_IDENTIFIER));
     } // End Switch
@@ -259,8 +259,14 @@ std::variant<Token, Errors::Error> Lexer::matchKeyword(Token t,
         t.createToken(HAVING_T);
     else if (keywd == "ORDER")
         t.createToken(ORDER_T);
+    else if (keywd == "ASC")
+        t.createToken(ASC_T);
+    else if (keywd == "DESC")
+        t.createToken(DESC_T);
     else if (keywd == "LIMIT")
         t.createToken(LIMIT_T);
+    else if (keywd == "OFFSET")
+        t.createToken(OFFSET_T);
     else if (keywd == "VALUES")
         t.createToken(VALUES_T);
     else if (keywd == "DEFAULT")
@@ -279,6 +285,8 @@ std::variant<Token, Errors::Error> Lexer::matchKeyword(Token t,
         t.createToken(OUTER_T);
     else if (keywd == "FULL")
         t.createToken(FULL_T);
+    else if (keywd == "CROSS")
+        t.createToken(CROSS_T);
     else if (keywd == "CREATE")
         t.createToken(CREATE_T);
     else if (keywd == "RENAME")

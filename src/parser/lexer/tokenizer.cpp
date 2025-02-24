@@ -15,7 +15,7 @@ Token Tokenizer::next(void)
 
     m_Tokens->advance();
 
-    return t.value();
+    return t.has_value() ? t.value() : throw Errors::Error(Errors::ErrorType::ParserError, "End of input", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
 }
 
 Token Tokenizer::peek(void) const
@@ -23,7 +23,7 @@ Token Tokenizer::peek(void) const
 
     std::optional<Token> t = m_Tokens->get_first();
 
-    return t.value();
+    return t.has_value() ? t.value() : throw Errors::Error(Errors::ErrorType::ParserError, "End of input", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
 }
 
 bool Tokenizer::isEmpty()

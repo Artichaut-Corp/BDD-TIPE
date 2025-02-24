@@ -50,7 +50,7 @@ std::variant<LogicalOperator, Errors::Error> ParseLogicalOperator(Lexing::Tokeni
                 t->next();
                 return LogicalOperator::AND;
             } else {
-                return Errors::Error(Errors::ErrorType::SynxtaxError, "Unexpected '&' in binary expression", 0, 0, Errors::ERROR_UNEXPECTED_SYMBOL);
+                return Errors::Error(Errors::ErrorType::SyntaxError, "Unexpected '&' in binary expression", 0, 0, Errors::ERROR_UNEXPECTED_SYMBOL);
             }
         }
         // '|' seul est un opérateur arithmétique
@@ -59,12 +59,12 @@ std::variant<LogicalOperator, Errors::Error> ParseLogicalOperator(Lexing::Tokeni
                 t->next();
                 return LogicalOperator::AND;
             } else {
-                return Errors::Error(Errors::ErrorType::SynxtaxError, "Unexpected '|' in binary expression", 0, 0, Errors::ERROR_UNEXPECTED_SYMBOL);
+                return Errors::Error(Errors::ErrorType::SyntaxError, "Unexpected '|' in binary expression", 0, 0, Errors::ERROR_UNEXPECTED_SYMBOL);
             }
         }
         // Je sait pas trop ce qu'il fait là
         else {
-            return Errors::Error(Errors::ErrorType::SynxtaxError, "Unexpected symbol in binary expression", 0, 0, Errors::ERROR_UNEXPECTED_SYMBOL);
+            return Errors::Error(Errors::ErrorType::SyntaxError, "Unexpected symbol in binary expression", 0, 0, Errors::ERROR_UNEXPECTED_SYMBOL);
         }
     }
     // Cas des opérateurs en toute lettre
@@ -75,62 +75,42 @@ std::variant<LogicalOperator, Errors::Error> ParseLogicalOperator(Lexing::Tokeni
     case Lexing::NOT_T:
         return LogicalOperator::NOT;
     default:
-        return Errors::Error(Errors::ErrorType::SynxtaxError, "Expected a logical operator in expression", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+        return Errors::Error(Errors::ErrorType::SyntaxError, "Expected a Logical Operator in Expression", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
     }
 }
 
-Expr* SchemaName::ParseSchemaName(Lexing::Tokenizer* t)
+SchemaName* SchemaName::ParseSchemaName(Lexing::Tokenizer* t)
 {
     Lexing::Token tok = t->next();
 
     // Seulement les 'variables', c'est à dire chaîne de caractères
     // sans "" ou ''
     if (tok.m_Token != Lexing::VAR_NAME_T) {
-        throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected Schema, Table or Column name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Schema Name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
     }
 
-    // Regarde le prochain sans le consommer car il est possible que
-    // ce soit un nom de schema seul
-    Lexing::Token next = t->peek();
-
-    if (next.m_Token != Lexing::DOT_T) {
-        // Schema seul
-        return new SchemaName(tok.m_Value);
-    }
-
-    // On peut alors consommer
-    next = t->next();
-
-    // Vérification du token suivant
-    if (next.m_Token != Lexing::VAR_NAME_T) {
-        throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected Schema, Table or Column name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
-    }
-
-    Lexing::Token next_next = t->peek();
-
-    if (next_next.m_Token != Lexing::DOT_T) {
-        // Schema et Table
-        return new SchemaName(tok.m_Value, next.m_Value);
-    }
-
-    next_next = t->next();
-
-    // Vérification du token suivant
-    if (next_next.m_Token != Lexing::VAR_NAME_T) {
-        throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected Schema, Table or Column name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
-    }
-
-    return new SchemaName(tok.m_Value, next.m_Value, next_next.m_Value);
+    // Comme on parse uniquement un nom de schema, on retourne directement
+    return new SchemaName(tok.m_Value);
 }
 
-Expr* TableName::ParseTableName(Lexing::Tokenizer* t)
+std::ostream& operator<<(std::ostream& os, const SchemaName& schema)
+{
+    os << schema.Print();
+
+    return os;
+}
+
+// Retourne soit:
+//  - Schema.Table
+//  - Table
+TableName* TableName::ParseTableName(Lexing::Tokenizer* t)
 {
     Lexing::Token tok = t->next();
 
     // Seulement les 'variables', c'est à dire chaîne de caractères
     // sans "" ou ''
     if (tok.m_Token != Lexing::VAR_NAME_T) {
-        throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected Schema, Table or Column name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table Name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
     }
 
     // Regarde le prochain sans le consommer car il est possible que
@@ -142,29 +122,88 @@ Expr* TableName::ParseTableName(Lexing::Tokenizer* t)
     }
 
     // On peut alors consommer
+    t->next();
+
+    // Et regarder le suivant. On peut le consommer directement
+    // car il est certain que l'on doive trouver un nom
     next = t->next();
 
     // Vérification du token suivant
     if (next.m_Token != Lexing::VAR_NAME_T) {
-        throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected Schema, Table or Column name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table Name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
     }
 
-    // Paramètre dans cet ordre car le nom de colonne vient après
+    // Schema + Table
     return new TableName(tok.m_Value, next.m_Value);
 }
 
-Expr* ColumnName::ParseColumnName(Lexing::Tokenizer* t)
+std::ostream& operator<<(std::ostream& os, const TableName& table)
 {
+    os << table.Print();
+
+    return os;
+}
+
+// Retourne soit:
+//  - Schema.Table.Colonne
+//  - Table.Colonne
+//  - Colonne
+ColumnName* ColumnName::ParseColumnName(Lexing::Tokenizer* t)
+{
+
     Lexing::Token tok = t->next();
 
     // Seulement les 'variables', c'est à dire chaîne de caractères
     // sans "" ou ''
     if (tok.m_Token != Lexing::VAR_NAME_T) {
-        throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected Schema, Table or Column name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Column Name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
     }
 
-    // Comme on parse uniquement un nom de colonne, on retourne directement
-    return new ColumnName(tok.m_Value);
+    // Regarde le prochain sans le consommer car il est possible que
+    // ce soit un nom de colonne seul
+    Lexing::Token next = t->peek();
+
+    if (next.m_Token != Lexing::DOT_T) {
+        // Schema seul
+        return new ColumnName(tok.m_Value);
+    }
+
+    // On peut alors consommer
+    t->next();
+
+    // Et regarder le suivant
+    next = t->next();
+
+    // Vérification du token suivant
+    if (next.m_Token != Lexing::VAR_NAME_T) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Column Name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+    }
+
+    Lexing::Token next_next = t->peek();
+
+    if (next_next.m_Token != Lexing::DOT_T) {
+        //  Table et Colonne
+        return new ColumnName(tok.m_Value, next.m_Value);
+    }
+
+    t->next();
+
+    next_next = t->next();
+
+    // Vérification du token suivant
+    if (next_next.m_Token != Lexing::VAR_NAME_T) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected  Column Name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+    }
+
+    // Schema + Table + Colonne
+    return new ColumnName(tok.m_Value, next.m_Value, next_next.m_Value);
+}
+
+std::ostream& operator<<(std::ostream& os, const ColumnName& col)
+{
+    os << col.Print();
+
+    return os;
 }
 
 BinaryExpression* BinaryExpression::ParseBinaryExpression(Lexing::Tokenizer* t)
@@ -186,15 +225,15 @@ BinaryExpression* BinaryExpression::ParseBinaryExpression(Lexing::Tokenizer* t)
         case Lexing::NUM_LITT_T: {
             expr = new LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value));
 
-            // Passer au suivant ici car Parse un nom table ou de schema le fait
+            // Passer au suivant ici car Parse un nom de colonne le fait
             t->next();
         } break;
         case Lexing::VAR_NAME_T: {
-            expr = TableName::ParseTableName(t);
+            expr = ColumnName::ParseColumnName(t);
 
         } break;
         default:
-            throw Errors::Error(Errors::ErrorType::SynxtaxError, "Expected identifier or value", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected identifier or value", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
         }
 
         // Modif ca. Dans le cas ou c'est un point virgule stop
