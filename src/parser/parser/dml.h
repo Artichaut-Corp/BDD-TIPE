@@ -47,6 +47,36 @@ public:
     }
 };
 
+enum class AggrFuncType {
+    AVG_F,
+    COUNT_F,
+    MAX_F,
+    MIN_F,
+    SUM_F
+};
+
+AggrFuncType ParseAggregateFunctionType(Lexing::Tokenizer* t);
+
+class AggregateFunction {
+    AggrFuncType m_Type;
+
+    bool m_All;
+
+    ColumnName* m_ColumnName;
+
+public:
+    AggregateFunction() = default;
+
+    AggregateFunction(AggrFuncType type, ColumnName* col, bool all = false)
+        : m_Type(type)
+        , m_All(all)
+        , m_ColumnName(col)
+    {
+    }
+
+    static std::variant<AggregateFunction*, Errors::Error> ParseAggregateFunction(Lexing::Tokenizer* t);
+};
+
 class GroupByClause {
     std::vector<ByItem> m_Items;
 };
@@ -125,7 +155,7 @@ public:
             if (m_Field.has_value())
                 res = m_Field.value().Print();
             else
-                res = "bizzarre";
+                res = "bizarre";
         }
 
         return res;
@@ -135,25 +165,30 @@ public:
 std::ostream& operator<<(std::ostream& os, const SelectField& select_field);
 
 class FieldsList {
-    std::vector<SelectField> m_Fields;
+    std::vector<std::variant<SelectField, AggregateFunction>> m_Fields;
 
     void AddField(SelectField* s)
     {
         m_Fields.emplace_back(*s);
     }
 
+    void AddField(AggregateFunction* f)
+    {
+        m_Fields.emplace_back(*f);
+    }
+
 public:
     // Cas de *
     FieldsList(bool def)
     {
-        m_Fields = std::vector<SelectField>();
+        m_Fields = std::vector<std::variant<SelectField, AggregateFunction>>();
 
         m_Fields.emplace_back(SelectField());
     }
 
     FieldsList()
     {
-        m_Fields = std::vector<SelectField>();
+        m_Fields = std::vector<std::variant<SelectField, AggregateFunction>>();
     }
 
     static std::variant<FieldsList*, Errors::Error> ParseFieldsList(Lexing::Tokenizer* t);
@@ -161,14 +196,6 @@ public:
     std::string Print() const
     {
         std::string res;
-
-        for (SelectField e : m_Fields) {
-            for (char c : e.Print()) {
-                res.push_back(c);
-            }
-            res.push_back(',');
-            res.push_back(' ');
-        }
 
         return res;
     }

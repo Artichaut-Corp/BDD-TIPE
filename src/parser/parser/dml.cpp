@@ -1,5 +1,6 @@
 #include "dml.h"
 #include <cassert>
+#include <stdexcept>
 #include <string>
 #include <variant>
 
@@ -27,6 +28,75 @@ std::variant<JoinType, Errors::Error> ParseJoinType(Lexing::Tokenizer* t)
     default:
         return JoinType::DEFAULT_J;
     }
+}
+
+AggrFuncType ParseAggregateFunctionType(Lexing::Tokenizer* t)
+{
+    auto token = t->peek();
+
+    AggrFuncType ret;
+
+    if (token.m_Value == "AVG") {
+        ret = AggrFuncType::AVG_F;
+    } else if (token.m_Value == "COUNT") {
+        ret = AggrFuncType::COUNT_F;
+    } else if (token.m_Value == "MAX") {
+        ret = AggrFuncType::MAX_F;
+    } else if (token.m_Value == "MIN") {
+        ret = AggrFuncType::MIN_F;
+    } else if (token.m_Value == "SUM") {
+        ret = AggrFuncType::SUM_F;
+    } else {
+        throw std::runtime_error("");
+    }
+
+    t->next();
+
+    return ret;
+}
+
+std::variant<AggregateFunction*, Errors::Error> AggregateFunction::ParseAggregateFunction(Lexing::Tokenizer* t)
+{
+    auto token = t->peek();
+
+    if (token.m_Token != Lexing::AGGR_FUNC_T) {
+        return Errors::Error(Errors::ErrorType::SyntaxError, "Expected Aggregate Function Names", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+    }
+
+    AggrFuncType type = ParseAggregateFunctionType(t);
+
+    token = t->next();
+
+    if (token.m_Token != Lexing::LPAREN_T) {
+        return Errors::Error(Errors::ErrorType::SyntaxError, "Expected a '('", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+    }
+
+    token = t->peek();
+
+    ColumnName* col;
+
+    bool all = false;
+
+    if (token.m_Token == Lexing::VAR_NAME_T) {
+        col = ColumnName::ParseColumnName(t);
+
+    } else if (token.m_Token == Lexing::MATH_OP_T && token.m_Value == "*") {
+
+        all = true;
+
+        t->next();
+    } else {
+
+        return Errors::Error(Errors::ErrorType::SyntaxError, "Expected Column Name or '*' in Aggregate Function ", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+    }
+
+    token = t->next();
+
+    if (token.m_Token != Lexing::RPAREN_T) {
+        return Errors::Error(Errors::ErrorType::SyntaxError, "Expected a ')'", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+    }
+
+    return new AggregateFunction(type, col, all);
 }
 
 // Si cette fonction est appelée, le cas de '*' est déjà traité.
@@ -59,12 +129,12 @@ std::variant<FieldsList*, Errors::Error> FieldsList::ParseFieldsList(Lexing::Tok
         return new FieldsList(true);
     }
 
-    if (next.m_Token == Lexing::VAR_NAME_T) {
-        FieldsList* field_list = new FieldsList();
+    FieldsList* field_list = new FieldsList();
 
-        do {
-            next = t->peek();
+    do {
+        next = t->peek();
 
+        if (next.m_Token == Lexing::VAR_NAME_T) {
             std::variant<SelectField*, Errors::Error> field = SelectField::ParseSelectField(t);
 
             if (std::holds_alternative<Errors::Error>(field)) {
@@ -81,12 +151,30 @@ std::variant<FieldsList*, Errors::Error> FieldsList::ParseFieldsList(Lexing::Tok
                 // Consommer la virgule
                 t->next();
             }
-        } while (1);
+        } else if (next.m_Token == Lexing::AGGR_FUNC_T) {
+            std::variant<AggregateFunction*, Errors::Error> func = AggregateFunction::ParseAggregateFunction(t);
 
-        return field_list;
-    }
+            if (std::holds_alternative<Errors::Error>(func)) {
+                return std::get<Errors::Error>(func);
+            }
 
-    return Errors::Error(Errors::ErrorType::SyntaxError, "Expected Column Names", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+            field_list->AddField(std::get<AggregateFunction*>(func));
+
+            next = t->peek();
+
+            if (next.m_Token != Lexing::COMMA_T) {
+                break;
+            } else {
+                // Consommer la virgule
+                t->next();
+            }
+        } else {
+            return Errors::Error(Errors::ErrorType::SyntaxError, "Expected Column Names or Aggregate Functions after 'SELECT' statement", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+        }
+
+    } while (1);
+
+    return field_list;
 }
 
 std::ostream& operator<<(std::ostream& os, const FieldsList& fields_list)
@@ -255,7 +343,7 @@ SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
         t->next();
     }
 
-    // Champs de retour ou '*'
+    // Champs de retour, '*' ou fonctions d'aggregation
     std::variant<FieldsList*, Errors::Error> field = FieldsList::ParseFieldsList(t);
 
     if (std::holds_alternative<Errors::Error>(field)) {

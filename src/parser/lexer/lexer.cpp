@@ -331,7 +331,13 @@ std::variant<Token, Errors::Error> Lexer::matchIdentifier(Token t, std::string s
 {
     std::variant<Token, Errors::Error> variant;
 
-    t.createToken(VAR_NAME_T, str);
+    const std::string& s = Utils::to_uppercase(str);
+
+    if (s == "AVG" || s == "COUNT" || s == "MAX" || s == "MIN" || s == "SUM") {
+        t.createToken(AGGR_FUNC_T, s);
+    } else {
+        t.createToken(VAR_NAME_T, str);
+    }
 
     variant = t;
     return variant;

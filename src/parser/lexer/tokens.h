@@ -32,6 +32,9 @@ enum TokenType {
     OFFSET_T,
     VALUES_T,
     DEFAULT_T,
+    
+    // Aggregate Functions
+    AGGR_FUNC_T,
 
     // Joins
     JOIN_T,
