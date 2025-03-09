@@ -28,7 +28,7 @@ public:
     {
     }
 
-    [[nodiscard]] std::variant<Statement*, Errors::Error> Parse();
+    [[nodiscard]] std::variant<Statement, Errors::Error> Parse();
 };
 } // namespace Compiler::Parsing
 

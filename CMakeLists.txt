@@ -9,7 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 enable_testing()
 
-add_subdirectory(src/parser)
+add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(lib/googletest)
 

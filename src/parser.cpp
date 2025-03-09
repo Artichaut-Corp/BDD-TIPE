@@ -16,10 +16,10 @@ Parser::Parser(std::string input)
     this->m_Tokenizer = std::unique_ptr<Lexing::Tokenizer>(new Lexing::Tokenizer(input, 1));
 }
 
-std::variant<Statement*, Errors::Error> Parser::Parse()
+std::variant<Statement, Errors::Error> Parser::Parse()
 {
 
-    std::variant<Statement*, Errors::Error> node;
+    std::variant<Statement, Errors::Error> node;
 
     if (m_Tokenizer->isEmpty()) {
         node = Errors::Error();
@@ -32,16 +32,16 @@ std::variant<Statement*, Errors::Error> Parser::Parse()
         switch (m_Tokenizer->peek().m_Token) {
 
         case Lexing::DELETE_T: {
-            Statement r = DeleteStmt::ParseDelete(m_Tokenizer.get());
+            return DeleteStmt::ParseDelete(m_Tokenizer.get());
         } break;
         case Lexing::INSERT_T: {
-            Statement r = InsertStmt::ParseInsert(m_Tokenizer.get());
+            return InsertStmt::ParseInsert(m_Tokenizer.get());
         } break;
         case Lexing::UPDATE_T: {
-            Statement r = UpdateStmt::ParseUpdate(m_Tokenizer.get());
+            return UpdateStmt::ParseUpdate(m_Tokenizer.get());
         } break;
         case Lexing::SELECT_T: {
-            Statement r = SelectStmt::ParseSelect(m_Tokenizer.get());
+            return SelectStmt::ParseSelect(m_Tokenizer.get());
         } break;
         default:
             UNIMPLEMENTED();

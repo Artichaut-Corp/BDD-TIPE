@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <memory>
 
-#include "../src/parser/utils/linked_list.h"
+#include "../src/utils/linked_list.h"
 
 using namespace Compiler::Utils;
 

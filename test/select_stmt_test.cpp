@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../src/parser/parser.h"
+#include "../src/parser.h"
 
 using namespace Compiler::Parsing;
 

@@ -22,8 +22,8 @@ const ErrorCode ERROR_EXPECTED_ENDLINE = std::pair(9, "Expected an endline marke
 const ErrorCode ERROR_UNEXPECTED_SYMBOL = std::pair(10, "Unexpected symbol was encountred");
 const ErrorCode ERROR_EXPECTED_SYMBOL = std::pair(11, "Expected a symbol");
 const ErrorCode ERROR_EXPECTED_EXPRESSION = std::pair(12, "Expected an expression");
+const ErrorCode ERROR_FILE_NOT_FOUND = std::pair(13, "File was not found");
 // Etc, I'll make them on need
-const ErrorCode ERROR_TESTIN = std::pair(13, "testing errors");
 const ErrorCode ERROR_TESTI = std::pair(14, "testing errors");
 const ErrorCode ERROR_TEST = std::pair(15, "testing errors");
 

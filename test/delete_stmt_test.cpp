@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <variant>
 
-#include "../src/parser/parser.h"
+#include "../src/parser.h"
 
 using namespace Compiler::Parsing;
 

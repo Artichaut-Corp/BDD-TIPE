@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "../src/parser/lexer/lexer.h"
-#include "../src/parser/lexer/tokenizer.h"
+#include "../src/lexer/lexer.h"
+#include "../src/lexer/tokenizer.h"
 
 using namespace Compiler::Lexing;
 
