@@ -2,7 +2,7 @@
 
 #include "tokens.h"
 
-namespace Compiler::Lexing {
+namespace Database::Lexing {
 
 Token::Token(TokenType type, std::string value)
 {

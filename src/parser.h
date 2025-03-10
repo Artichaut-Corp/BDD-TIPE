@@ -13,7 +13,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-namespace Compiler::Parsing {
+namespace Database::Parsing {
 
 using Statement = std::variant<SelectStmt*, InsertStmt*, UpdateStmt*, DeleteStmt*>;
 

@@ -7,7 +7,7 @@
 #ifndef TOKENIZER_H
 #define TOKENIZER_H
 
-namespace Compiler::Lexing {
+namespace Database::Lexing {
 
 // Interface accessing tokens
 class Tokenizer {

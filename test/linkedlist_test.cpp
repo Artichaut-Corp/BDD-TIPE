@@ -3,7 +3,7 @@
 
 #include "../src/utils/linked_list.h"
 
-using namespace Compiler::Utils;
+using namespace Database::Utils;
 
 class LinkedListTest : public testing::Test {
 protected:

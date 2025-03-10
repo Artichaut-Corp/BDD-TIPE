@@ -5,7 +5,7 @@
 #include <optional>
 #include <ostream>
 
-namespace Compiler::Utils {
+namespace Database::Utils {
 
 template <typename T>
 class ListNode {

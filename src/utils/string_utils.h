@@ -6,7 +6,7 @@
 #ifndef STRING_UTILS_H
 #define STRING_UTILS_H
 
-namespace Compiler::Utils {
+namespace Database::Utils {
 // trim from start (in place)
 inline void ltrim(std::string& str)
 {

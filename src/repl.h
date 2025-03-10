@@ -9,7 +9,7 @@
 #include "errors.h"
 #include "parser.h"
 
-namespace Compiler::Utils {
+namespace Database::Utils {
 
 class Repl {
     // Get input and lex
@@ -38,6 +38,8 @@ class Repl {
         if (std::holds_alternative<Errors::Error>(n)) {
             Errors::Error e = std::get<Errors::Error>(n);
             e.printAllInfo();
+
+            return "\0";
         }
 
         auto stmt = std::get<Parsing::Statement>(n);
@@ -82,6 +84,8 @@ class Repl {
         if (input == "\0") {
             return "\0";
         }
+
+        std::cout << input << std::endl;
 
         return input;
     }

@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <assert.h>
 #include <memory>
 #include <optional>
@@ -11,7 +10,7 @@
 
 #define DML_H
 
-namespace Compiler::Parsing {
+namespace Database::Parsing {
 
 enum class JoinType {
     DEFAULT_J,
@@ -45,36 +44,10 @@ public:
         , m_Desc(desc)
     {
     }
-};
 
-enum class AggrFuncType {
-    AVG_F,
-    COUNT_F,
-    MAX_F,
-    MIN_F,
-    SUM_F
-};
+    bool isDesc() const { return m_Desc; }
 
-AggrFuncType ParseAggregateFunctionType(Lexing::Tokenizer* t);
-
-class AggregateFunction {
-    AggrFuncType m_Type;
-
-    bool m_All;
-
-    ColumnName* m_ColumnName;
-
-public:
-    AggregateFunction() = default;
-
-    AggregateFunction(AggrFuncType type, ColumnName* col, bool all = false)
-        : m_Type(type)
-        , m_All(all)
-        , m_ColumnName(col)
-    {
-    }
-
-    static std::variant<AggregateFunction*, Errors::Error> ParseAggregateFunction(Lexing::Tokenizer* t);
+    Expr getExpr() const { return m_Expr; }
 };
 
 class GroupByClause {
@@ -119,13 +92,14 @@ public:
 };
 
 class SelectField {
+
     // If '*' false then Expr is true
     bool m_WildCard = false;
 
+public:
     // If Expr is false then m_WildCard is true
     std::optional<ColumnName> m_Field;
 
-public:
     SelectField() = default;
 
     SelectField(bool wildcard, ColumnName* field)
@@ -143,8 +117,6 @@ public:
     {
     }
 
-    static std::variant<SelectField*, Errors::Error> ParseSelectField(Lexing::Tokenizer* t);
-
     std::string Print() const
     {
         std::string res;
@@ -160,6 +132,10 @@ public:
 
         return res;
     }
+
+    bool isWildCard() { return m_WildCard; }
+
+    static std::variant<SelectField*, Errors::Error> ParseSelectField(Lexing::Tokenizer* t);
 };
 
 std::ostream& operator<<(std::ostream& os, const SelectField& select_field);
@@ -191,14 +167,16 @@ public:
         m_Fields = std::vector<std::variant<SelectField, AggregateFunction>>();
     }
 
-    static std::variant<FieldsList*, Errors::Error> ParseFieldsList(Lexing::Tokenizer* t);
-
     std::string Print() const
     {
         std::string res;
 
         return res;
     }
+
+    std::vector<std::variant<SelectField, AggregateFunction>> getField() const { return m_Fields; }
+
+    static std::variant<FieldsList*, Errors::Error> ParseFieldsList(Lexing::Tokenizer* t);
 };
 
 std::ostream& operator<<(std::ostream& os, const FieldsList& fields_list);
@@ -230,6 +208,10 @@ public:
     {
     }
 
+    Expr* getCount() const { return m_Count.get(); }
+
+    Expr* getOffset() const { return m_Offset.get(); }
+
     static std::variant<Limit*, Errors::Error> ParseLimit(Lexing::Tokenizer* t);
 };
 
@@ -247,6 +229,8 @@ public:
         m_Items.reserve(1);
     }
 
+    std::vector<ByItem> getByItems() const { return m_Items; }
+
     static std::variant<OrderByClause*, Errors::Error> ParseOrderBy(Lexing::Tokenizer* t);
 };
 
@@ -258,6 +242,8 @@ public:
         : m_Condition(std::unique_ptr<BinaryExpression>(cond))
     {
     }
+
+    BinaryExpression* getCondition() const { return m_Condition.get(); }
 
     static WhereClause* ParseWhere(Lexing::Tokenizer* t);
 };
@@ -282,6 +268,19 @@ public:
     {
         m_Table = std::unique_ptr<Expr>(table);
         m_Where = std::make_optional<std::unique_ptr<WhereClause>>(where);
+    }
+
+    Expr* getTable() const
+    {
+        return m_Table.get();
+    }
+
+    WhereClause* getWhere() const
+    {
+        if (m_Where.has_value()) {
+            return m_Where.value().get();
+        }
+        return nullptr;
     }
 
     static DeleteStmt* ParseDelete(Lexing::Tokenizer* t);
@@ -328,6 +327,26 @@ public:
     {
     }
 
+    bool isDefault() const
+    {
+        return m_Default;
+    }
+
+    TableName* getTable() const
+    {
+        return m_Table.get();
+    }
+
+    const std::optional<std::vector<ColumnName>>& getOrder() const
+    {
+        return m_Order;
+    }
+
+    const std::optional<std::vector<std::vector<Expr>>>& getData() const
+    {
+        return m_Data;
+    }
+
     static InsertStmt* ParseInsert(Lexing::Tokenizer* t);
 };
 
@@ -341,6 +360,7 @@ public:
 
 // SELECT ..
 class SelectStmt {
+
     // Disctinct or not
     bool m_Distinct;
 
@@ -398,6 +418,61 @@ public:
         , m_GroupBy(std::nullopt)
         , m_Having(std::nullopt)
     {
+    }
+
+    bool isDistinct() const
+    {
+        return m_Distinct;
+    }
+
+    FieldsList* getFields() const
+    {
+        return m_Fields.get();
+    }
+
+    TableName* getTable() const
+    {
+        return m_Table.get();
+    }
+
+    WhereClause* getWhere() const
+    {
+        if (m_Where.has_value()) {
+            return m_Where.value().get();
+        }
+        return nullptr;
+    }
+
+    Limit* getLimit() const
+    {
+        if (m_Limit.has_value()) {
+            return m_Limit.value().get();
+        }
+        return nullptr;
+    }
+
+    OrderByClause* getOrderBy() const
+    {
+        if (m_OrderBy.has_value()) {
+            return m_OrderBy.value().get();
+        }
+        return nullptr;
+    }
+
+    GroupByClause* getGroupBy() const
+    {
+        if (m_GroupBy.has_value()) {
+            return m_GroupBy.value().get();
+        }
+        return nullptr;
+    }
+
+    HavingClause* getHaving() const
+    {
+        if (m_Having.has_value()) {
+            return m_Having.value().get();
+        }
+        return nullptr;
     }
 
     static SelectStmt* ParseSelect(Lexing::Tokenizer* t);

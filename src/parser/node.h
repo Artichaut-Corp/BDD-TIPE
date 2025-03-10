@@ -4,7 +4,7 @@
 
 #define NODE_H
 
-namespace Compiler::Parsing {
+namespace Database::Parsing {
 
 template <typename U>
 class Node {

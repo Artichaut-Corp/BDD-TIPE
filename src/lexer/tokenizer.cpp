@@ -2,12 +2,11 @@
 #include "lexer.h"
 #include "tokens.h"
 
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
 
-namespace Compiler::Lexing {
+namespace Database::Lexing {
 
 Token Tokenizer::next(void)
 {
@@ -70,9 +69,6 @@ Tokenizer::Tokenizer(std::string line, int l_number)
 
 Tokenizer::~Tokenizer()
 {
-    std::cout << "----- [DEBUG] -----\n\n";
-    printAll();
-    std::cout << "----- [DEBUG] -----\n";
 }
 
 } // namespace Compiler::Lexing

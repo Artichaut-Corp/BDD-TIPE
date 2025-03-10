@@ -4,12 +4,7 @@
 #include <memory>
 #include <string>
 
-#define UNIMPLEMENTED()                            \
-    {                                              \
-        throw std::runtime_error("UNIMPLEMENTED"); \
-    }
-
-namespace Compiler::Parsing {
+namespace Database::Parsing {
 
 Parser::Parser(std::string input)
 {
@@ -44,7 +39,7 @@ std::variant<Statement, Errors::Error> Parser::Parse()
             return SelectStmt::ParseSelect(m_Tokenizer.get());
         } break;
         default:
-            UNIMPLEMENTED();
+            node = Errors::Error(Errors::ErrorType::SyntaxError, "Expected SQL Statement", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
             break;
         }
     } catch (Errors::Error& e) {

@@ -4,7 +4,7 @@
 #ifndef TOKENS_H
 #define TOKENS_H
 
-namespace Compiler::Lexing {
+namespace Database::Lexing {
 
 enum TokenType {
     // File related

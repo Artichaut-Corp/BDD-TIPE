@@ -9,7 +9,7 @@
 
 #define EXPRESSION_H
 
-namespace Compiler::Parsing {
+namespace Database::Parsing {
 
 enum class LogicalOperator { EQ,
     GT,
@@ -22,6 +22,14 @@ enum class LogicalOperator { EQ,
     NOT };
 
 std::variant<LogicalOperator, Errors::Error> ParseLogicalOperator(Lexing::Tokenizer* t);
+
+enum class AggrFuncType {
+    AVG_F,
+    COUNT_F,
+    MAX_F,
+    MIN_F,
+    SUM_F
+};
 
 enum class ColumnType { NULL_C,
     INTEGER_C,
@@ -46,6 +54,10 @@ public:
         , m_Data(data)
     {
     }
+
+    T getData() const { return m_Data; }
+
+    ColumnType getColumnType() const { return m_Type; }
 };
 
 template <typename T>
@@ -60,12 +72,14 @@ public:
     {
     }
 
-    static SchemaName* ParseSchemaName(Lexing::Tokenizer* t);
-
     std::string Print() const override
     {
         return m_Name;
     }
+
+    std::string getSchemaName() const { return m_Name; }
+
+    static SchemaName* ParseSchemaName(Lexing::Tokenizer* t);
 };
 
 std::ostream& operator<<(std::ostream& os, const SchemaName& schema);
@@ -92,6 +106,8 @@ public:
     }
 
     static TableName* ParseTableName(Lexing::Tokenizer* t);
+
+    std::string getTableName() const { return m_Name; }
 
     std::string Print() const override
 
@@ -139,6 +155,8 @@ public:
     {
     }
 
+    std::string getColumnName() const { return m_Name; }
+
     static ColumnName* ParseColumnName(Lexing::Tokenizer* t);
 
     std::string Print() const override
@@ -157,6 +175,34 @@ public:
 };
 
 std::ostream& operator<<(std::ostream& os, const ColumnName& column);
+
+AggrFuncType ParseAggregateFunctionType(Lexing::Tokenizer* t);
+
+class AggregateFunction {
+    AggrFuncType m_Type;
+
+    bool m_All;
+
+    ColumnName* m_ColumnName;
+
+public:
+    AggregateFunction() = default;
+
+    AggregateFunction(AggrFuncType type, ColumnName* col, bool all = false)
+        : m_Type(type)
+        , m_All(all)
+        , m_ColumnName(col)
+    {
+    }
+
+    bool isAll() { return m_All; }
+
+    AggrFuncType getType() { return m_Type; }
+
+    ColumnName* getColumnName() { return m_ColumnName; }
+
+    static std::variant<AggregateFunction*, Errors::Error> ParseAggregateFunction(Lexing::Tokenizer* t);
+};
 
 class BinaryExpression : Expr {
     // Cas Récursifs

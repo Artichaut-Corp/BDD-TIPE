@@ -2,7 +2,7 @@
 
 #include "../src/parser.h"
 
-using namespace Compiler::Parsing;
+using namespace Database::Parsing;
 
 // Sur une table exemple de la forme:
 // Ville {

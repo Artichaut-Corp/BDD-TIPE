@@ -1,15 +1,18 @@
 #include "file.h"
 
+#include <fcntl.h>
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <sstream>
 #include <string>
+#include <unistd.h>
 #include <variant>
 
-namespace Compiler::Utils {
+namespace Database::Utils {
 
-std::variant<std::string, Errors::Error> readFileFromPath(const std::string& filePath)
+std::variant<std::string, Errors::Error> readFileFromPathToString(const std::string& filePath)
 {
     std::string fileContent;
     std::ifstream file;
@@ -31,6 +34,27 @@ std::variant<std::string, Errors::Error> readFileFromPath(const std::string& fil
     }
 
     return fileContent;
+}
+
+bool RecognizedDatabaseSignature(int fd)
+{
+    int buf[52];
+
+    int e = read(fd, buf, 52 * sizeof(int));
+
+    for (int i = 0; i < 52; i++) {
+
+        if (buf[i] != signature[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void AddDatabaseSignature(int fd)
+{
+    int e = write(fd, signature, 52 * sizeof(int));
 }
 
 }

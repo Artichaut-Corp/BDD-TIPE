@@ -5,7 +5,7 @@
 
 #define DDL_H
 
-namespace Compiler::Parsing {
+namespace Database::Parsing {
 
 // Type générique, j'imagine qu'on aura un dictionnaire regroupant toutes les
 // options

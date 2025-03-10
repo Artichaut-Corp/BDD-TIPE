@@ -3,7 +3,7 @@
 
 #include "../src/parser.h"
 
-using namespace Compiler::Parsing;
+using namespace Database::Parsing;
 
 // DELETE FROM ville;
 TEST(DeleteStmtTest, BasicDelete)

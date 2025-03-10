@@ -1,16 +1,10 @@
-#include "repl.h"
+#include "database.h"
 
-using namespace Compiler;
+using namespace Database;
 
 int main(int argc, char* argv[])
 {
-
-    // If there is no arguments, then it's a line by line interactive interpreter
-    if (argc < 2) {
-        Utils::Repl::Run();
-    }
-
-    // else this is a whole file that will be interpreted
+    DatabaseI::Init(argc, argv);
 
     return 0;
 }

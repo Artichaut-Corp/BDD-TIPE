@@ -13,7 +13,7 @@
 #ifndef LEXER_H
 #define LEXER_H
 
-namespace Compiler::Lexing {
+namespace Database::Lexing {
 
 class Lexer {
 

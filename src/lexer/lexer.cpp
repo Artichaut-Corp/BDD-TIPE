@@ -16,7 +16,7 @@
 #include "../errors.h"
 #include "../utils.h"
 
-namespace Compiler::Lexing {
+namespace Database::Lexing {
 
 Lexer::Lexer(std::string str, int line)
     : m_InputString(str)
