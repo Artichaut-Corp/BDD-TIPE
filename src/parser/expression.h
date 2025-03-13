@@ -72,6 +72,8 @@ public:
     {
     }
 
+    ~SchemaName() = default;
+
     std::string Print() const override
     {
         return m_Name;
@@ -104,6 +106,8 @@ public:
         , m_SchemaName(schema_name)
     {
     }
+
+    ~TableName() = default;
 
     static TableName* ParseTableName(Lexing::Tokenizer* t);
 
@@ -154,6 +158,8 @@ public:
         , m_SchemaName(schema)
     {
     }
+
+    ~ColumnName() = default;
 
     std::string getColumnName() const { return m_Name; }
 

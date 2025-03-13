@@ -30,18 +30,16 @@ TEST(InsertStmtTest, SimpleValues)
     data[1] = LitteralValue<int>(ColumnType::INTEGER_C, 54420);
     data[2] = LitteralValue<std::string>(ColumnType::TEXT_C, "Bretagne");
 
-    auto dataOfData = std::vector<std::vector<Expr>>(1);
-
-    dataOfData[0] = data;
-
     auto name = new TableName("Ville");
 
-    auto insert = new InsertStmt(name, false, dataOfData);
+    auto insert = new InsertStmt(name, false, data);
 
     auto node = Node<InsertStmt>(insert);
 }
 
 // INSERT INTO Ville (Habitants, Nom, Region) VALUES (54420, "Vannes", "Bretagne"), (325070, "Nantes", "Bretagne");
+//
+/* Not Implemented, for now only taking single dimension vectors
 TEST(InsertStmtTest, SimpleValuesWithDefinedOrder)
 {
 
@@ -74,3 +72,5 @@ TEST(InsertStmtTest, SimpleValuesWithDefinedOrder)
 
     auto node = Node<InsertStmt>(insert);
 }
+
+*/

@@ -1,6 +1,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <unistd.h>
 #include <variant>
 
 #include "../errors.h"
@@ -27,6 +28,11 @@ public:
         for (uint32_t i = 0; i < MAX_PAGES; i++) {
             this->m_Pages[i] = nullptr;
         }
+    }
+
+    ~Pager()
+    {
+        close(m_FileDescriptor);
     }
 
     static std::variant<Pager*, Errors::Error> OpenPager(const std::string& filepath);

@@ -74,7 +74,9 @@ std::optional<Errors::Error> Lexer::identifyFirst()
     using namespace Errors;
 
     Token t {};
+
     std::optional<Error> err = std::nullopt;
+
     auto it = std::begin(this->m_InputString); // it != std::end(input); it++) {
 
     // Ignore all spaces
@@ -196,7 +198,7 @@ std::optional<Errors::Error> Lexer::identifyFirst()
     case 65 ... 90:
     case 97 ... 122: {
         std::string keyword;
-        while (std::isalpha(*it) || *it == '%' || *it == '$' || *it == ':') {
+        while (std::isalpha(*it) || *it == '_' || *it == '-' || *it == '%' || *it == '$' || *it == ':') {
             keyword.push_back(*it);
             std::advance(it, 1);
             m_CurrToken++;
@@ -210,11 +212,11 @@ std::optional<Errors::Error> Lexer::identifyFirst()
 
         t = std::get<Token>(token_or_err);
     } break;
-    // In default case just add the token
+    // In default case just return an error
     default:
-        err = std::make_optional(Error(ErrorType::SyntaxError,
+        return Error(ErrorType::SyntaxError,
             "Unexpected Character Found", m_Line,
-            m_CurrToken, ERROR_UNEXPECTED_IDENTIFIER));
+            m_CurrToken, ERROR_UNEXPECTED_IDENTIFIER);
     } // End Switch
 
     // Store the token

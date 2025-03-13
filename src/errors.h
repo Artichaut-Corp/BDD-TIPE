@@ -24,8 +24,7 @@ const ErrorCode ERROR_EXPECTED_SYMBOL = std::pair(11, "Expected a symbol");
 const ErrorCode ERROR_EXPECTED_EXPRESSION = std::pair(12, "Expected an expression");
 const ErrorCode ERROR_FILE_NOT_FOUND = std::pair(13, "File was not found");
 const ErrorCode ERROR_WRONG_MEMORY_ACCESS = std::pair(14, "Unallowed access to memory");
-// Etc, I'll make them on need
-const ErrorCode ERROR_TEST = std::pair(15, "testing errors");
+const ErrorCode ERROR_UNEXPECTED_CALL_TO_FUNCTION = std::pair(15, "Unexpected call to function");
 
 enum class ErrorType { ParserError,
     SyntaxError,

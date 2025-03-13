@@ -13,15 +13,17 @@
 namespace Database::Parsing {
 
 enum class JoinType {
-    DEFAULT_J,
     INNER_J,
     LEFT_J,
     LEFT_OUTER_J,
     RIGHT_J,
     RIGHT_OUTER_J,
     FULL_J,
+    FULL_OUTER_J,
     CROSS_J,
 };
+
+bool isJoin(const Lexing::Token tok);
 
 std::variant<JoinType, Errors::Error> ParseJoinType(Lexing::Tokenizer* t);
 
@@ -71,24 +73,55 @@ public:
 class Join {
     JoinType m_Type;
 
+    std::unique_ptr<TableName> m_Table;
+
     // Left Table
-    std::unique_ptr<Expr> m_Left;
+    std::unique_ptr<ColumnName> m_Left;
 
     // Right Table
-    std::unique_ptr<Expr> m_Right;
-
-    std::unique_ptr<OnCondition> m_On;
-
-    // Could implement using clause
+    std::unique_ptr<ColumnName> m_Right;
 
 public:
-    Join(JoinType type, Expr* left, Expr* right, OnCondition* on)
+    Join(JoinType type, TableName* table, ColumnName* left, ColumnName* right)
         : m_Type(type)
-        , m_Left(std::unique_ptr<Expr>(left))
-        , m_Right(std::unique_ptr<Expr>(right))
-        , m_On(std::unique_ptr<OnCondition>(on))
+        , m_Table(std::make_unique<TableName>(*table))
+        , m_Left(std::make_unique<ColumnName>(*left))
+        , m_Right(std::make_unique<ColumnName>(*right))
     {
     }
+
+    Join(const Join& other)
+        : m_Type(other.m_Type)
+    {
+        m_Table = std::unique_ptr<TableName>(other.m_Table.get());
+
+        m_Left = std::unique_ptr<ColumnName>(other.m_Left.get());
+        m_Right = std::unique_ptr<ColumnName>(other.m_Right.get());
+    }
+
+    ~Join() = default;
+
+    ColumnName* getLeftColumn() const
+    {
+        return m_Left.get();
+    }
+
+    ColumnName* getRightColunm() const
+    {
+        return m_Right.get();
+    }
+
+    TableName* getTable() const
+    {
+        return m_Table.get();
+    }
+
+    JoinType getJoinType() const
+    {
+        return m_Type;
+    }
+
+    static Join* ParseJoin(Lexing::Tokenizer* t);
 };
 
 class SelectField {
@@ -192,25 +225,25 @@ public:
 };
 
 class Limit {
-    std::unique_ptr<Expr> m_Count;
-    std::unique_ptr<Expr> m_Offset;
+    int m_Count;
+    int m_Offset;
 
 public:
     Limit(int count)
-        : m_Count(new LitteralValue<int>(ColumnType::INTEGER_C, count))
-        , m_Offset(new LitteralValue<int>(ColumnType::INTEGER_C, 0))
+        : m_Count(count)
+        , m_Offset(0)
     {
     }
 
     Limit(int count, int offset)
-        : m_Count(new LitteralValue<int>(ColumnType::INTEGER_C, count))
-        , m_Offset(new LitteralValue<int>(ColumnType::INTEGER_C, offset))
+        : m_Count(count)
+        , m_Offset(offset)
     {
     }
 
-    Expr* getCount() const { return m_Count.get(); }
+    int getCount() const { return m_Count; }
 
-    Expr* getOffset() const { return m_Offset.get(); }
+    int getOffset() const { return m_Offset; }
 
     static std::variant<Limit*, Errors::Error> ParseLimit(Lexing::Tokenizer* t);
 };
@@ -299,7 +332,7 @@ class InsertStmt {
 
     // Data, un autre type pourrait probablement
     //  mieux convenir
-    std::optional<std::vector<std::vector<Expr>>> m_Data;
+    std::optional<std::vector<Expr>> m_Data;
 
     // VALUES
 
@@ -308,22 +341,15 @@ public:
     InsertStmt(TableName* name, bool def = true)
         : m_Table(name)
         , m_Default(def)
+        , m_Data(std::nullopt)
 
     {
     }
 
-    InsertStmt(TableName* name, bool def, std::vector<std::vector<Expr>> data)
+    InsertStmt(TableName* name, bool def, std::vector<Expr> data)
         : m_Table(name)
         , m_Default(def)
         , m_Data(data)
-    {
-    }
-
-    InsertStmt(TableName* name, bool def, std::vector<ColumnName> order, std::vector<std::vector<Expr>> data)
-        : m_Table(name)
-        , m_Default(def)
-        , m_Data(data)
-        , m_Order(order)
     {
     }
 
@@ -342,7 +368,7 @@ public:
         return m_Order;
     }
 
-    const std::optional<std::vector<std::vector<Expr>>>& getData() const
+    const std::optional<std::vector<Expr>>& getData() const
     {
         return m_Data;
     }
@@ -367,14 +393,9 @@ class SelectStmt {
     // * or a list of attributes
     std::unique_ptr<FieldsList> m_Fields;
 
-    /*
-    // FROM .. (may have joins), pas utilisé tant que l'on ne parse pas les JOIN
-    std::unique_ptr<TableRefsClause> m_From;
-
-    remplacé par m_Table ci dessous
-    */
-
     std::unique_ptr<TableName> m_Table;
+
+    std::optional<std::unique_ptr<std::vector<Join>>> m_Joins;
 
     // WHERE expr
     std::optional<std::unique_ptr<WhereClause>> m_Where;
@@ -397,8 +418,8 @@ public:
     SelectStmt(bool distinct, FieldsList* fields_list, TableName* table)
         : m_Distinct(distinct)
         , m_Fields(std::unique_ptr<FieldsList>(fields_list))
-        //, m_From(std::make_unique<TableRefsClause>(tables))
         , m_Table(std::unique_ptr<TableName>(table))
+        , m_Joins(std::nullopt)
         , m_Where(std::nullopt)
         , m_Limit(std::nullopt)
         , m_OrderBy(std::nullopt)
@@ -407,10 +428,23 @@ public:
     {
     }
 
-    SelectStmt(bool distinct, FieldsList* fields_list, TableName* table, WhereClause* where, Limit* limit, OrderByClause* order_by)
+    SelectStmt(bool distinct, FieldsList* fields_list, TableName* table, std::vector<Join>* join)
         : m_Distinct(distinct)
         , m_Fields(std::unique_ptr<FieldsList>(fields_list))
-        //, m_From(std::make_unique<TableRefsClause>(tables))
+        , m_Table(std::unique_ptr<TableName>(table))
+        , m_Joins(join)
+        , m_Where(std::nullopt)
+        , m_Limit(std::nullopt)
+        , m_OrderBy(std::nullopt)
+        , m_GroupBy(std::nullopt)
+        , m_Having(std::nullopt)
+    {
+    }
+
+    SelectStmt(bool distinct, FieldsList* fields_list, TableName* table, std::vector<Join>* join, WhereClause* where, Limit* limit, OrderByClause* order_by)
+        : m_Distinct(distinct)
+        , m_Fields(std::unique_ptr<FieldsList>(fields_list))
+        , m_Joins(join)
         , m_Table(std::unique_ptr<TableName>(table))
         , m_Where(std::unique_ptr<WhereClause>(where))
         , m_Limit(std::unique_ptr<Limit>(limit))
@@ -433,6 +467,15 @@ public:
     TableName* getTable() const
     {
         return m_Table.get();
+    }
+
+    std::vector<Join>* getJoins() const
+    {
+        if (m_Joins.has_value()) {
+            return m_Joins.value().get();
+        }
+
+        return nullptr;
     }
 
     WhereClause* getWhere() const

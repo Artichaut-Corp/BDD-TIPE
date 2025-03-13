@@ -1,33 +1,169 @@
 #include "dml.h"
 #include <cassert>
-#include <stdexcept>
 #include <string>
 #include <variant>
 
 namespace Database::Parsing {
 
+bool isJoin(const Lexing::TokenType tok)
+{
+    return tok == Lexing::JOIN_T
+        || tok == Lexing::LEFT_T
+        || tok == Lexing::RIGHT_T
+        || tok == Lexing::INNER_T
+        || tok == Lexing::OUTER_T
+        || tok == Lexing::FULL_T
+        || tok == Lexing::CROSS_T;
+}
+
 std::variant<JoinType, Errors::Error> ParseJoinType(Lexing::Tokenizer* t)
 {
-    assert(t->next().m_Token == Lexing::JOIN_T);
 
     Lexing::Token tok = t->peek();
 
     switch (tok.m_Token) {
-    case Lexing::LEFT_T:
-    case Lexing::RIGHT_T:
-    case Lexing::INNER_T:
-    case Lexing::OUTER_T:
-    case Lexing::FULL_T: {
+    case Lexing::JOIN_T:
         t->next();
-        return JoinType::FULL_J;
+
+        return JoinType::INNER_J;
+    case Lexing::LEFT_T: {
+        tok = t->next();
+
+        if (tok.m_Token == Lexing::OUTER_T) {
+            t->next();
+
+            return JoinType::LEFT_OUTER_J;
+        } else if (tok.m_Token == Lexing::JOIN_T) {
+            t->next();
+            return JoinType::LEFT_J;
+        } else {
+
+            return Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'JOIN' or 'OUTER' after 'LEFT'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+        }
+    };
+    case Lexing::RIGHT_T: {
+        tok = t->next();
+
+        if (tok.m_Token == Lexing::OUTER_T) {
+            t->next();
+
+            return JoinType::RIGHT_OUTER_J;
+        } else if (tok.m_Token == Lexing::JOIN_T) {
+            t->next();
+            return JoinType::RIGHT_J;
+        } else {
+
+            return Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'JOIN' or 'OUTER' after 'RIGHT'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+        }
+    };
+    case Lexing::INNER_T: {
+        tok = t->next();
+
+        if (tok.m_Token != Lexing::JOIN_T) {
+
+            return Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'JOIN' after 'INNER'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+        }
+
+        t->next();
+
+        return JoinType::INNER_J;
     }
+
+    case Lexing::OUTER_T: {
+        return Errors::Error(Errors::ErrorType::SyntaxError, "Unexpected 'OUTER' keyword", 0, 0, Errors::ERROR_UNEXPECTED_SYMBOL);
+    }
+    case Lexing::FULL_T: {
+        tok = t->next();
+
+        if (tok.m_Token == Lexing::OUTER_T) {
+            t->next();
+
+            return JoinType::FULL_OUTER_J;
+        } else if (tok.m_Token == Lexing::JOIN_T) {
+            t->next();
+
+            return JoinType::FULL_J;
+        } else {
+
+            return Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'JOIN' or 'OUTER' after 'RIGHT'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+        }
+    };
     case Lexing::CROSS_T: {
+        tok = t->next();
+
+        if (tok.m_Token != Lexing::JOIN_T) {
+
+            return Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'JOIN' after 'CROSS'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+        }
+
         t->next();
+
         return JoinType::CROSS_J;
     }
     default:
-        return JoinType::DEFAULT_J;
+        return Errors::Error(Errors::ErrorType::RuntimeError, "Unexpected Call to 'ParseJoinType'", 0, 0, Errors::ERROR_UNEXPECTED_CALL_TO_FUNCTION);
     }
+}
+
+Join* Join::ParseJoin(Lexing::Tokenizer* t)
+{
+    auto next = t->peek();
+
+    auto type_v = ParseJoinType(t);
+
+    if (std::holds_alternative<Errors::Error>(type_v)) {
+        throw std::get<Errors::Error>(type_v);
+    }
+
+    next = t->peek();
+
+    TableName* table = nullptr;
+
+    if (next.m_Token != Lexing::VAR_NAME_T) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected table name after 'JOIN'", 0, 0, Errors::ERROR_EXPECTED_EXPRESSION);
+    }
+
+    table = TableName::ParseTableName(t);
+
+    next = t->next();
+
+    if (next.m_Token != Lexing::ON_T) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'ON' condition after 'JOIN'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+    }
+
+    next = t->peek();
+
+    if (next.m_Token != Lexing::VAR_NAME_T) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected column name in 'JOIN' condition", 0, 0, Errors::ERROR_EXPECTED_EXPRESSION);
+    }
+
+    ColumnName* lhs = ColumnName::ParseColumnName(t);
+
+    next = t->peek();
+
+    if (next.m_Token != Lexing::EQ_OP_T) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected '=' in 'JOIN' condition", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+    }
+
+    auto op = ParseLogicalOperator(t);
+
+    if (std::holds_alternative<Errors::Error>(op)) {
+        throw std::get<Errors::Error>(op);
+    }
+
+    if (std::get<LogicalOperator>(op) != LogicalOperator::EQ) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected '=' in 'JOIN' condition", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+    }
+
+    next = t->peek();
+
+    if (next.m_Token != Lexing::VAR_NAME_T) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected column name in 'JOIN' condition", 0, 0, Errors::ERROR_EXPECTED_EXPRESSION);
+    }
+
+    ColumnName* rhs = ColumnName::ParseColumnName(t);
+
+    return new Join(std::get<JoinType>(type_v), table, lhs, rhs);
 }
 
 // Si cette fonction est appelée, le cas de '*' est déjà traité.
@@ -239,13 +375,91 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
 
     auto next = t->next();
 
-    // TODO
+    if (next.m_Token != Lexing::INTO_T) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'INTO' after 'INSERT'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+    }
 
-    throw Errors::Error(Errors::ErrorType::RuntimeError, "Unimplemented", 0, 0, Errors::ERROR_UNIMPLEMENTED);
+    next = t->peek();
 
-    return new InsertStmt(new TableName("Placeholder"));
+    if (next.m_Token != Lexing::VAR_NAME_T) {
+
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+    }
+
+    TableName* table = TableName::ParseTableName(t);
+
+    next = t->next();
+
+    if (next.m_Token == Lexing::DEFAULT_T) {
+        next = t->next();
+
+        if (next.m_Token != Lexing::VALUES_T) {
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'VALUES' after 'DEFAULT' in 'INSERT' statement", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+        }
+
+        next = t->peek();
+
+        if (next.m_Token == Lexing::SEMI_COLON_T) {
+            return new InsertStmt(table);
+        }
+
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected ';' at the end", 0, 0, Errors::ERROR_ENDLINE);
+    } else if (next.m_Token == Lexing::VALUES_T) {
+
+        next = t->next();
+
+        if (next.m_Token != Lexing::LPAREN_T) {
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a '('", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+        }
+
+        std::vector<Expr> data;
+
+        do {
+            next = t->next();
+
+            if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T) {
+
+                throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected litteral values in 'INSERT' statement", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+            } else {
+
+                if (next.m_Token == Lexing::STRING_LITT_T) {
+
+                    LitteralValue<std::string> val = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
+
+                    data.push_back(val);
+                }
+
+                else {
+                    LitteralValue<int> val = LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value));
+
+                    data.push_back(val);
+                }
+            }
+
+            next = t->peek();
+
+            if (next.m_Token != Lexing::COMMA_T) {
+                break;
+            } else {
+                // Consommer la virgule
+                t->next();
+            }
+
+        } while (1);
+
+        next = t->next();
+
+        if (next.m_Token != Lexing::RPAREN_T) {
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a ')'", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+        }
+
+        return new InsertStmt(table, false, data);
+    } else {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'VALUES (...)' or 'DEFAULT' in 'INSERT' statement", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+    }
 }
 
+// Juste remplacer par DELETE puis INSERT ça marche aussi bien
 UpdateStmt* UpdateStmt::ParseUpdate(Lexing::Tokenizer* t)
 {
     assert(t->next().m_Token == Lexing::UPDATE_T);
@@ -300,7 +514,7 @@ SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
 
     } else {
 
-        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table name after 'FROM' in a 'SELECT' Statment", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table name after 'FROM' in a 'SELECT' Statment", 0, 0, Errors::ERROR_EXPECTED_EXPRESSION);
     }
 
     next = t->peek();
@@ -312,13 +526,22 @@ SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
 
     // JOIN
 
-    // TODO
+    std::vector<Join>* joins = new std::vector<Join>();
+
+    joins->reserve(1);
+
+    while (isJoin(next.m_Token)) {
+
+        joins->emplace_back(*Join::ParseJoin(t));
+
+        next = t->peek();
+    }
 
     // WHERE
 
     if (next.m_Token == Lexing::SEMI_COLON_T) {
 
-        return new SelectStmt(distinct, std::get<FieldsList*>(field), table);
+        return new SelectStmt(distinct, std::get<FieldsList*>(field), table, joins);
     }
 
     std::variant<WhereClause*, Errors::Error> where = nullptr;
@@ -338,6 +561,7 @@ SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
         return new SelectStmt(distinct,
             std::get<FieldsList*>(field),
             table,
+            joins,
             std::get<WhereClause*>(where),
             nullptr, nullptr);
     }
@@ -362,6 +586,7 @@ SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
         return new SelectStmt(distinct,
             std::get<FieldsList*>(field),
             table,
+            joins,
             std::get<WhereClause*>(where),
             nullptr,
             std::get<OrderByClause*>(order_by));
@@ -385,6 +610,7 @@ SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
         return new SelectStmt(distinct,
             std::get<FieldsList*>(field),
             table,
+            joins,
             std::get<WhereClause*>(where),
             std::get<Limit*>(limit),
             std::get<OrderByClause*>(order_by));
