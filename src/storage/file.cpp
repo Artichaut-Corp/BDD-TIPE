@@ -1,4 +1,4 @@
-#include "pager.h"
+#include "file.h"
 #include "../utils.h"
 
 #include <cstdlib>
@@ -9,12 +9,13 @@
 
 namespace Database::Storing {
 
+
 std::variant<Pager*, Errors::Error> Pager::OpenPager(const std::string& filepath)
 {
     int fd = open(filepath.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
 
-    if (!Utils::RecognizedDatabaseSignature(fd)) {
-        Utils::AddDatabaseSignature(fd);
+    if (!File::RecognizedDatabaseSignature(fd)) {
+        File::AddDatabaseSignature(fd);
     }
 
     if (fd == -1) {

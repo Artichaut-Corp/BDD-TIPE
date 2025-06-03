@@ -1,6 +1,3 @@
-#ifndef REPL_H
-#define REPL_H
-
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -8,6 +5,10 @@
 
 #include "errors.h"
 #include "parser.h"
+
+#ifndef REPL_H
+
+#define REPL_H
 
 namespace Database::Utils {
 
@@ -25,9 +26,6 @@ class Repl {
 
     static std::string Eval(const std::string& input)
     {
-        if (input == "\0") {
-            return "\0";
-        }
 
         std::string output = "";
 
@@ -79,15 +77,10 @@ class Repl {
         return output;
     }
 
-    static std::string Print(const std::string& input)
+    // Pourrait prendre un type Result qui serait formatté et affiché ici
+    static void Print(const std::string& result)
     {
-        if (input == "\0") {
-            return "\0";
-        }
-
-        std::cout << input << std::endl;
-
-        return input;
+        std::cout << result << std::endl;
     }
 
 public:
@@ -96,9 +89,14 @@ public:
         for (;;) {
             std::cout << "SQL>>" << std::endl;
 
-            if (Print(Eval(Read())) == "\0") {
-                break;
+            const std::string& input = Read();
+
+            if (input == "\0") {
+                std::cout << "Exiting...\n";
+                return;
             }
+
+            Print(Eval(input));
         }
     }
 };

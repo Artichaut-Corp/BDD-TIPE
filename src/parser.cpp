@@ -38,6 +38,9 @@ std::variant<Statement, Errors::Error> Parser::Parse()
         case Lexing::SELECT_T: {
             return SelectStmt::ParseSelect(m_Tokenizer.get());
         } break;
+        case Lexing::TRANSACTION_T: {
+            return Transaction::ParseTransaction(m_Tokenizer.get());
+        }
         default:
             node = Errors::Error(Errors::ErrorType::SyntaxError, "Expected SQL Statement", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
             break;

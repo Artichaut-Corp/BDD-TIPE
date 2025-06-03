@@ -1,14 +1,14 @@
-#ifndef DATABASE_H
-
-#define DATABASE_H
-
 #include "errors.h"
 #include "repl.h"
-#include "storage/pager.h"
+#include "storage.h"
 
 #include <filesystem>
 #include <memory>
 #include <variant>
+
+#ifndef DATABASE_H
+
+#define DATABASE_H
 
 namespace Database {
 
@@ -18,11 +18,8 @@ enum class DatabaseOptions {
 
 class DatabaseI {
 
-    std::unique_ptr<Storing::Pager> m_Pager;
-
 public:
-    DatabaseI(Storing::Pager* p)
-        : m_Pager(std::unique_ptr<Storing::Pager>(p))
+    DatabaseI(Storing::File* p)
     {
     }
 
@@ -42,19 +39,46 @@ public:
                 }
             }
 
+            if (db_path == "") {
+                db_path = Storing::File::CreateFile();
+            }
+
         } else {
             db_path = argv[1];
         }
 
-        auto p = Storing::Pager::OpenPager(db_path);
+        Storing::File f = Storing::File(db_path);
 
-        if (std::holds_alternative<Errors::Error>(p)) {
-            std::get<Errors::Error>(p).printAllInfo();
+        // Après avoir trouvé et chargé le fichier
+        // On charge la table système qui repertorie toutes les colonnes dans
+        // une HashMap / Array sous forme d'objets. En utilisant les infos
+        // là-bas + les méthodes des Objets représentant les tuples on peut
+        // ajouter des tuples ou aller chercher une colonne par ex
 
-            return;
-        }
+        /* std::unique_ptr<std::vector<ColumnData>> res =
+            Record::GetColumn(f.Fd(), f.Index.at("country").GetColumnInfo("name")); */
 
-        Storing::Pager* pager = std::get<Storing::Pager*>(p);
+        /*
+         - Aller chercher une colonne
+
+          1. Prendre la table:
+          Table t = Index.at(table_name);
+
+          std::vector<int> col_Data = t.GetColumn(column_name)
+          // Qui appelle à un moment:
+              Column payspop = db.at("pays__pop");
+
+          - Ecrire un enregistrement dans une table
+
+          Table t = Index.at(table_name);
+          // Gérer les erreurs dans le cas où la table n'existe pas
+
+          t.WriteRecord(table_name, )
+      WriteRecord(
+            "schema_table",
+            t.MakeRecord(c1, c2, ...) );
+
+          */
 
         Utils::Repl::Run();
     }

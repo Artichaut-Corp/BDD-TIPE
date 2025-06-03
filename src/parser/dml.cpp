@@ -619,4 +619,109 @@ SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
         throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected ';' at the end", 0, 0, Errors::ERROR_ENDLINE);
     }
 }
+
+Transaction* Transaction::ParseTransaction(Lexing::Tokenizer* t)
+{
+    assert(t->next().m_Token == Lexing::TRANSACTION_T);
+
+    auto next = t->peek();
+
+    std::cout << next << "\n";
+
+    TableName* name;
+
+    std::vector<std::vector<Expr>> data;
+
+    while (next.m_Token != Lexing::END_T) {
+
+        std::cout << next << "\n";
+
+        assert(t->next().m_Token == Lexing::INSERT_T);
+
+        auto next = t->next();
+
+        if (next.m_Token != Lexing::INTO_T) {
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'INTO' after 'INSERT'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+        }
+
+        next = t->peek();
+
+        if (next.m_Token != Lexing::VAR_NAME_T) {
+
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+        }
+
+        // On pourrait optimiser le parsing en n'analysant pas les
+        // noms de table que l'on connait déjà
+
+        name = TableName::ParseTableName(t);
+
+        next = t->next();
+
+        if (next.m_Token != Lexing::VALUES_T) {
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'VALUES' in transactionnal 'INSERT' statement ", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+        }
+
+        next = t->next();
+
+        if (next.m_Token != Lexing::LPAREN_T) {
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a '('", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+        }
+
+        std::vector<Expr> values;
+
+        do {
+            next = t->next();
+
+            if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T) {
+
+                throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected litteral values in 'INSERT' statement", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+            }
+
+            if (next.m_Token == Lexing::STRING_LITT_T) {
+
+                LitteralValue<std::string> val = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
+
+                values.push_back(val);
+            }
+
+            else {
+                LitteralValue<int> val = LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value));
+
+                values.push_back(val);
+            }
+
+            next = t->peek();
+
+            if (next.m_Token != Lexing::COMMA_T) {
+                break;
+            } else {
+                // Consommer la virgule
+                t->next();
+            }
+        } while (1);
+
+        data.push_back(values);
+
+        next = t->next();
+
+        if (next.m_Token != Lexing::RPAREN_T) {
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a ')'", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+        }
+    }
+
+    if (next.m_Token != Lexing::END_T) {
+
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'END' after 'TRANSACTION'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+    }
+
+    next = t->next();
+
+    if (next.m_Token != Lexing::SEMI_COLON_T) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected ';' at the end", 0, 0, Errors::ERROR_ENDLINE);
+    }
+
+    return new Transaction(name, data);
+}
+
 } // namespace parsing

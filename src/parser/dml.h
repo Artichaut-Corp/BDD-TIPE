@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <assert.h>
 #include <memory>
 #include <optional>
@@ -520,6 +521,22 @@ public:
 
     static SelectStmt* ParseSelect(Lexing::Tokenizer* t);
 };
+
+class Transaction {
+    std::unique_ptr<TableName> m_Table;
+
+    std::vector<std::vector<Expr>> m_Data;
+
+    Transaction(TableName* name, std::vector<std::vector<Expr>> data)
+        : m_Table(name)
+        , m_Data(data)
+    {
+    }
+
+public:
+    static Transaction* ParseTransaction(Lexing::Tokenizer* t);
+};
+
 } // namespace parsing
 
 #endif // !DML_H

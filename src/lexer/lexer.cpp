@@ -273,6 +273,10 @@ std::variant<Token, Errors::Error> Lexer::matchKeyword(Token t,
         t.createToken(VALUES_T);
     else if (keywd == "DEFAULT")
         t.createToken(DEFAULT_T);
+    else if (keywd == "TRANSACTION")
+        t.createToken(TRANSACTION_T);
+    else if (keywd == "END")
+        t.createToken(END_T);
     else if (keywd == "JOIN")
         t.createToken(JOIN_T);
     else if (keywd == "ON")

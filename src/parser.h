@@ -15,7 +15,7 @@
 
 namespace Database::Parsing {
 
-using Statement = std::variant<SelectStmt*, InsertStmt*, UpdateStmt*, DeleteStmt*>;
+using Statement = std::variant<SelectStmt*, InsertStmt*, UpdateStmt*, DeleteStmt*, Transaction*>;
 
 class Parser {
 private:

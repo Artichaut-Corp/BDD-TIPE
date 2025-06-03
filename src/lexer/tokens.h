@@ -32,6 +32,8 @@ enum TokenType {
     OFFSET_T,
     VALUES_T,
     DEFAULT_T,
+    TRANSACTION_T,
+    END_T,
     
     // Aggregate Functions
     AGGR_FUNC_T,

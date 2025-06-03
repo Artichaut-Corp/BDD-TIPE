@@ -1,10 +1,9 @@
-#include "file.h"
+#include "file_utils.h"
 
 #include <fcntl.h>
 #include <format>
 #include <fstream>
 #include <iostream>
-#include <iterator>
 #include <sstream>
 #include <string>
 #include <unistd.h>
@@ -34,27 +33,6 @@ std::variant<std::string, Errors::Error> readFileFromPathToString(const std::str
     }
 
     return fileContent;
-}
-
-bool RecognizedDatabaseSignature(int fd)
-{
-    int buf[52];
-
-    int e = read(fd, buf, 52 * sizeof(int));
-
-    for (int i = 0; i < 52; i++) {
-
-        if (buf[i] != signature[i]) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-void AddDatabaseSignature(int fd)
-{
-    int e = write(fd, signature, 52 * sizeof(int));
 }
 
 }
