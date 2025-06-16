@@ -1,0 +1,13 @@
+\beamer@sectionintoc {1}{Introduction}{2}{0}{1}
+\beamer@subsectionintoc {1}{1}{À quoi ressemble le traitement d'un requête}{2}{0}{1}
+\beamer@sectionintoc {2}{Problématique}{3}{0}{2}
+\beamer@subsectionintoc {2}{1}{Les défault des systèmes column-based sur les fonctions d'agrégation}{3}{0}{2}
+\beamer@subsectionintoc {2}{2}{Présentation de la problématique}{4}{0}{2}
+\beamer@sectionintoc {3}{Notre approche}{5}{0}{3}
+\beamer@subsectionintoc {3}{1}{Les bases de données orientées colonnes}{5}{0}{3}
+\beamer@subsectionintoc {3}{2}{Procédés d'optimisation}{6}{0}{3}
+\beamer@subsectionintoc {3}{3}{Les bases de données orientées colonnes}{7}{0}{3}
+\beamer@subsectionintoc {3}{4}{Notre implémentation}{8}{0}{3}
+\beamer@sectionintoc {4}{Conclusion}{9}{0}{4}
+\beamer@subsectionintoc {4}{1}{Notre objectif}{9}{0}{4}
+\beamer@subsectionintoc {4}{2}{Nos ressources et contacts}{10}{0}{4}

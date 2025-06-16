@@ -16,6 +16,12 @@
 *.dylib
 *.dll
 
+# LateX generated output
+*.aux
+*.nav
+*.snm
+*.tec
+
 # Fortran module files
 *.mod
 *.smod
