@@ -390,6 +390,7 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
 
     next = t->next();
 
+    // Default Case
     if (next.m_Token == Lexing::DEFAULT_T) {
         next = t->next();
 
@@ -404,6 +405,103 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
         }
 
         throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected ';' at the end", 0, 0, Errors::ERROR_ENDLINE);
+    } else if (next.m_Token == Lexing::LPAREN_T) {
+
+        // Prefered case with column names given
+
+        // Get all column names and keep the count
+        auto column_order = new std::vector<ColumnName>();
+
+        do {
+            next = t->peek();
+            if (next.m_Token != Lexing::VAR_NAME_T) {
+
+                throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Column name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+            }
+
+            ColumnName* col = ColumnName::ParseColumnName(t);
+
+            column_order->push_back(*col);
+
+            next = t->peek();
+
+            if (next.m_Token != Lexing::COMMA_T) {
+                break;
+            } else {
+                // Consommer la virgule
+                t->next();
+            }
+
+        } while (1);
+
+        next = t->next();
+
+        if (next.m_Token != Lexing::RPAREN_T) {
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a ')'", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+        }
+
+        // Now parsing the actual data
+
+        next = t->next();
+
+        if (next.m_Token != Lexing::VALUES_T) {
+
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'VALUES (...)' in 'INSERT' statement", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+        }
+        next = t->next();
+
+        if (next.m_Token != Lexing::LPAREN_T) {
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a '('", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+        }
+
+        // Keeping track of the 'type' of data provided is useless
+        // as everything is stored in the table and not necessary to write it
+        // Thats why this vector of LitteralValue will finally only contain std::strings
+
+        auto data = new std::vector<LitteralValue<std::string>>();
+
+        data->reserve(column_order->size());
+
+        do {
+            next = t->next();
+
+            if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T) {
+
+                throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected litteral values in 'INSERT' statement", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+            }
+
+            if (next.m_Token == Lexing::STRING_LITT_T) {
+
+                auto val = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
+
+                data->emplace_back(val);
+            }
+
+            else {
+                auto val = LitteralValue<std::string>(ColumnType::INTEGER_C, next.m_Value);
+
+                data->emplace_back(val);
+            }
+
+            next = t->peek();
+
+            if (next.m_Token != Lexing::COMMA_T) {
+                break;
+            } else {
+                // Consommer la virgule
+                t->next();
+            }
+
+        } while (1);
+
+        next = t->next();
+
+        if (next.m_Token != Lexing::RPAREN_T) {
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a ')'", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+        }
+
+        return new InsertStmt(table, false, data, column_order);
+
     } else if (next.m_Token == Lexing::VALUES_T) {
 
         next = t->next();
@@ -412,7 +510,7 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
             throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a '('", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
         }
 
-        std::vector<Expr> data;
+        auto data = new std::vector<LitteralValue<std::string>>();
 
         do {
             next = t->next();
@@ -420,20 +518,19 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
             if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T) {
 
                 throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected litteral values in 'INSERT' statement", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
-            } else {
+            }
 
-                if (next.m_Token == Lexing::STRING_LITT_T) {
+            if (next.m_Token == Lexing::STRING_LITT_T) {
 
-                    LitteralValue<std::string> val = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
+                auto val = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
 
-                    data.push_back(val);
-                }
+                data->push_back(val);
+            }
 
-                else {
-                    LitteralValue<int> val = LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value));
+            else {
+                auto val = LitteralValue<std::string>(ColumnType::INTEGER_C, next.m_Value);
 
-                    data.push_back(val);
-                }
+                data->push_back(val);
             }
 
             next = t->peek();

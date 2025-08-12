@@ -12,11 +12,9 @@ namespace Database::Storing {
 
 class ColumnInfo {
 
-    DbInt64 m_Offset;
+    DbInt m_Offset;
 
     DbInt8 m_ElementSize;
-
-    DbInt m_CurrentMaxRecord;
 
     DbBool m_Sortable;
 
@@ -29,10 +27,9 @@ class ColumnInfo {
 public:
     ColumnInfo() = default;
 
-    ColumnInfo(int offset, uint8_t e_size, int current_max, bool opt)
+    ColumnInfo(int offset, uint8_t e_size, bool opt)
         : m_Offset(offset)
         , m_ElementSize(e_size)
-        , m_CurrentMaxRecord(current_max)
         , m_Sortable(opt)
         , m_IsSorted(opt)
         , m_Compressable(opt)
@@ -40,14 +37,13 @@ public:
     {
     }
 
-    ColumnInfo(int offset, uint8_t e_size, int current_max, bool sortable,
-        bool sorted, bool comrpessable, bool compressed)
+    ColumnInfo(int offset, uint8_t e_size, bool sortable, bool sorted,
+        bool compressable, bool compressed)
         : m_Offset(offset)
         , m_ElementSize(e_size)
-        , m_CurrentMaxRecord(current_max)
         , m_Sortable(sortable)
         , m_IsSorted(sorted)
-        , m_Compressable(compressed)
+        , m_Compressable(compressable)
         , m_IsCompressed(compressed)
     {
     }
@@ -56,19 +52,17 @@ public:
 
     uint8_t GetElementSize() const { return m_ElementSize; }
 
-    int GetCurrentMax() const { return m_CurrentMaxRecord; }
+    static std::unique_ptr<std::vector<
+        std::tuple<DbString, DbInt, DbInt8, DbBool, DbBool, DbBool, DbBool>>>
+    GetColumnsData(int fd, int total_column_number);
 
     std::unordered_map<std::string, ColumnData> Map(const std::string& name)
     {
 
         std::unordered_map<std::string, ColumnData> res = {
-            { "name", Convert::StringToDbString(name) },
-            { "offset", m_Offset },
-            { "element_size", m_ElementSize },
-            { "current_max_record", m_CurrentMaxRecord },
-            { "sortable", m_Sortable },
-            { "sorted", m_IsSorted },
-            { "compressable", m_Compressable },
+            { "name", Convert::StringToDbString(name) }, { "offset", m_Offset },
+            { "element_size", m_ElementSize }, { "sortable", m_Sortable },
+            { "sorted", m_IsSorted }, { "compressable", m_Compressable },
             { "compressed", m_IsCompressed }
         };
 
@@ -81,7 +75,6 @@ public:
         std::unordered_map<std::string, ColumnData> res = {
             { "offset", m_Offset },
             { "element_size", m_ElementSize },
-            { "current_max_record", m_CurrentMaxRecord },
             { "sortable", m_Sortable },
             { "sorted", m_IsSorted },
             { "compressable", m_Compressable },

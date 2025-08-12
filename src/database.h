@@ -28,6 +28,8 @@ public:
 
         std::string db_path;
 
+        bool created = false;
+
         // If there is no arguments, then it's a line by line interactive interpreter
         // Running default *.db database
         if (argc < 2) {
@@ -41,13 +43,15 @@ public:
 
             if (db_path == "") {
                 db_path = Storing::File::CreateFile();
+
+                created = !created;
             }
 
         } else {
             db_path = argv[1];
         }
 
-        Storing::File f = Storing::File(db_path);
+        Storing::File f = Storing::File(db_path, created);
 
         // Après avoir trouvé et chargé le fichier
         // On charge la table système qui repertorie toutes les colonnes dans
@@ -80,7 +84,7 @@ public:
 
           */
 
-        Utils::Repl::Run();
+        Utils::Repl::Run(f);
     }
 };
 

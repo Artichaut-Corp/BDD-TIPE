@@ -1,6 +1,12 @@
+#include "../errors.h"
+#include "../parser.h"
 #include "table.h"
 #include "types.h"
 
+#include <cstring>
+#include <memory>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 #ifndef RECORD_H
@@ -9,39 +15,41 @@
 
 namespace Database::Storing {
 
-using DBTableIndex = std::unordered_map<std::string, TableInfo>;
-
-static DBTableIndex Index = {};
-
 class Record {
 
-    static ColumnInfo LocateColumn(std::string table_name,
-        std::string column_name)
-    {
-        // - Aller chercher la table système via le header qui garde sa position
-        // - Parcourir jusqu'à trouver la bonne table puis la bonne colonne
-        // - Remplir la structure et la retourner
-    }
-
 public:
-    static Column GetColumn(int fd,
-        ColumnInfo& info)
+    template <typename T>
+    static std::unique_ptr<std::vector<T>>
+    GetColumn(int fd, const ColumnInfo& info, uint16_t element_number)
     {
         // Etapes:
         // - Aller Chercher les informations de la table (peut être les garder)
         // - Lire à partir de l'offset n tous les n + |e|
         // - Remplir et retourner un vecteur
 
-        auto result = std::make_unique<std::vector<ColumnData>>();
+        auto result = std::make_unique<std::vector<T>>();
 
-        const uint64_t offset = info.GetOffset();
-        const int element_count = info.GetCurrentMax();
+        uint32_t offset = info.GetOffset();
 
-        result->reserve(element_count);
+        uint8_t element_size = info.GetElementSize();
+
+        result->reserve(element_number);
 
         lseek(fd, offset, SEEK_SET);
 
-        read(fd, result->data(), info.GetElementSize() * element_count);
+        T buffer;
+
+        for (int i = 0; i < element_number; i++) {
+            int bytes_read = read(fd, &buffer, element_size);
+
+            offset += bytes_read;
+
+            if (bytes_read != element_size) {
+                throw std::runtime_error("failed to read");
+            }
+
+            result->emplace_back(buffer);
+        }
 
         return result;
     }
@@ -52,26 +60,26 @@ public:
     // capacité qui meneraient éventuellement à déplacer l'entierté / une partie
     // / rien des données
     template <typename T>
-    static uint32_t Write(int fd, TableInfo& info, T* record)
+    static void Write(int fd, TableInfo* info, const T& record)
     {
 
         const auto data = record->Map();
 
         int ret = 0;
 
-        for (auto iter = info.m_Columns.begin(); iter != info.m_Columns.end();
+        for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
             // Ptêtre bound check quand même
-            lseek(fd,
-                iter->second.GetOffset() + e_size * iter->second.GetCurrentMax(),
+            lseek(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
                 SEEK_SET);
 
             ret = write(fd, &data.at(iter->first), e_size);
         }
-        return info.GetColumnsFirstOffset();
+
+        info->IncrMaxRecord();
     }
 
     // Supposant que la table existe;
@@ -80,7 +88,7 @@ public:
     // capacité qui meneraient éventuellement à déplacer l'entierté / une partie
     // / rien des données
     template <typename T>
-    static uint32_t Write(int fd, TableInfo& info, T* record,
+    static void Write(int fd, TableInfo* info, const T& record,
         const std::string& name)
     {
 
@@ -88,48 +96,72 @@ public:
 
         int ret = 0;
 
-        for (auto iter = info.m_Columns.begin(); iter != info.m_Columns.end();
+        for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
             // Ptêtre bound check quand même
-            lseek(fd,
-                iter->second.GetOffset() + e_size * iter->second.GetCurrentMax(),
+            lseek(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
                 SEEK_SET);
 
             ret = write(fd, &data.at(iter->first), e_size);
         }
 
-        return info.GetColumnsFirstOffset();
+        info->IncrMaxRecord();
     }
 
-    static uint32_t Write(int fd, TableInfo& info, TableInfo* record,
-        const std::string& name,
-        const std::vector<DbInt> offsets)
+    // Using directly a map to write data
+    // Does not ensure that the TableInfo provided corresponds to the data
+    static void Write(int fd, TableInfo* info, const std::unordered_map<std::string, ColumnData>& data)
     {
-
-        auto data = record->Map(name, offsets);
 
         int ret = 0;
 
-        for (auto iter = info.m_Columns.begin(); iter != info.m_Columns.end();
+        for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
             // Ptêtre bound check quand même
-            lseek(fd,
-                iter->second.GetOffset() + e_size * iter->second.GetCurrentMax(),
+            lseek(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
                 SEEK_SET);
 
             ret = write(fd, &data.at(iter->first), e_size);
         }
 
-        return info.GetColumnsFirstOffset();
+        info->IncrMaxRecord();
+    }
+
+    // Choose between the possiblities of "ClassNameRecord"
+    // As the user doesnt create tables, we can just fetch the right one
+    template <typename R>
+    static std::variant<std::unique_ptr<R>, Errors::Error> GetRecordFromTableName(const std::string& name, std::unordered_map<std::string, ColumnData> data);
+
+    static std::unordered_map<std::string, ColumnData>* GetMapFromData(std::vector<Parsing::LitteralValue<std::string>>* column_data, std::vector<Parsing::ColumnName>* column_order)
+    {
+
+        auto res = new std::unordered_map<std::string, ColumnData>();
+
+        // Assuming the vectors have the same length
+        // I will certainly need some types to cast in
+        //
+        // TODO: Not functionnal till types are not casted rigth
+        for (int i = 0; i < column_order->size(); i++) {
+
+            if (column_data->at(i).getColumnType() == Parsing::ColumnType::INTEGER_C) {
+                res->insert(
+                    { column_order->at(i).getColumnName(), static_cast<DbInt>(std::stoi(column_data->at(i).getData())) });
+            } else {
+
+                res->insert(
+                    { column_order->at(i).getColumnName(), Convert::StringToDbString(column_data->at(i).getData()) });
+            }
+        }
+
+        return res;
     }
 };
-
 
 }
 #endif

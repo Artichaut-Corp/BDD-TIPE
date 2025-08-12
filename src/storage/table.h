@@ -3,6 +3,7 @@
 #define TABLE_H
 
 #include <cmath>
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -14,30 +15,53 @@ namespace Database::Storing {
 
 //  Contient les informations immuables liées à une table
 class TableInfo {
-    DbInt m_IsSys;
+    DbBool m_IsSys;
 
-    DbInt m_CurrentMaxRecord;
+    DbInt16 m_CurrentElementNb;
 
-    DbInt m_ColumnNumber;
+    DbInt8 m_ColumnNumber;
 
-    uint64_t m_FirstColumnOffset;
+    DbInt m_FirstColumnOffset;
 
 public:
     std::unordered_map<std::string, ColumnInfo> m_Columns;
 
     TableInfo() = default;
 
-    TableInfo(bool sys, int current_max_record, int column_number,
+    TableInfo(bool sys, uint8_t column_number, uint32_t first_offset,
         std::vector<std::pair<std::string, ColumnInfo>> columns)
         : m_IsSys(sys)
-        , m_CurrentMaxRecord(current_max_record)
+        , m_CurrentElementNb(0)
         , m_ColumnNumber(column_number)
+        , m_FirstColumnOffset(first_offset)
+
     {
 
         m_Columns.insert(columns.begin(), columns.end());
     }
 
-    bool IsSys() { return m_IsSys; }
+    TableInfo(bool sys, uint16_t current_element_number, uint8_t column_number,
+        uint32_t first_offset,
+        std::vector<std::pair<std::string, ColumnInfo>> columns)
+        : m_IsSys(sys)
+        , m_CurrentElementNb(current_element_number)
+        , m_ColumnNumber(column_number)
+        , m_FirstColumnOffset(first_offset)
+    {
+
+        m_Columns.insert(columns.begin(), columns.end());
+    }
+
+    DbInt GetElementNumber() { return m_CurrentElementNb; }
+
+    DbBool IsSys() { return m_IsSys; }
+
+    DbInt8 GetColumnNumber() { return m_ColumnNumber; }
+
+    void IncrMaxRecord()
+    {
+        m_CurrentElementNb++;
+    }
 
     ColumnInfo& GetColumnInfo(const std::string& column_name)
     {
@@ -51,6 +75,7 @@ public:
     }
 
     // Etrange manière de le faire + pas très opti
+    // Useless prob
     uint64_t GetColumnsFirstOffset()
     {
         uint64_t ret = std::pow(2, 64) - 1;
@@ -66,28 +91,39 @@ public:
         return ret;
     }
 
+    // 1. Récupérer toutes les données des colonnes (chaque méta-donnée un vec).
+    // Besoin nb total de colonnes
+    // 2. Découper et créer les vecteurs qui contiennent les données selon les
+    // tables
+    static std::unique_ptr<std::vector<std::pair<std::string, ColumnInfo>>>
+    GetTableColumns(
+        int fd, uint8_t column_number, int column_number_beginning,
+        const std::unique_ptr<std::vector<
+            std::tuple<DbString, DbInt, DbInt8, DbBool, DbBool, DbBool, DbBool>>>& data);
+
     std::unordered_map<std::string, ColumnData> Map(const std::string& name,
-        std::vector<DbInt> offsets)
+        DbInt offset)
     {
         return { { "name", Convert::StringToDbString(name) },
-            { "offsets", Convert::VectorToDbIntArray(offsets) },
+            { "column_offset", offset },
             { "is_sys", m_IsSys },
-            { "current_max_record", m_CurrentMaxRecord },
+            { "current_max_record", m_CurrentElementNb },
             { "column_number", m_ColumnNumber } };
     }
 
     std::unordered_map<std::string, ColumnData> Map(const std::string& name)
     {
         return { { "name", Convert::StringToDbString(name) },
+            { "column_offset", m_FirstColumnOffset },
             { "is_sys", m_IsSys },
-            { "current_max_record", m_CurrentMaxRecord },
+            { "current_max_record", m_CurrentElementNb },
             { "column_number", m_ColumnNumber } };
     }
 
     std::unordered_map<std::string, ColumnData> Map()
     {
         return { { "is_sys", m_IsSys },
-            { "current_max_record", m_CurrentMaxRecord },
+            { "current_max_record", m_CurrentElementNb },
             { "column_number", m_ColumnNumber } };
     }
 };

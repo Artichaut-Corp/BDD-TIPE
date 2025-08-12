@@ -24,11 +24,13 @@ TEST(InsertStmtTest, DefaultCase)
 // INSERT INTO Ville VALUES ("Vannes",  54420, "Bretagne");
 TEST(InsertStmtTest, SimpleValues)
 {
-    auto data = std::vector<Expr>(3);
+    auto data = new std::vector<LitteralValue<std::string>>();
 
-    data[0] = LitteralValue<std::string>(ColumnType::TEXT_C, "Vannes");
-    data[1] = LitteralValue<int>(ColumnType::INTEGER_C, 54420);
-    data[2] = LitteralValue<std::string>(ColumnType::TEXT_C, "Bretagne");
+    data->reserve(3);
+
+    data->emplace_back(LitteralValue<std::string>(ColumnType::TEXT_C, "Vannes"));
+    data->emplace_back(LitteralValue<std::string>(ColumnType::INTEGER_C, "54420"));
+    data->emplace_back(LitteralValue<std::string>(ColumnType::TEXT_C, "Bretagne"));
 
     auto name = new TableName("Ville");
 

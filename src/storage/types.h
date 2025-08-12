@@ -3,12 +3,10 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
 #include <assert.h>
-
 
 #ifndef DB_TYPES_H
 
@@ -20,26 +18,34 @@ namespace Database {
 #define MAX_COLUMN_PER_TABLE 16
 #define MAX_ELEMENT_PER_COLUMN 4096
 #define MAX_ARRAY_SIZE 16
-#define MAX_STRING_LENGTH 256
+#define MAX_STRING_LENGTH 255
 
 constexpr uint8_t DB_BOOL_SIZE = 1; // 8 bits
+constexpr uint8_t DB_INT8_SIZE = 1; // 8 bits
+constexpr uint8_t DB_INT16_SIZE = 2; // 16 bits
 constexpr uint8_t DB_INT_SIZE = 4; // 32 bits
 constexpr uint8_t DB_INT64_SIZE = 8; // 64 bits
 constexpr uint8_t DB_CHAR_SIZE = 1; // 8 bits
-constexpr uint8_t DB_STRING_SIZE = 255; // 255 chars
+constexpr uint8_t DB_STRING_SIZE = MAX_STRING_LENGTH * DB_CHAR_SIZE; // 256 chars
 constexpr uint8_t DB_INT_ARRAY_SIZE = DB_INT_SIZE * MAX_ARRAY_SIZE; // 16 int
 
-constexpr uint32_t DB_SCHEMA_TABLE_SIZE = DB_STRING_SIZE + MAX_COLUMN_PER_TABLE * DB_BOOL_SIZE + 2 * MAX_COLUMN_PER_TABLE * DB_INT_SIZE;
+// Taille d'un élément de la table système contenant les
+// méta-données des tables
+constexpr uint32_t DB_SCHEMA_TABLE_SIZE = DB_STRING_SIZE + DB_BOOL_SIZE + DB_INT16_SIZE + DB_INT8_SIZE + DB_INT_SIZE;
 
-constexpr uint32_t DB_SCHEMA_COLUMN_SIZE = DB_STRING_SIZE + MAX_COLUMN_PER_TABLE * DB_INT_SIZE + 4 * MAX_COLUMN_PER_TABLE * DB_BOOL_SIZE;
+// Taille d'un élément de la table système contenant les
+// méta-données des colonnes
+constexpr uint32_t DB_SCHEMA_COLUMN_SIZE = DB_STRING_SIZE + DB_INT_SIZE + DB_INT8_SIZE + 4 * DB_BOOL_SIZE;
 
 #define HEADER_OFFSET 0
 #define SIGNATURE_OFFSET 0
 #define TABLE_NUMBER_OFFSET 52 * DB_CHAR_SIZE
 #define LAST_OFFSET_OFFSET 52 * DB_CHAR_SIZE + 1
 #define SCHEMA_TABLE_OFFSET 52 * DB_CHAR_SIZE + 2
-#define SCHEMA_COLUMN_OFFSET SCHEMA_TABLE_OFFSET + DB_SCHEMA_TABLE_SIZE
-#define HEADER_END SCHEMA_COLUMN_OFFSET + DB_SCHEMA_COLUMN_SIZE
+#define SCHEMA_COLUMN_OFFSET \
+    SCHEMA_TABLE_OFFSET + MAX_TABLE* DB_SCHEMA_TABLE_SIZE
+#define HEADER_END \
+    SCHEMA_COLUMN_OFFSET + MAX_TABLE* MAX_COLUMN_PER_TABLE* DB_SCHEMA_COLUMN_SIZE
 
 enum class Type {
     Null = 0,
@@ -51,6 +57,7 @@ using DbNull = std::nullopt_t;
 
 using DbBool = uint8_t;
 using DbInt8 = uint8_t;
+using DbInt16 = uint16_t;
 using DbInt = uint32_t;
 using DbInt64 = uint64_t;
 using DbChar = uint8_t;
@@ -59,11 +66,10 @@ using DbIntArray = std::array<DbInt, MAX_ARRAY_SIZE>;
 
 static uint64_t m_CurrOffset = 0;
 
-using ColumnData = std::variant<DbBool, DbInt, DbInt64, DbString, DbIntArray>;
+using ColumnData = std::variant<DbInt8, DbInt16, DbInt, DbInt64, DbString>;
 
-using Column = std::unique_ptr<std::vector<ColumnData>>;
-
-
+using Column = std::variant<
+    std::unique_ptr<std::vector<DbInt8>>, std::unique_ptr<std::vector<DbInt16>>, std::unique_ptr<std::vector<DbInt>>, std::unique_ptr<std::vector<DbInt64>>, std::unique_ptr<std::vector<DbString>>>;
 
 class Convert {
 public:
@@ -98,7 +104,7 @@ public:
 
     static DbString StringToDbString(const std::string& s)
     {
-        DbString r = std::array<DbChar, 256>();
+        DbString r = std::array<DbChar, 255>();
 
         for (int i = 0; i < s.length(); i++) {
             r[i] = s[i];

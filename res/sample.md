@@ -15,4 +15,10 @@ SELECT "room", COUNT("room") AS count, SUM("it_bool") AS it_bool FROM "timeslot"
 SELECT SUM("timeslot"."it_bool") AS SUM FROM "timeslot" INNER JOIN "registration" ON "registration"."id"="timeslot"."id" WHERE "week"=:week AND "registration"."account"=:user_id;
 SELECT * from "availability" WHERE "whose" IS NOT NULL AND "room"=:room ;
 SELECT count("whose") AS SUM FROM "availability" WHERE "room"=:room AND "whose" like "%" :class "%"AND (;
+
+
+INSERT INTO country (name, pop) VALUES ("France", 68605616);
+INSERT INTO country (name, pop) VALUES ("Japon", 123360000);
+INSERT INTO country (name, pop) VALUES ("Norvège", 5594340);
+INSERT INTO country (name, pop) VALUES ("Danemark", 5992734);
 ```

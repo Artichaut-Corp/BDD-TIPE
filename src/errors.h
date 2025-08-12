@@ -27,8 +27,8 @@ const ErrorCode ERROR_EXPECTED_EXPRESSION = std::pair(12, "Expected an expressio
 const ErrorCode ERROR_FILE_NOT_FOUND = std::pair(13, "File was not found");
 const ErrorCode ERROR_WRONG_MEMORY_ACCESS = std::pair(14, "Unallowed access to memory");
 const ErrorCode ERROR_UNEXPECTED_CALL_TO_FUNCTION = std::pair(15, "Unexpected call to function");
-const ErrorCode ERROR_TABLE_DOES_NOT_EXIST = std::pair(16, "Try to access a table that does not exist");
-const ErrorCode ERROR_COLUMN_DOES_NOT_EXIST = std::pair(17, "Try to access a column that does not exist");
+const ErrorCode ERROR_TABLE_DOES_NOT_EXIST = std::pair(16, "Tried to access a table that does not exist");
+const ErrorCode ERROR_COLUMN_DOES_NOT_EXIST = std::pair(17, "Tried to access a column that does not exist");
 
 enum class ErrorType { ParserError,
     SyntaxError,
@@ -73,8 +73,7 @@ public:
     {
         try {
             std::cout << "ERROR "
-                      << "[[ " << m_ErrorCode.first << " ]] - " << m_ErrorCode.second;
-            std::cout << " at line " << m_Line << " and column " << m_Col << std::endl;
+                      << "[[ " << m_ErrorCode.first << " ]] - " << m_ErrorCode.second << ":\n";
             std::cout << m_Message << std::endl;
         } catch (ParserInternalError) {
             throw ParserInternalError();

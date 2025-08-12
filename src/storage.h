@@ -1,6 +1,7 @@
 #include "errors.h"
 #include "storage/cursor.h"
 #include "storage/file.h"
+#include "storage/record.h"
 #include "storage/table.h"
 #include "storage/types.h"
 
@@ -12,57 +13,40 @@
 
 namespace Database::Storing {
 
+using DBTableIndex = std::unordered_map<std::string, TableInfo>;
+using DBTableOrder = std::vector<std::string>;
+
+extern DBTableIndex Index;
+extern DBTableOrder TableOrder;
+
 class Store {
+
 public:
-    static std::variant<Column, Errors::Error> GetColumn(int fd, const std::string& table_name, const std::string& column_name);
+    static std::variant<Column, Errors::Error> GetDBColumn(int fd, const std::string& table_name, const std::string& column_name);
 
     template <typename R>
-    static std::optional<Errors::Error> SetRecord(int fd, const std::string& table_name, R* record);
+    [[nodiscard]] static std::optional<Errors::Error> SetRecord(int fd, const std::string& table_name, R* record);
+
+    [[nodiscard]] static std::optional<Errors::Error> SetData(int fd, const std::string& table_name, const std::unordered_map<std::string, ColumnData>& data);
 };
 
 class CountryRecord {
-    DbString name;
-    DbInt pop;
+    DbString m_Name;
+    DbInt m_Pop;
 
+public:
+    CountryRecord(const std::string& name, int pop)
+        : m_Name(Convert::StringToDbString(name))
+        , m_Pop(pop)
+    {
+    }
     std::unordered_map<std::string, ColumnData> Map()
     {
-        return { { "name", name }, { "pop", pop } };
+        return { { "name", m_Name }, { "pop", m_Pop } };
     }
 
     // Crée en mémoire la représentation de la table pays
-    static void CreateCountryTable(int fd, DBTableIndex& index)
-    {
-        // -- Country Table --
-        // Text name
-        // Int pop
-
-        std::vector<DbInt>* offsets = new std::vector<DbInt>();
-
-        // Passer comme offset la première localisation encore disponible, prob via
-        // la class Cursor
-        ColumnInfo* c_name = new ColumnInfo(
-            Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE),
-            DB_STRING_SIZE, 0, false);
-
-        offsets->push_back(Record::Write(fd, index.at("schema_column"), c_name));
-
-        ColumnInfo* c_pop = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-            DB_INT_SIZE, 0, false);
-
-        offsets->push_back(Record::Write(fd, index.at("schema_column"), c_pop));
-
-        auto c_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-            { "name", *c_name }, { "pop", *c_pop }
-        };
-
-        // 3. Write it on disk in the dedicated system table
-
-        auto t = new TableInfo(false, 0, 2, c_columns);
-
-        index.insert({ "country", *t });
-
-        Record::Write(fd, index.at("schema_table"), t, "country", *offsets);
-    }
+    static void CreateCountryTable(int fd);
 };
 
 } // namespace Database::Storing

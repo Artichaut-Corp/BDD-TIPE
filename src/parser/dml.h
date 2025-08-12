@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <assert.h>
 #include <memory>
 #include <optional>
@@ -329,11 +328,11 @@ class InsertStmt {
     std::unique_ptr<TableName> m_Table;
 
     // Define and optional order ( .., .., )
-    std::optional<std::vector<ColumnName>> m_Order;
+    std::optional<std::unique_ptr<std::vector<ColumnName>>> m_Order;
 
     // Data, un autre type pourrait probablement
     //  mieux convenir
-    std::optional<std::vector<Expr>> m_Data;
+    std::optional<std::unique_ptr<std::vector<LitteralValue<std::string>>>> m_Data;
 
     // VALUES
 
@@ -347,10 +346,18 @@ public:
     {
     }
 
-    InsertStmt(TableName* name, bool def, std::vector<Expr> data)
+    InsertStmt(TableName* name, bool def, std::vector<LitteralValue<std::string>>* data)
         : m_Table(name)
         , m_Default(def)
         , m_Data(data)
+    {
+    }
+
+    InsertStmt(TableName* name, bool def, std::vector<LitteralValue<std::string>>* data, std::vector<ColumnName>* order)
+        : m_Table(name)
+        , m_Default(def)
+        , m_Data(data)
+        , m_Order(order)
     {
     }
 
@@ -364,12 +371,12 @@ public:
         return m_Table.get();
     }
 
-    const std::optional<std::vector<ColumnName>>& getOrder() const
+    const std::optional<std::unique_ptr<std::vector<ColumnName>>>& getOrder() const
     {
         return m_Order;
     }
 
-    const std::optional<std::vector<Expr>>& getData() const
+    const std::optional<std::unique_ptr<std::vector<LitteralValue<std::string>>>>& getData() const
     {
         return m_Data;
     }
