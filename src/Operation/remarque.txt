@@ -1,0 +1,4 @@
+Lors du join, si des colonne sont en communs avec les deux table, alors seule les informations de la colonne stocker dans la première table sont enregistrer
+
+
+Dans le join, le constructeur des colonnes n'est pas trouvé...

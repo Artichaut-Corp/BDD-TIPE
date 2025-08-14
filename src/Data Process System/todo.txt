@@ -1,0 +1,3 @@
+Dans Racine, il faut définir la méthode pour récupérer la valeur stocker dans le pointeur
+
+fix le problème de définition des prototype dans Table.h et Table.c
