@@ -1,6 +1,8 @@
 #include <format>
 #include <iostream>
+#include <iterator>
 #include <memory>
+#include <span>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -113,10 +115,51 @@ class Repl {
 
             // On va avoir besoin de sombres techniques pour savoir quelle class enployer et remplir des info recup
             if (insert->isDefault()) {
-
+                std::cout << "TODO: insert stmt using default values.\n";
             } else if (insert->getOrder().has_value()) {
 
                 std::unordered_map<std::string, ColumnData>* data = Storing::Record::GetMapFromData(insert->getData()->get(), insert->getOrder()->get());
+
+                auto err = Storing::Store::SetData(f.Fd(), name, *data);
+
+                delete data;
+
+                if (err.has_value()) {
+                    err->printAllInfo();
+
+                    return "\0";
+                }
+
+            } else {
+                // Use a default order to fill column
+                // We will worry about it later
+
+                std::cout << "TODO: insert stmt using default order.\n";
+            }
+
+            delete insert;
+
+            output = std::format("Inserted one record into table {}.", name);
+
+        } else if (std::holds_alternative<Parsing::Transaction*>(stmt)) {
+            auto transaction = std::get<Parsing::Transaction*>(stmt);
+
+            std::string name = transaction->getTable()->getTableName();
+
+            auto col_order = transaction->getOrder().get();
+
+            auto col_data = transaction->getData().get();
+
+            size_t col_number = col_order->size();
+
+            size_t record_number = col_data->size();
+
+            std::unordered_map<std::string, ColumnData>* data;
+            for (size_t i = 0; i < record_number / col_number; i++) {
+
+                data = Storing::Record::GetMapFromData(
+                    std::span(col_data->begin() + 2 * i, col_data->begin() + (2 * i + col_number)),
+                    col_order);
 
                 auto err = Storing::Store::SetData(f.Fd(), name, *data);
 
@@ -125,16 +168,13 @@ class Repl {
 
                     return "\0";
                 }
-
-                delete data;
-            } else {
-                // Use a default order to fill column
-                // We will worry about it later
             }
 
-            delete insert;
+            delete data;
 
-            output = std::format("Inserted one record into table {}.", name);
+            delete transaction;
+
+            output = std::format("Inserted {} elements into table {}.", record_number / col_number, name);
         } else if (std::holds_alternative<Parsing::DeleteStmt*>(stmt)) {
             // delete est un mot réservé en C++
             auto del = std::get<Parsing::DeleteStmt*>(stmt);

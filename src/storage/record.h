@@ -161,6 +161,30 @@ public:
 
         return res;
     }
+
+    static std::unordered_map<std::string, ColumnData>* GetMapFromData(std::span<Parsing::LitteralValue<std::string>> column_data, std::vector<Parsing::ColumnName>* column_order)
+    {
+
+        auto res = new std::unordered_map<std::string, ColumnData>();
+
+        // Assuming the vectors have the same length
+        // I will certainly need some types to cast in
+        //
+        // TODO: Not functionnal till types are not casted rigth
+        for (int i = 0; i < column_order->size(); i++) {
+
+            if (column_data[i].getColumnType() == Parsing::ColumnType::INTEGER_C) {
+                res->insert(
+                    { column_order->at(i).getColumnName(), static_cast<DbInt>(std::stoi(column_data[i].getData())) });
+            } else {
+
+                res->insert(
+                    { column_order->at(i).getColumnName(), Convert::StringToDbString(column_data[i].getData()) });
+            }
+        }
+
+        return res;
+    }
 };
 
 }

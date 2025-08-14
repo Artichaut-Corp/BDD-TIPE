@@ -529,19 +529,47 @@ public:
     static SelectStmt* ParseSelect(Lexing::Tokenizer* t);
 };
 
+/* Type of request used to insert data in large batches.
+ * Syntax:
+ *  TRANSACTION table_name
+ *  (col_1, col_2, ..., col_n)
+ *  VALUES
+ *  (val_11, val_21, ..., val_n1 ),
+ *  ....
+ *  (val_1n, val_2n, ..., val_nn)
+ *  END;
+ */
 class Transaction {
     std::unique_ptr<TableName> m_Table;
 
-    std::vector<std::vector<Expr>> m_Data;
+    std::unique_ptr<std::vector<LitteralValue<std::string>>> m_Data;
 
-    Transaction(TableName* name, std::vector<std::vector<Expr>> data)
+    std::unique_ptr<std::vector<ColumnName>> m_Order;
+
+    Transaction(TableName* name, std::vector<LitteralValue<std::string>>* data, std::vector<ColumnName>* order)
         : m_Table(name)
         , m_Data(data)
+        , m_Order(order)
     {
     }
 
 public:
     static Transaction* ParseTransaction(Lexing::Tokenizer* t);
+
+    TableName* getTable() const
+    {
+        return m_Table.get();
+    }
+
+    const std::unique_ptr<std::vector<LitteralValue<std::string>>>& getData() const
+    {
+        return m_Data;
+    }
+
+    const std::unique_ptr<std::vector<ColumnName>>& getOrder() const
+    {
+        return m_Order;
+    }
 };
 
 } // namespace parsing

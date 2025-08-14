@@ -21,4 +21,15 @@ INSERT INTO country (name, pop) VALUES ("France", 68605616);
 INSERT INTO country (name, pop) VALUES ("Japon", 123360000);
 INSERT INTO country (name, pop) VALUES ("Norvège", 5594340);
 INSERT INTO country (name, pop) VALUES ("Danemark", 5992734);
+
+TRANSACTION country (name, pop)
+VALUES
+("France", 67000000),
+("Allemagne", 80000000),
+("Japon", 120000000),
+("Corée du Sud", 50000000),
+("Norvège", 5000000),
+("Danemark", 5000000),
+("Suède", 10000000)
+END;
 ```

@@ -376,14 +376,14 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
     auto next = t->next();
 
     if (next.m_Token != Lexing::INTO_T) {
-        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'INTO' after 'INSERT'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'INTO' after 'INSERT'.", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
     }
 
     next = t->peek();
 
     if (next.m_Token != Lexing::VAR_NAME_T) {
 
-        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table name after 'INTO' in INSERT statement.", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
     }
 
     TableName* table = TableName::ParseTableName(t);
@@ -723,41 +723,65 @@ Transaction* Transaction::ParseTransaction(Lexing::Tokenizer* t)
 
     auto next = t->peek();
 
-    std::cout << next << "\n";
+    if (next.m_Token != Lexing::VAR_NAME_T) {
 
-    TableName* name;
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table name after 'INTO' in INSERT statement.", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+    }
 
-    std::vector<std::vector<Expr>> data;
+    TableName* table_name = TableName::ParseTableName(t);
 
-    while (next.m_Token != Lexing::END_T) {
+    next = t->next();
 
-        std::cout << next << "\n";
+    // Parse the order of columns given
+    if (next.m_Token != Lexing::LPAREN_T) {
+    }
+    // Get all column names and keep the count
+    auto column_order = new std::vector<ColumnName>();
 
-        assert(t->next().m_Token == Lexing::INSERT_T);
+    do {
+        next = t->peek();
+        if (next.m_Token != Lexing::VAR_NAME_T) {
 
-        auto next = t->next();
-
-        if (next.m_Token != Lexing::INTO_T) {
-            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'INTO' after 'INSERT'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Column name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
         }
+
+        ColumnName* col = ColumnName::ParseColumnName(t);
+
+        column_order->push_back(*col);
 
         next = t->peek();
 
-        if (next.m_Token != Lexing::VAR_NAME_T) {
-
-            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+        if (next.m_Token != Lexing::COMMA_T) {
+            break;
+        } else {
+            // Consommer la virgule
+            t->next();
         }
 
-        // On pourrait optimiser le parsing en n'analysant pas les
-        // noms de table que l'on connait déjà
+    } while (1);
 
-        name = TableName::ParseTableName(t);
+    next = t->next();
 
-        next = t->next();
+    if (next.m_Token != Lexing::RPAREN_T) {
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a ')'", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+    }
 
-        if (next.m_Token != Lexing::VALUES_T) {
-            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'VALUES' in transactionnal 'INSERT' statement ", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
-        }
+    // Now parsing the actual data
+
+    next = t->next();
+
+    if (next.m_Token != Lexing::VALUES_T) {
+
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'VALUES (...)' in 'TRANSACTION' statement", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+    }
+
+    auto data = new std::vector<LitteralValue<std::string>>();
+
+    size_t col_number = column_order->size();
+
+    while (true) {
+
+        data->reserve(col_number);
 
         next = t->next();
 
@@ -765,45 +789,50 @@ Transaction* Transaction::ParseTransaction(Lexing::Tokenizer* t)
             throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a '('", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
         }
 
-        std::vector<Expr> values;
+        for (int i = 0; i < col_number; i++) {
 
-        do {
             next = t->next();
 
             if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T) {
 
-                throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected litteral values in 'INSERT' statement", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+                throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected litteral values in 'TRANSACTION' statement.", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
             }
 
             if (next.m_Token == Lexing::STRING_LITT_T) {
 
-                LitteralValue<std::string> val = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
+                auto val = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
 
-                values.push_back(val);
+                data->emplace_back(val);
             }
 
             else {
-                LitteralValue<int> val = LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value));
+                auto val = LitteralValue<std::string>(ColumnType::INTEGER_C, next.m_Value);
 
-                values.push_back(val);
+                data->emplace_back(val);
             }
 
             next = t->peek();
 
             if (next.m_Token != Lexing::COMMA_T) {
-                break;
-            } else {
-                // Consommer la virgule
-                t->next();
-            }
-        } while (1);
+                if (i == col_number - 1) {
+                    continue;
+                }
 
-        data.push_back(values);
+                throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a ','", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+            }
+            next = t->next();
+        }
 
         next = t->next();
 
         if (next.m_Token != Lexing::RPAREN_T) {
             throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected a ')'", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
+        }
+
+        next = t->next();
+
+        if (next.m_Token != Lexing::COMMA_T) {
+            break;
         }
     }
 
@@ -818,7 +847,7 @@ Transaction* Transaction::ParseTransaction(Lexing::Tokenizer* t)
         throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected ';' at the end", 0, 0, Errors::ERROR_ENDLINE);
     }
 
-    return new Transaction(name, data);
+    return new Transaction(table_name, data, column_order);
 }
 
 } // namespace parsing
