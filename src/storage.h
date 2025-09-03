@@ -1,4 +1,7 @@
 #include "errors.h"
+
+#include "storage/column.h"
+#include "storage/common.h"
 #include "storage/cursor.h"
 #include "storage/file.h"
 #include "storage/record.h"
@@ -6,6 +9,8 @@
 #include "storage/types.h"
 
 #include <optional>
+#include <string>
+#include <unordered_map>
 
 #ifndef STORAGE_H
 
@@ -13,21 +18,19 @@
 
 namespace Database::Storing {
 
-using DBTableIndex = std::unordered_map<std::string, TableInfo>;
-using DBTableOrder = std::vector<std::string>;
+using DBTableIndex = std::unordered_map<std::string, Storing::TableInfo>;
 
-extern DBTableIndex Index;
-extern DBTableOrder TableOrder;
+using DBTableOrder = std::vector<std::string>;
 
 class Store {
 
 public:
-    static std::variant<Column, Errors::Error> GetDBColumn(int fd, const std::string& table_name, const std::string& column_name);
+    static std::variant<Column, Errors::Error> GetDBColumn(int fd, DBTableIndex* Index, const std::string& table_name, const std::string& column_name);
 
     template <typename R>
-    [[nodiscard]] static std::optional<Errors::Error> SetRecord(int fd, const std::string& table_name, R* record);
+    [[nodiscard]] static std::optional<Errors::Error> SetRecord(int fd, DBTableIndex* Index, const std::string& table_name, R* record);
 
-    [[nodiscard]] static std::optional<Errors::Error> SetData(int fd, const std::string& table_name, const std::unordered_map<std::string, ColumnData>& data);
+    [[nodiscard]] static std::optional<Errors::Error> SetData(int fd, DBTableIndex* Index, const std::string& table_name, const std::unordered_map<std::string, ColumnData>& data);
 };
 
 class CountryRecord {
@@ -44,9 +47,6 @@ public:
     {
         return { { "name", m_Name }, { "pop", m_Pop } };
     }
-
-    // Crée en mémoire la représentation de la table pays
-    static void CreateCountryTable(int fd);
 };
 
 } // namespace Database::Storing

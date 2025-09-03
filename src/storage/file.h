@@ -13,7 +13,6 @@
 
 #include "column.h"
 #include "cursor.h"
-#include "record.h"
 #include "types.h"
 
 #ifndef FILE_H
@@ -60,7 +59,6 @@ public:
     std::variant<void*, Errors::Error> GetPage(uint32_t pageNumber);
 };
 
-
 class File {
 
 private:
@@ -71,8 +69,7 @@ private:
     std::unique_ptr<Cursor> m_Cursor;
 
 public:
-
-    File(std::string filepath, bool was_just_created)
+    File(const std::string& filepath)
     {
         int fd = open(filepath.c_str(), O_RDWR, S_IWUSR | S_IRUSR);
 
@@ -89,8 +86,6 @@ public:
         m_Size = s.st_size;
 
         m_Fd = fd;
-
-        FillIndex(fd);
     }
 
     static int GetTableCount(int fd);
@@ -99,27 +94,13 @@ public:
 
     static void IncrTableCount(int fd);
 
-    static void PrintIndex(int fd, std::ostream& out);
-
-    // Prépare et charge l'index des tables déjà présentes en mémoire
-    static void FillIndex(int fd);
-
     static bool
     RecognizedDatabaseSignature(int fd);
 
     static void AddDatabaseSignature(int fd);
 
-    static std::string CreateFile();
-
     // A modifier pour assurer la validité de la variable
     int Fd() const { return m_Fd; }
-
-    // Cette méthode n'est normalement appelée qu'une fois lors de la création du
-    // fichier .db. Elle initialise les tables qui contiendront les méta-données
-    // sur les futures tables
-    static void InitializeSystemTables(int fd);
-
-    static void Cleanup(int fd);
 };
 }
 

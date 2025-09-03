@@ -30,6 +30,7 @@ public:
 
     [[nodiscard]] std::variant<Statement, Errors::Error> Parse();
 };
+
 } // namespace Compiler::Parsing
 
 #endif // !PARSER_H

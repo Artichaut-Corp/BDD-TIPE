@@ -3,11 +3,16 @@
 #include <unistd.h>
 #include <vector>
 
+#include "../errors.h"
+#include "types.h"
+
 #ifndef FILE_COMMON_H
 
 #define FILE_COMMON_H
 
 namespace Database::Storing {
+
+
 
 class FileInterface {
 public:

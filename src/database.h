@@ -1,10 +1,16 @@
 #include "errors.h"
+#include "parser.h"
 #include "repl.h"
+#include "server.h"
 #include "storage.h"
 
 #include <filesystem>
+#include <format>
 #include <memory>
-#include <variant>
+#include <ostream>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 #ifndef DATABASE_H
 
@@ -12,79 +18,192 @@
 
 namespace Database {
 
-enum class DatabaseOptions {
+class DatabaseEngine {
 
-};
+private:
+    class DatabaseSetting {
+    public:
+        bool m_Repl = true;
+        std::string m_Address;
+        std::string m_FileName;
 
-class DatabaseI {
+        DatabaseSetting() = default;
+    };
 
-public:
-    DatabaseI(Storing::File* p)
+    std::unique_ptr<Storing::DBTableIndex> Index;
+
+    Storing::DBTableOrder TableOrder = {};
+
+    Storing::File* File;
+
+    DatabaseSetting Settings;
+
+    // Finding default *.db database in the current directory
+    // else returns an empty string
+    auto FindDBFile() -> const std::string;
+
+    // Cette méthode n'est normalement appelée qu'une fois lors de la création du
+    // fichier .db. Elle initialise les tables qui contiendront les méta-données
+    // sur les futures tables
+    auto InitializeSystemTables(int fd) -> void;
+
+    // Crée en mémoire la représentation de la table pays
+    auto CreateCountryTable(int fd) -> void;
+
+    // Prépare et charge l'index des tables déjà présentes en mémoire
+    auto FillIndex() -> void;
+
+    auto Eval(const std::string& input) -> const std::string;
+
+    auto PrintIndex(std::ostream& out) -> void;
+
+    auto Cleanup() -> void
     {
+        int fd = File->Fd();
+
+        int table_count = Storing::File::GetTableCount(fd);
+
+        auto tables_element_count = std::vector<DbInt16>();
+
+        tables_element_count.reserve(table_count);
+
+        // Get all element_count from Index
+        for (const std::string& table : TableOrder) {
+            uint16_t element_count = Index->at(table).GetElementNumber();
+
+            tables_element_count.emplace_back(element_count);
+        }
+
+        // Overwrite those values at the right place
+
+        uint32_t offset = SCHEMA_TABLE_OFFSET + MAX_TABLE * (DB_STRING_SIZE + DB_BOOL_SIZE);
+
+        lseek(fd, offset, SEEK_SET);
+
+        DbInt16 buffer;
+
+        for (int i = 0; i < table_count; i++) {
+
+            buffer = tables_element_count[i];
+
+            int bytes_written = write(fd, &buffer, DB_INT16_SIZE);
+        }
+
+        close(fd);
     }
 
-    static void Init(int argc, char* argv[])
+public:
+    // Options:
+    // --serve address / -s address
+    // --repl / -r
+    // --file name / -f name
+    static auto ParseArguments(int argc, char** argv) -> DatabaseSetting*;
+
+    auto Run(DatabaseSetting* s) -> void
     {
 
-        std::string db_path;
+        Settings = *s;
 
-        bool created = false;
+        std::string db_path = "";
 
-        // If there is no arguments, then it's a line by line interactive interpreter
-        // Running default *.db database
-        if (argc < 2) {
-            std::string ext = ".db";
+        bool created_file = false;
 
-            for (auto& p : std::filesystem::recursive_directory_iterator(std::filesystem::current_path())) {
-                if (p.path().extension() == ext) {
-                    db_path = p.path();
-                }
-            }
+        Index = std::make_unique<Storing::DBTableIndex>();
+
+        if (Settings.m_FileName.empty()) {
+
+            db_path = FindDBFile();
 
             if (db_path == "") {
-                db_path = Storing::File::CreateFile();
+                created_file = true;
 
-                created = !created;
+                db_path = std::format(
+                    "{}/{}", std::filesystem::current_path().string(), "main.db");
+
+                int fd = open(db_path.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+
+                Storing::File::AddDatabaseSignature(fd);
+
+                Storing::File::SetTableCount(fd, 0);
+
+                // Write System Tables
+                InitializeSystemTables(fd);
+
+                // Create new table and insert some data
+                CreateCountryTable(fd);
+
+                // Clean up and close
+                close(fd);
+            }
+        } else {
+            db_path = Settings.m_FileName;
+        }
+
+        File = new Storing::File(db_path);
+
+        if (!created_file) {
+            FillIndex();
+        }
+
+        std::string input;
+
+        if (Settings.m_Repl) {
+
+            for (;;) {
+                std::cout << "SQL>>" << std::endl;
+
+                input = Utils::Repl::Read();
+
+                if (input == "\0") {
+                    std::cout << "Exiting...\n";
+                    break;
+                }
+
+                Utils::Repl::Print(Eval(input));
             }
 
         } else {
-            db_path = argv[1];
+
+            if (Settings.m_Address == "") {
+                throw Errors::Error(Errors::ErrorType::CLIArgument, "Use of --serve / -s requires an address", 0, 0, Errors::ERROR_UNGIVEN_ARGUMENT);
+            }
+
+            const std::string& delimiter = ":";
+
+            auto delimiter_position = Settings.m_Address.find(delimiter);
+
+            const std::string& address = Settings.m_Address.substr(0, delimiter_position);
+
+            int port;
+
+            try {
+                port = std::stoi(Settings.m_Address.substr(delimiter_position + 1, Settings.m_Address.size()));
+
+            } catch (const std::invalid_argument& e) {
+
+                throw Errors::Error(Errors::ErrorType::CLIArgument, "Was not able to parse port number", 0, 0, Errors::ERROR_UNKNOWN_ARGUMENT);
+            }
+
+            Utils::SocketOStream stream
+                = Utils::Server::ConnectTcpStream(address, port);
+
+            for (;;) {
+
+                input = Utils::Server::ReadStream(stream);
+
+                if (input == "\0") {
+                    std::cout << "Exiting...\n";
+                    break;
+                }
+
+                Utils::Server::PrintStream(stream, Eval(input));
+            }
         }
+    }
 
-        Storing::File f = Storing::File(db_path, created);
-
-        // Après avoir trouvé et chargé le fichier
-        // On charge la table système qui repertorie toutes les colonnes dans
-        // une HashMap / Array sous forme d'objets. En utilisant les infos
-        // là-bas + les méthodes des Objets représentant les tuples on peut
-        // ajouter des tuples ou aller chercher une colonne par ex
-
-        /* std::unique_ptr<std::vector<ColumnData>> res =
-            Record::GetColumn(f.Fd(), f.Index.at("country").GetColumnInfo("name")); */
-
-        /*
-         - Aller chercher une colonne
-
-          1. Prendre la table:
-          Table t = Index.at(table_name);
-
-          std::vector<int> col_Data = t.GetColumn(column_name)
-          // Qui appelle à un moment:
-              Column payspop = db.at("pays__pop");
-
-          - Ecrire un enregistrement dans une table
-
-          Table t = Index.at(table_name);
-          // Gérer les erreurs dans le cas où la table n'existe pas
-
-          t.WriteRecord(table_name, )
-      WriteRecord(
-            "schema_table",
-            t.MakeRecord(c1, c2, ...) );
-
-          */
-
-        Utils::Repl::Run(f);
+    ~DatabaseEngine()
+    {
+        Cleanup();
     }
 };
 

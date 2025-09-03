@@ -133,11 +133,6 @@ public:
         info->IncrMaxRecord();
     }
 
-    // Choose between the possiblities of "ClassNameRecord"
-    // As the user doesnt create tables, we can just fetch the right one
-    template <typename R>
-    static std::variant<std::unique_ptr<R>, Errors::Error> GetRecordFromTableName(const std::string& name, std::unordered_map<std::string, ColumnData> data);
-
     static std::unordered_map<std::string, ColumnData>* GetMapFromData(std::vector<Parsing::LitteralValue<std::string>>* column_data, std::vector<Parsing::ColumnName>* column_order)
     {
 

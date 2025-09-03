@@ -1,4 +1,5 @@
 #include <iostream>
+#include <ostream>
 #include <string>
 #include <utility>
 
@@ -29,8 +30,13 @@ const ErrorCode ERROR_WRONG_MEMORY_ACCESS = std::pair(14, "Unallowed access to m
 const ErrorCode ERROR_UNEXPECTED_CALL_TO_FUNCTION = std::pair(15, "Unexpected call to function");
 const ErrorCode ERROR_TABLE_DOES_NOT_EXIST = std::pair(16, "Tried to access a table that does not exist");
 const ErrorCode ERROR_COLUMN_DOES_NOT_EXIST = std::pair(17, "Tried to access a column that does not exist");
+const ErrorCode ERROR_UNKNOWN_ARGUMENT = std::pair(18, "Passed unrecognized argument");
+const ErrorCode ERROR_UNGIVEN_ARGUMENT = std::pair(19, "Passed command without required argument");
+const ErrorCode ERROR_UNRECOGNIZED_STMT = std::pair(20, "Used unrecognized statement");
+const ErrorCode ERROR_NETWORK_FAILURE = std::pair(21, "Networking capabilities have failed");
 
-enum class ErrorType { ParserError,
+enum class ErrorType { CLIArgument,
+    ParserError,
     SyntaxError,
     RuntimeError,
     SyntaxWarning };
@@ -69,15 +75,11 @@ public:
     {
     }
 
-    void printAllInfo()
+    void printAllInfo(std::ostream& out) const
     {
-        try {
-            std::cout << "ERROR "
-                      << "[[ " << m_ErrorCode.first << " ]] - " << m_ErrorCode.second << ":\n";
-            std::cout << m_Message << std::endl;
-        } catch (ParserInternalError) {
-            throw ParserInternalError();
-        }
+        out << "ERROR "
+            << "[[ " << m_ErrorCode.first << " ]] - " << m_ErrorCode.second << ":\n";
+        out << m_Message << std::endl;
     }
 }; // class Error
 

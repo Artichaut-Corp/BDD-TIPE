@@ -56,11 +56,7 @@ std::unique_ptr<Utils::LinkedList<Token>> Lexer::getTokens()
         err = identifyFirst();
 
         if (err.has_value()) {
-            err->printAllInfo();
-
-            Utils::LinkedList<Token> l;
-
-            return std::unique_ptr<Utils::LinkedList<Token>>(&l);
+            throw err;
         }
     }
 
