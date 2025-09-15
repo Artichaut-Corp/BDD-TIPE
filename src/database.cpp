@@ -1,6 +1,6 @@
 #include "database.h"
-#include "storage/record.h"
 #include "data_process_system/racine.h"
+#include "storage/record.h"
 
 #include <numeric>
 #include <ostream>
@@ -232,6 +232,50 @@ auto DatabaseEngine::CreateCountryTable(int fd) -> void
     File::IncrTableCount(fd);
 }
 
+// Crée en mémoire la représentation de la table pays
+auto DatabaseEngine::CreateCityTable(int fd) -> void
+{
+    using namespace Database::Storing;
+
+    // -- City Table --
+    // Text name
+    // Int pop
+    // Text country
+
+    DbInt first_offset = Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE);
+
+    // Passer comme offset la première localisation encore disponible
+    ColumnInfo* c_name = new ColumnInfo(first_offset, DB_STRING_SIZE, false);
+
+    Record::Write(fd, &Index->at("schema_column"), c_name, "name");
+
+    ColumnInfo* c_pop = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
+        DB_INT_SIZE, false);
+
+    Record::Write(fd, &Index->at("schema_column"), c_pop, "pop");
+
+    ColumnInfo* c_country = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE),
+        DB_STRING_SIZE, false);
+
+    Record::Write(fd, &Index->at("schema_column"), c_country, "country");
+
+    auto c_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+        { "name", *c_name }, { "pop", *c_pop }, { "country", *c_country }
+    };
+
+    // 3. Write it on disk in the dedicated system table
+
+    auto city = new TableInfo(false, 3, first_offset, c_columns);
+
+    Index->insert({ "city", *city });
+
+    Record::Write(fd, &Index->at("schema_table"), city, "city");
+
+    TableOrder.push_back("city");
+
+    File::IncrTableCount(fd);
+}
+
 auto DatabaseEngine::FillIndex() -> void
 {
     using namespace Database::Storing;
@@ -444,7 +488,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
         for (size_t i = 0; i < record_number / col_number; i++) {
 
             data = Storing::Record::GetMapFromData(
-                std::span(col_data->begin() + 2 * i, col_data->begin() + (2 * i + col_number)),
+                std::span(col_data->begin() + col_number * i, col_data->begin() + (col_number * i + col_number)),
                 col_order);
 
             auto err = Storing::Store::SetData(File->Fd(), Index.get(), name, *data);
@@ -488,15 +532,17 @@ auto DatabaseEngine::PrintIndex(std::ostream& out) -> void
 
     for (auto e : *Index) {
         out << "Reading info from table: " << e.first << "\n";
-        out << "Is sys: " << e.second.IsSys() << "\n";
+        out << "Is sys: " << (e.second.IsSys() == 0 ? "false" : "true") << "\n";
         out << "Element number: " << e.second.GetElementNumber() << "\n";
         out << "Column number: " << static_cast<int>(e.second.GetColumnNumber())
-            << "\n";
-        out << "Column table first offset: 0x" << e.second.GetColumnsFirstOffset()
             << "\n";
 
         for (auto c : e.second.m_Columns) {
             out << "Reading info from column: " << c.first << "\n";
+            out << "Found at offset: 0x" << c.second.GetOffset()
+                << "\n";
+            out << "Element size: " << static_cast<int>(c.second.GetElementSize())
+                << "\n";
         }
 
         out << "\n";

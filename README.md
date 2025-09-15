@@ -6,10 +6,12 @@ Structure du projet
 -------------------
 
     ├─ src/             Code source de l'application 
-    │  ├─ parser/       Parser SQL 
-    │  ├─               etc
-    │  ├─ 
-    │  └─
+    │  ├─ parser/         
+    │  ├─ lexer/          
+    │  ├─ storage/              
+    │  ├─ lexer/
+    │  ├─ operation/
+    │  └─ utils/
     ├─  test/           Tests
     └─  lib/            Dépendences Extérieures
 

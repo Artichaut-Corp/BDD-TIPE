@@ -74,23 +74,6 @@ public:
         return m_Columns.at(column_name);
     }
 
-    // Etrange manière de le faire + pas très opti
-    // Useless prob
-    uint64_t GetColumnsFirstOffset()
-    {
-        uint64_t ret = std::pow(2, 64) - 1;
-
-        for (auto iter = m_Columns.begin(); iter != m_Columns.end(); ++iter) {
-            uint64_t p = iter->second.GetOffset();
-
-            if (p < ret) {
-                ret = p;
-            }
-        }
-
-        return ret;
-    }
-
     // 1. Récupérer toutes les données des colonnes (chaque méta-donnée un vec).
     // Besoin nb total de colonnes
     // 2. Découper et créer les vecteurs qui contiennent les données selon les
