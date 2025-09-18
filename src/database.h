@@ -50,6 +50,8 @@ private:
     // Crée en mémoire la représentation de la table pays
     auto CreateCountryTable(int fd) -> void;
 
+    auto CreateCityTable(int fd) -> void;
+
     // Prépare et charge l'index des tables déjà présentes en mémoire
     auto FillIndex() -> void;
 
@@ -93,13 +95,15 @@ private:
     }
 
 public:
+    bool m_Quit = false;
+
     // Options:
     // --serve address / -s address
     // --repl / -r
     // --file name / -f name
     static auto ParseArguments(int argc, char** argv) -> DatabaseSetting*;
 
-    auto Run(DatabaseSetting* s) -> void
+    auto Init(DatabaseSetting* s) -> void
     {
 
         Settings = *s;
@@ -132,6 +136,8 @@ public:
                 // Create new table and insert some data
                 CreateCountryTable(fd);
 
+                CreateCityTable(fd);
+
                 // Clean up and close
                 close(fd);
             }
@@ -145,6 +151,13 @@ public:
             FillIndex();
         }
 
+#ifdef _GLIBCXX_DEBUG_ONLY
+        PrintIndex(std::cout);
+#endif
+    }
+
+    auto Run() -> void
+    {
         std::string input;
 
         if (Settings.m_Repl) {
@@ -156,6 +169,8 @@ public:
 
                 if (input == "\0") {
                     std::cout << "Exiting...\n";
+                    m_Quit = true;
+
                     break;
                 }
 

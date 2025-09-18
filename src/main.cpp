@@ -8,18 +8,21 @@ int main(int argc, char* argv[])
 
     auto s = DatabaseEngine::ParseArguments(argc, argv);
 
-    try {
+    database.Init(s);
 
-        database.Run(s);
+  while (!database.m_Quit) {
+      try {
 
-    } catch (const Errors::Error& e) {
+          database.Run();
 
-        if (s->m_Repl)
-            e.printAllInfo(std::cerr);
-        else
-            // Should send back to the server
-            e.printAllInfo(std::cerr);
-        return -1;
+      } catch (const Errors::Error& e) {
+
+            if (s->m_Repl)
+                e.printAllInfo(std::cerr);
+            else
+                // Should send back to the server
+                e.printAllInfo(std::cerr);
+        }
     }
 
     return 0;

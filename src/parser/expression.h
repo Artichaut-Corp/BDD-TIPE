@@ -49,6 +49,8 @@ class LitteralValue : public Expr {
     T m_Data;
 
 public:
+    LitteralValue() = default;
+
     LitteralValue(ColumnType type, T data)
         : m_Type(type)
         , m_Data(data)
@@ -225,25 +227,19 @@ public:
 };
 
 class BinaryExpression : Expr {
-    // Cas Récursifs
-    std::optional<std::unique_ptr<Expr>> m_Lhs;
-    std::optional<std::unique_ptr<Expr>> m_Rhs;
-
     // Opérateur
     std::optional<LogicalOperator> m_Op;
 
 public:
-    // Cas de base, expression seulement
-    BinaryExpression(Expr* expr)
-        : m_Op(std::nullopt)
-        , m_Lhs(std::nullopt)
-        , m_Rhs(expr)
-    {
-    }
+    using BinaryExpressionMember = std::variant<BinaryExpression*, ColumnName*, LitteralValue<int>*, LitteralValue<std::string>*>;
+    // Cas Récursifs
+    //
+    BinaryExpressionMember m_Lhs;
+    BinaryExpressionMember m_Rhs;
 
     // Un ou deux cas récursifs: a = b OR b = c
-    BinaryExpression(Expr* lhs, LogicalOperator op,
-        Expr* rhs)
+    BinaryExpression(BinaryExpressionMember lhs, LogicalOperator op,
+        BinaryExpressionMember rhs)
         : m_Op(op)
         , m_Lhs(lhs)
         , m_Rhs(rhs)
@@ -251,6 +247,12 @@ public:
     }
 
     static BinaryExpression* ParseBinaryExpression(Lexing::Tokenizer* t);
+
+    static BinaryExpressionMember ParseMember(Lexing::Tokenizer* t);
+
+    auto Op() -> std::optional<LogicalOperator>& { return m_Op; }
+
+    auto Op() const -> const std::optional<LogicalOperator>& { return m_Op; }
 };
 
 std::ostream& operator<<(std::ostream& os, const BinaryExpression& binary_expr);

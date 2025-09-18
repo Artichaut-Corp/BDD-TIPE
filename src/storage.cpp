@@ -13,6 +13,10 @@ std::variant<Column, Errors::Error> Store::GetDBColumn(int fd, DBTableIndex* Ind
         return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table {} does not exist", table_name), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
     }
 
+    if (t->GetElementNumber() == 0) {
+        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table {} is empty", table_name), 0, 0, Errors::ERROR_TABLE_EMPTY);
+    }
+
     ColumnInfo c;
 
     try {

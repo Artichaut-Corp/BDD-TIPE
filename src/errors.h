@@ -34,6 +34,7 @@ const ErrorCode ERROR_UNKNOWN_ARGUMENT = std::pair(18, "Passed unrecognized argu
 const ErrorCode ERROR_UNGIVEN_ARGUMENT = std::pair(19, "Passed command without required argument");
 const ErrorCode ERROR_UNRECOGNIZED_STMT = std::pair(20, "Used unrecognized statement");
 const ErrorCode ERROR_NETWORK_FAILURE = std::pair(21, "Networking capabilities have failed");
+const ErrorCode ERROR_TABLE_EMPTY = std::pair(22, "Requested an empty table");
 
 enum class ErrorType { CLIArgument,
     ParserError,

@@ -275,51 +275,55 @@ std::ostream& operator<<(std::ostream& os, const ColumnName& col)
     return os;
 }
 
+BinaryExpression::BinaryExpressionMember BinaryExpression::ParseMember(Lexing::Tokenizer* t)
+{
+
+    Lexing::Token next = t->peek();
+
+    std::variant<BinaryExpression*, ColumnName*, LitteralValue<int>*, LitteralValue<std::string>*> member;
+
+    switch (next.m_Token) {
+    case Lexing::STRING_LITT_T: {
+        member = new LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
+
+        t->next();
+
+    } break;
+    case Lexing::NUM_LITT_T: {
+        member = new LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value));
+
+        // Passer au suivant ici car Parse un nom de colonne le fait
+        t->next();
+    } break;
+    case Lexing::VAR_NAME_T: {
+        member = ColumnName::ParseColumnName(t);
+
+    } break;
+    default:
+        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected identifier or value", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+    }
+
+    return member;
+}
+
+// Todo: Modifier cette fonction pour accepter plus qu'une condition
 BinaryExpression* BinaryExpression::ParseBinaryExpression(Lexing::Tokenizer* t)
 {
 
     Lexing::Token next = t->peek();
     std::variant<LogicalOperator, Errors::Error> op;
 
-    Expr* expr;
+    BinaryExpressionMember lhs = ParseMember(t);
 
-    do {
-        switch (next.m_Token) {
-        case Lexing::STRING_LITT_T: {
-            expr = new LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
+    op = ParseLogicalOperator(t);
 
-            t->next();
+    if (std::holds_alternative<Errors::Error>(op)) {
+        throw std::get<Errors::Error>(op);
+    }
 
-        } break;
-        case Lexing::NUM_LITT_T: {
-            expr = new LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value));
+    BinaryExpressionMember rhs = ParseMember(t);
 
-            // Passer au suivant ici car Parse un nom de colonne le fait
-            t->next();
-        } break;
-        case Lexing::VAR_NAME_T: {
-            expr = ColumnName::ParseColumnName(t);
-
-        } break;
-        default:
-            throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected identifier or value", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
-        }
-
-        // Modif ca. Dans le cas ou c'est un point virgule stop
-        if (t->peek().m_Token == Lexing::SEMI_COLON_T) {
-            return new BinaryExpression(expr);
-        }
-        op = ParseLogicalOperator(t);
-
-        if (std::holds_alternative<Errors::Error>(op)) {
-            throw std::get<Errors::Error>(op);
-        }
-
-        next = t->peek();
-
-    } while (std::holds_alternative<LogicalOperator>(op));
-
-    return new BinaryExpression(ParseBinaryExpression(t), std::get<LogicalOperator>(op), expr);
+    return new BinaryExpression(lhs, std::get<LogicalOperator>(op), rhs);
 }
 
 } // namespace parsing
