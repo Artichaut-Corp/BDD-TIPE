@@ -3,6 +3,7 @@
 
 #include "pred.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -15,27 +16,20 @@ namespace Database::QueryPlanning {
 class Select {
 private:
     ;
-    std::vector<std::string> m_Cols; // all the column who need to be deleted once they got there
-    Table m_Table;
+    std::vector<std::unique_ptr<std::string>> m_Cols; // all the column who stays once they got there
 
 public:
-    Select(std::vector<std::string> cols, Table table)
+    Select(std::vector<std::unique_ptr<std::string>> cols)
         : m_Cols(cols)
-        , m_Table(table)
 
     {
     }
 
-    Table Exec()
+    std::unique_ptr<Table> Exec(std::unique_ptr<Table> table)
     {
-        m_Table.Selection(m_Cols);
+        table->Selection(std::make_shared<std::vector<std::unique_ptr<std::string>>>(m_Cols));
 
-        return m_Table;
-    }
-
-    void edit_table(Table new_table)
-    {
-        m_Table = new_table;
+        return table;
     }
 };
 

@@ -1,0 +1,4 @@
+- faire la foction de modification des sorties
+- Les différent type de join
+- Prendre en compte les schéma dans les noms colonne
+-

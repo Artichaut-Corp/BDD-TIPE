@@ -399,20 +399,20 @@ class SelectStmt {
     bool m_Distinct;
 
     // * or a list of attributes
-    std::unique_ptr<FieldsList> m_Fields;
+    std::unique_ptr<FieldsList> m_Fields; //ce qu'il y'as entre le Select et le From (les colonne et les tables sont mélangé)
 
-    std::unique_ptr<TableName> m_Table;
+    std::unique_ptr<TableName> m_Table; //ce qu'il y'as après le From
 
-    std::optional<std::unique_ptr<std::vector<Join>>> m_Joins;
+    std::optional<std::unique_ptr<std::vector<Join>>> m_Joins; //les join (des jointure dcp)
 
     // WHERE expr
-    std::optional<std::unique_ptr<WhereClause>> m_Where;
+    std::optional<std::unique_ptr<WhereClause>> m_Where; //les conditions des objets (des projections)
 
     // LIMIT
-    std::optional<std::unique_ptr<Limit>> m_Limit;
+    std::optional<std::unique_ptr<Limit>> m_Limit; //les limites (des projections)
 
     // ORDER BY
-    std::optional<std::unique_ptr<OrderByClause>> m_OrderBy;
+    std::optional<std::unique_ptr<OrderByClause>> m_OrderBy; //des tris (et donc des projections)
 
     // Ces deux là s'utilisent avec les fonctions qu'on implémente pas pour l'instant
 
@@ -420,7 +420,7 @@ class SelectStmt {
     std::optional<std::unique_ptr<GroupByClause>> m_GroupBy;
 
     // HAVING expr
-    std::optional<std::unique_ptr<HavingClause>> m_Having;
+    std::optional<std::unique_ptr<HavingClause>> m_Having; //projections
 
 public:
     SelectStmt(bool distinct, FieldsList* fields_list, TableName* table)

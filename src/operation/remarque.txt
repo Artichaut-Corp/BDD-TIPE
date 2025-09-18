@@ -1,4 +1,3 @@
 Lors du join, si des colonne sont en communs avec les deux table, alors seule les informations de la colonne stocker dans la première table sont enregistrer
 
-
-Dans le join, le constructeur des colonnes n'est pas trouvé...
+quand on feras les join, faut implémenter dans la projection le cas où on compare deux élément entre eux parce que pour l'instant les projections c'est que entre un élément et une constante 

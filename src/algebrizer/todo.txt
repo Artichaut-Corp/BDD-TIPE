@@ -1,0 +1,10 @@
+
+- mieux formaliser les erreurs dans "./algebrizer.cpp"
+
+- prendre en compte le cas où la query est de la forme "Select * From ..."
+
+- sur les agregate type, faire le cas où m_all est vrai
+
+- Les différent type de join
+
+- fix les unique ptr

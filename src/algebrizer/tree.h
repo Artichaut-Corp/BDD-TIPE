@@ -6,8 +6,9 @@
 
 #include <memory>
 #include <variant>
-
+namespace Database::QueryPlanning {
 using NodeType = std::variant<Join*, Proj*, Select*>;
+
 
 class Node {
 private:
@@ -29,11 +30,12 @@ public:
             m_Fd = std::move(child);
     }
 
-    Table Pronf()
+    std::unique_ptr<Table> Pronf()
     {
-        Table result;
+        std::unique_ptr<Table> result;
 
-        Table tFg, tFd;
+        std::unique_ptr<Table> tFg;
+        std::unique_ptr<Table> tFd;
         bool hasFg = false, hasFd = false;
 
         if (m_Fg) {
@@ -45,7 +47,7 @@ public:
             hasFd = true;
         }
 
-        result = std::visit([&](auto* op) -> Table {
+        result = std::visit([&](auto* op) -> std::unique_ptr<Table> {
             using T = std::decay_t<decltype(*op)>;
 
             if constexpr (std::is_same_v<T, Join>) {
@@ -55,14 +57,12 @@ public:
                     throw std::runtime_error("Join requires two children tables");
             } else if constexpr (std::is_same_v<T, Proj>) {
                 if (hasFg) {
-                    op->edit_table(tFg);
-                    return op->Exec();
+                    return op->Exec(tFg);
                 } else
                     throw std::runtime_error("Proj requires one child table");
             } else if constexpr (std::is_same_v<T, Select>) {
                 if (hasFg) {
-                    op->edit_table(tFg);
-                    return op->Exec();
+                    return op->Exec(tFg);
                 } else
                     throw std::runtime_error("Select requires one child table");
             } else {
@@ -74,3 +74,4 @@ public:
         return result;
     }
 };
+}

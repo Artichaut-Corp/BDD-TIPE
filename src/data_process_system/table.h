@@ -1,4 +1,5 @@
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,24 +14,25 @@ namespace Database::QueryPlanning {
 
 class Table {
 private:
-    std::vector<Colonne> data; // données immuables
+    std::unique_ptr<std::vector<std::unique_ptr<Colonne>>> data; // données immuables
     std::map<std::string, size_t> map; // permet de trouver la position d'une colonne à partir de son nom
+    std::unique_ptr<std::vector<std::string>> Colonnes_names; // contient les noms de toute les colonnes présente dans la table (ces noms sont de la forme Table@colonnes) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
 
 public:
-    Table(const std::vector<Colonne>& data_, const std::vector<std::string>& nom_colonne) // noms et colonnes dans le bon ordre
-        : data(data_)
+    Table(std::unique_ptr<std::vector<std::unique_ptr<Colonne>>> data_, const std::vector<std::string>& nom_colonne) // noms et colonnes dans le bon ordre
+        : data(std::move(data_))
     {
         for (size_t i = 0; i < nom_colonne.size(); ++i) {
             map[nom_colonne[i]] = i;
         }
     }
 
-    void Projection(const std::vector<Predicat_list> preds, const std::vector<std::string> nom_colonnes);
-    void Selection(std::vector<std::string> nom_colonnes);
+    void Projection(const std::unique_ptr<std::vector<std::unique_ptr<Predicat_list>>> preds, const std::unique_ptr<std::vector<std::string>> nom_colonnes);
+    void Selection(std::unique_ptr<std::vector<std::unique_ptr<std::string>>> nom_colonnes);
 
     int size()
     {
-        return data.size();
+        return data->size();
     }
     int get_column_pos(std::string column_name)
     {
@@ -40,16 +42,16 @@ public:
     ColumnData get_value(std::string column_name, int pos_ind)
     {
         int pos = map[column_name];
-        return data[pos].getValue(pos_ind);
+        return (*data)[pos]->getValue(pos_ind);
     }
-    std::vector<Colonne> get_data_ptr()
+    std::unique_ptr<std::vector<std::unique_ptr<Colonne>>> get_data_ptr()
     {
         return data;
     }
 
-    bool colonne_exist(std::string clef_testé)
+    bool colonne_exist(std::unique_ptr<std::string> clef_testé)
     {
-        return !(map.end() == map.find(clef_testé)); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
+        return !(map.end() == map.find(*clef_testé)); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
     }
 };
 
