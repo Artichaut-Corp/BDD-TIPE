@@ -36,9 +36,7 @@ std::vector<size_t> merge_sorted_unique(const std::vector<size_t>& a,
 
     return result;
 }
-void Table::Projection(
-    const std::unique_ptr<std::vector<std::unique_ptr<Predicat_list>>> preds,
-    const std::unique_ptr<std::vector<std::string>> nom_colonnes) // colonnes qui vont être modifié
+void Table::Projection(const std::shared_ptr<std::vector<std::shared_ptr<Predicat_list>>> preds, const std::shared_ptr<std::vector<std::string>> nom_colonnes) // colonnes qui vont être modifié
 // les éléments de la colonne en position i doivent vérifier le prédicat en positions i
 {
     // Pour faire une projection, d'abord, il faut garder que les indices qui vérifient toute les conditions, ensuite, il faut modifier chaque colonne en ne gardant que ces indices, on rapelle que toute les colonne ont le même nombre d'indices mais ceux-ci diffère en valeur (voire explication.txt)
@@ -50,27 +48,36 @@ void Table::Projection(
     for (int i = 0; nom_colonnes->size(); i++) {
         std::string nom_colonne_testé = (*nom_colonnes)[i];
         size_t colonne_pos = map[nom_colonne_testé];
-        std::unique_ptr<Colonne> colonne_testé = (*data)[colonne_pos];
-        std::unique_ptr<Predicat_list> PredicatAVérifié = (*preds)[i];
+        std::shared_ptr<Colonne> colonne_testé = (*data)[colonne_pos];
+        std::shared_ptr<Predicat_list> PredicatAVérifié = (*preds)[i];
         indices_valides.erase(std::remove_if(indices_valides.begin(), indices_valides.end(), [indices_valides, colonne_testé, PredicatAVérifié](size_t j) { return !PredicatAVérifié->Eval(colonne_testé->getValue(indices_valides[j])); }));
         // supprime tout les élément ne vérifiant pas le PredicatAVérifié
     }
     // quand on arrive ici, les élément dans indices_valides sont les positions vérifiant tout les prédicat dans les liste des colonnes, il faut alors les modifié ne gardé que les bons
-    std::unique_ptr<std::vector<size_t>> indices_valides_ptr = std::make_shared<std::vector<size_t>>(indices_valides);
+    std::shared_ptr<std::vector<size_t>> indices_valides_ptr = std::make_shared<std::vector<size_t>>(indices_valides);
     for (int i = 0; nom_colonnes->size(); i++) {
         std::string nom_colonne_testé = (*nom_colonnes)[i];
         size_t colonne_pos = map[nom_colonne_testé];
-        std::unique_ptr<Colonne> colonne_testé = (*data)[colonne_pos];
+        std::shared_ptr<Colonne> colonne_testé = (*data)[colonne_pos];
         colonne_testé->garder_indice_valide(indices_valides_ptr);
     }
 };
 
-void Table::Selection(std::unique_ptr<std::vector<std::unique_ptr<std::string>>> nom_colonnes)
+void Table::Selection(std::shared_ptr<std::vector<std::string>> ColumnToSave)
 {
-    for (size_t i = 0; i < nom_colonnes->size(); ++i) {
-        size_t pos = map[*(*nom_colonnes)[i]];
-        data->erase(data->begin() + pos-i);//prendre en compte le nombre d'indices supprimé
+    std::vector<std::string> intersection;
+    std::sort(ColumnToSave->begin(), ColumnToSave->end());
+    std::sort(Colonnes_names->begin(), Colonnes_names->end());
+
+    std::set_intersection(
+        ColumnToSave->begin(), ColumnToSave->end(),
+        Colonnes_names->begin(), Colonnes_names->end(),
+        std::back_inserter(intersection));
+
+    for (size_t i = 0; i < intersection.size(); ++i) {
+        size_t pos = map[intersection[i]];
+        data->erase(data->begin() + pos - i); // prendre en compte le nombre d'indices supprimé
     }
 }
 
-} 
+}

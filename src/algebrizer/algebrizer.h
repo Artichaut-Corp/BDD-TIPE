@@ -10,6 +10,8 @@
 
 namespace Database::QueryPlanning {
 
+std::string GetColumnFullName(std::string NomTablePrincipale, Database::Parsing::ColumnName* Colonne);
+
 std::unique_ptr<Node> ConversionEnArbre(std::unique_ptr<Database::Parsing::SelectStmt> Selection);
 
 };

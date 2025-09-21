@@ -1,56 +1,59 @@
 // Le but ici est de transformer l'arbre former par le parser un arbre très naïf qui seras ensuite modifié par l'optimiser
 #include "../algebrizer/algebrizer.h"
+#include "../data_process_system/table.h"
+#include "../storage.h"
+#include "../utils/BinaryTree.h"
 #include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include <vector>
-#include "../storage.h"
+
 namespace Database::QueryPlanning {
 
-std::unique_ptr<Table> ConversionEnArbre_ET_excution(std::unique_ptr<Database::Parsing::SelectStmt> Selection, Storing:: )
+std::string GetColumnFullName(std::string NomTablePrincipale, Database::Parsing::ColumnName* Colonne)
+{
+    if ((*Colonne).HaveTable()) {
+        return (*Colonne).getColumnName(); // récupere le nom de cette colonne
+    } else { // la colonne n'as pas de nom de table, on en conclu que c'est un colonne de la table principale, il faut donc rajouter le nom de cette table à son identifiant
+        std::string nom_colonne = (*Colonne).getColumnName(); // récupere le nom de cette colonne
+        return std::format("{}.{}", NomTablePrincipale, nom_colonne);
+    }
+}
+
+std::unique_ptr<Table> ConversionEnArbre_ET_excution(std::unique_ptr<Database::Parsing::SelectStmt> Selection)
 {
     // Implémentation d'une conversion en arbre d'une query simple
-    //  select sum(R.a) from R Join S ON R.c = S.b where 5<R.a<20 and 40<R.b<50 and 30<S.a<40
 
-    // tout les commentaire vont décrypter comment ma conversion en Arbre marche pour cette query
-    //--- Etape 1 : récupérer la Table utilisé, ici c'est 'pays' c'est facile elle est stocké dans Selection.m_Table
-    std::string Table_nom = Selection->getTable()->getTableName();
+    std::string Table_nom = Selection->getTable()->getTableName(); // ne peut pas être nullptr
     // récupérer la liste des colonne de retour,
     std::vector<ReturnType> colonnes_de_retour;
+    std::vector<std::string> NomColonneDeRetour;
+    std::vector<std::string> ColonneUsed;
     for (std::variant<Database::Parsing::SelectField, Database::Parsing::AggregateFunction> colonne_info : Selection->getFields()->getField()) { // permet de convertir m_fields list en un autre type plus utile
         std::visit([&](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, Database::Parsing::SelectField>) { // si c'est un nom de colonne
                 if (arg.isWildCard()) { // on vérifie si le nom de la colonne c'est pas "*"
-                    
-                } else {
+
+                } else { // il faut savoir de quelle table vient cette colonne
                     if (arg.m_Field.has_value()) { // on vérifie que y'as bien une valeur, c'est un type optional
-                        if ((*arg.m_Field).HaveTable()) {
-                            std::string nom_colonne = (*arg.m_Field).getColumnName(); // récupere le nom de cette colonne
-                            colonnes_de_retour.push_back(ReturnType(nom_colonne, AggrType::NOTHING_F));
-                        } else { // la colonne n'as pas de nom de table, on en conclu que c'est un colonne de la table principale, il faut donc rajouter le nom de cette table à son identifiant
-                            std::string nom_colonne = (*arg.m_Field).getColumnName(); // récupere le nom de cette colonne
-                            nom_colonne = std::format("{}.{}", Table_nom, nom_colonne);
-                            colonnes_de_retour.push_back(ReturnType(nom_colonne, AggrType::NOTHING_F));
-                        }
+                        std::string NomColonne = GetColumnFullName(Table_nom, &(arg.m_Field.value()));
+                        colonnes_de_retour.push_back(ReturnType(NomColonne, AggrType::NOTHING_F));
+                        ColonneUsed.push_back(NomColonne);
+                        NomColonneDeRetour.push_back(NomColonne);
                     } else {
-                        // bizare, est normalement impossible
+                        // bizare, c'est normalement impossible
                     }
                 }
             } else if constexpr (std::is_same_v<T, Database::Parsing::AggregateFunction>) { // est une fonction d'agrégation
                 if (!arg.isAll()) {
-
                     // on vérifie que y'as bien une valeur, c'est un type optinal
-                    std::string nom_colonne;
-                    if (arg.getColumnName()->HaveTable()) {
-                        nom_colonne = arg.getColumnName()->getColumnName(); // récupere le nom de cette colonne
-                        colonnes_de_retour.push_back(ReturnType(nom_colonne, AggrType::NOTHING_F));
-                    } else { // la colonne n'as pas de nom de table, on en conclu que c'est un colonne de la table principale, il faut donc rajouter le nom de cette table à son identifiant
-                        nom_colonne = arg.getColumnName()->getColumnName(); // récupere le nom de cette colonne
-                        nom_colonne = std::format("{}.{}", Table_nom, nom_colonne);
-                        colonnes_de_retour.push_back(ReturnType(nom_colonne, AggrType::NOTHING_F));
-                    }
+                    std::string nom_colonne = GetColumnFullName(Table_nom, arg.getColumnName());
+                    ColonneUsed.push_back(nom_colonne);
+                    NomColonneDeRetour.push_back(nom_colonne);
+
                     if (arg.getType() == Database::Parsing::AggrFuncType::AVG_F) {
                         colonnes_de_retour.push_back(ReturnType(nom_colonne, AggrType::AVG_F));
                     } else if (arg.getType() == Database::Parsing::AggrFuncType::COUNT_F) {
@@ -73,14 +76,19 @@ std::unique_ptr<Table> ConversionEnArbre_ET_excution(std::unique_ptr<Database::P
         },
             colonne_info);
     }
-    std::optional<std::vector<std::string>> Table_secondaires;
+
+    //pour les join
+    std::optional<std::vector<std::string>> Tables_secondaires;
     std::optional<std::vector<Join>> Join_list;
-    if (Selection->getJoins() != nullptr) { // il y as des join, on suppose que ce sont tous des join classique des inner join
+    if (Selection->getJoins() != nullptr) { // si il y as des join, on suppose que ce sont tous des join classique càd des inner join
         for (Database::Parsing::Join j : *Selection->getJoins()) {
             if (j.getJoinType() == Database::Parsing::JoinType::INNER_J) {
-                Table_secondaires->push_back(j.getTable()->getTableName());
-                std::string colonne_gauche = j.getLeftColumn()->getColumnName();
-                std::string colonne_droite = j.getRightColunm()->getColumnName();
+                Tables_secondaires->push_back(j.getTable()->getTableName());
+                std::string colonne_gauche = GetColumnFullName(Table_nom, j.getLeftColumn());
+                std::string colonne_droite = GetColumnFullName(Table_nom, j.getRightColumn());
+                ColonneUsed.push_back(colonne_gauche);
+                ColonneUsed.push_back(colonne_droite);
+
                 Comparateur condition = Comparateur(Parsing::LogicalOperator::EQ); // dans tout les cas c'est un égal
                 Join jointure = Join(condition, colonne_gauche, colonne_droite);
                 Join_list->push_back(jointure);
@@ -88,6 +96,42 @@ std::unique_ptr<Table> ConversionEnArbre_ET_excution(std::unique_ptr<Database::P
                 // à implémenter
             }
         }
+    }
+
+    // il faut maintenant choper les conditions càd les where
+    std::optional<Database::QueryPlanning::BinaryTree> clause; // Selection->getWhere();
+    // a modifier une fois le BinaryTree type fini !
+
+    if (Tables_secondaires.has_value()) { // cas avec des joins pas traité pour l'instant
+
+    } else {
+        // pour l'instant le seul cas "fonctionnel" est le cas où la requete ressemble à : Select Personne.nom, Personne.age From Personne
+        // on doit creer la table, pour cela on doit creer les racines et les Colonnes
+        std::vector<std::shared_ptr<Racine>> Racines;
+        Racines.reserve(ColonneUsed.size());
+        std::vector<std::shared_ptr<Colonne>> Colonnes;
+        Colonnes.reserve(ColonneUsed.size());
+        for (std::string colonne_nom : ColonneUsed) {
+            std::shared_ptr<Racine> RacinePtr = std::make_shared<Racine>(Racine(colonne_nom));
+            Racines.push_back(RacinePtr);
+            std::shared_ptr<Colonne> ColonnePtr = std::make_shared<Colonne>(Colonne(RacinePtr, colonne_nom));
+            Colonnes.push_back(ColonnePtr);
+        }
+        // étant donné qu'il n'y as qu'une seul Table on n'en créer qu'une seule avec tout les paramètre
+        Table* table_principale = new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(Colonnes), ColonneUsed,Table_nom);
+
+        // il faut maintenant creer la query
+        Node Racine = Node(new Select(NomColonneDeRetour)); //le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
+        
+        Final filtre_fin = Final(colonnes_de_retour) ;
+
+        std::vector<std::shared_ptr<Table>> Tables;
+        Tables.push_back(std::make_shared<Table>(*table_principale));
+        Ikea Magasin = Ikea(Tables);
+
+        Table* Table_Finale = Racine.Pronf(Magasin);
+
+        filtre_fin.AfficheResultat(filtre_fin.AppliqueAgregate(Table_Finale));
     }
 }
 };

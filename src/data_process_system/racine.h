@@ -10,17 +10,18 @@ namespace Database::QueryPlanning {
 // Racine : contient des pointeurs vers les données brutes (immutable)
 class Racine {
 private:
+    std::string NomColonne;
     std::vector<ColumnData*> data; // données immuables
 public:
-    Racine(const std::vector<ColumnData*> data_)
-        : data(data_)
+    Racine(std::string NomColonne_)
+        : NomColonne(NomColonne_)
     {
+        std::vector<ColumnData> ValeurRecuper; // = GetColonneValeurByName(NomColonne_)
     }
 
-    ColumnData getValue(const size_t idx) const // à modifier
+    ColumnData* getValue(const size_t idx) const 
     {
-        // return data[idx]&   à définir en fonction de l'implémentaiton
-        return DbInt { 42 }; // à modifier évidemment
+        return data[idx];
     }
 
     size_t size() const

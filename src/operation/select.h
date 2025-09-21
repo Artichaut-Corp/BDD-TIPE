@@ -15,19 +15,18 @@ namespace Database::QueryPlanning {
 
 class Select {
 private:
-    ;
-    std::vector<std::unique_ptr<std::string>> m_Cols; // all the column who stays once they got there
-
+    std::vector<std::string> m_Cols; // all the column who stays once they got there
+    
 public:
-    Select(std::vector<std::unique_ptr<std::string>> cols)
+    Select(std::vector<std::string> cols)
         : m_Cols(cols)
 
     {
     }
 
-    std::unique_ptr<Table> Exec(std::unique_ptr<Table> table)
+    Table* Exec(Table* table)
     {
-        table->Selection(std::make_shared<std::vector<std::unique_ptr<std::string>>>(m_Cols));
+        table->Selection(std::make_shared<std::vector<std::string>> (m_Cols));
 
         return table;
     }

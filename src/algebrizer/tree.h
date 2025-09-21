@@ -1,4 +1,5 @@
 #include "../data_process_system/table.h"
+#include "ikea.h"
 
 #include "../operation/join.h"
 #include "../operation/proj.h"
@@ -7,8 +8,7 @@
 #include <memory>
 #include <variant>
 namespace Database::QueryPlanning {
-using NodeType = std::variant<Join*, Proj*, Select*>;
-
+using NodeType = std::variant<Join*, Proj*, Select*>; //le type root est censé être la racine de la query et ne jamais parti de là
 
 class Node {
 private:
@@ -30,42 +30,38 @@ public:
             m_Fd = std::move(child);
     }
 
-    std::unique_ptr<Table> Pronf()
+    Table* Pronf(Ikea Tables)
     {
-        std::unique_ptr<Table> result;
+        Table* result = nullptr;
 
-        std::unique_ptr<Table> tFg;
-        std::unique_ptr<Table> tFd;
-        bool hasFg = false, hasFd = false;
+        Table* tFg = nullptr;
+        Table* tFd = nullptr;
 
-        if (m_Fg) {
-            tFg = m_Fg->Pronf();
-            hasFg = true;
-        }
-        if (m_Fd) {
-            tFd = m_Fd->Pronf();
-            hasFd = true;
-        }
+        if (m_Fg)
+            tFg = m_Fg->Pronf(Tables);
+        if (m_Fd)
+            tFd = m_Fd->Pronf(Tables);
 
-        result = std::visit([&](auto* op) -> std::unique_ptr<Table> {
+        result = std::visit([&](auto* op) -> Table* { // <-- retour explicite Table*
             using T = std::decay_t<decltype(*op)>;
 
             if constexpr (std::is_same_v<T, Join>) {
-                if (hasFg && hasFd)
-                    return op->Exec(tFg, tFd);
+                if (tFg && tFd)
+                    return op->Exec(tFg, tFd); // doit retourner Table*
                 else
+                    
                     throw std::runtime_error("Join requires two children tables");
             } else if constexpr (std::is_same_v<T, Proj>) {
-                if (hasFg) {
-                    return op->Exec(tFg);
-                } else
+                if (tFg)
+                    return op->Exec(tFg); // doit retourner Table*
+                else
                     throw std::runtime_error("Proj requires one child table");
             } else if constexpr (std::is_same_v<T, Select>) {
-                if (hasFg) {
-                    return op->Exec(tFg);
-                } else
+                if (tFg)
+                    return op->Exec(tFg); // doit retourner Table*
+                else
                     throw std::runtime_error("Select requires one child table");
-            } else {
+            } else{
                 throw std::runtime_error("Unknown node type");
             }
         },
