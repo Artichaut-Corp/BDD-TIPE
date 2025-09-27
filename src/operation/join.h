@@ -24,6 +24,8 @@ private:
     std::string m_ColumnName1; // la colonne qui doit être tester par la table 1
     std::string m_columnName2; // la colonne qui doit être tester par la table 2
 
+    std::string table1;
+    std::string table2;
     struct pair_hash {
         std::size_t operator()(const std::pair<size_t, size_t>& p) const
         {
@@ -42,7 +44,7 @@ public:
         // Pour faire une jointure on doit procéder par deux étape
         // 1) repérer tout les couples valides
         // 2)recréer une nouvelle Table en rejoignant les deux Tables avec les lignes que l'on garde
-        // 1) :
+        // 
         std::unordered_set<std::pair<size_t, size_t>, pair_hash> couple_valides; // stocke tout les couple de ligne valide
         for (int i = 0; i < table1->size(); i++) {
             for (int j = 0; j < table2->size(); j++) {
@@ -62,7 +64,7 @@ public:
         int i = 0;
         for (std::shared_ptr<Colonne> c : *table1->get_data_ptr()) {
             std::string nom = c->get_name();
-            std::shared_ptr<Racine> racine_ptr = std::make_shared<Racine>(c->get_racine_ptr());
+            std::shared_ptr<Racine> racine_ptr = std::make_shared<Racine>(*c->get_racine_ptr());
             map[nom] = i;
             colonnes_info.push_back({ nom, racine_ptr });
             pos_valid_in_colonne.emplace_back(); // préparer un vecteur pour les indices valides
@@ -73,7 +75,7 @@ public:
         for (std::shared_ptr<Colonne> c : *table2->get_data_ptr()) {
             if (!table1->colonne_exist(c->get_name())) {
                 std::string nom = c->get_name();
-                std::shared_ptr<Racine> racine_ptr = std::make_shared<Racine>(c->get_racine_ptr());
+                std::shared_ptr<Racine> racine_ptr = std::make_shared<Racine>(*c->get_racine_ptr());
                 map[nom] = i;
                 colonnes_info.push_back({ nom, racine_ptr });
                 pos_valid_in_colonne.emplace_back();
@@ -114,6 +116,9 @@ public:
 
         return new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(nouvelles_colonne), names,table1->Get_name());
     }
+    std::string GetTable1(){return table1;}
+    std::string GetTable2(){return table2;}
+
 };
 
 } // Database::QueryPlanning

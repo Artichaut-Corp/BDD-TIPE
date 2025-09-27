@@ -3,26 +3,24 @@
 #include "../data_process_system/table.h"
 #include "../storage.h"
 #include "../utils/BinaryTree.h"
-#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 namespace Database::QueryPlanning {
 
-std::string GetColumnFullName(std::string NomTablePrincipale, Database::Parsing::ColumnName* Colonne)
+std::string GetColumnFullName(const std::string& NomTablePrincipale, Database::Parsing::ColumnName* Colonne)
 {
-    if ((*Colonne).HaveTable()) {
-        return (*Colonne).getColumnName(); // récupere le nom de cette colonne
+    if (Colonne->HaveTable()) {
+        return Colonne->getColumnName(); // récupere le nom de cette colonne
     } else { // la colonne n'as pas de nom de table, on en conclu que c'est un colonne de la table principale, il faut donc rajouter le nom de cette table à son identifiant
-        std::string nom_colonne = (*Colonne).getColumnName(); // récupere le nom de cette colonne
+        std::string nom_colonne = Colonne->getColumnName(); // récupere le nom de cette colonne
         return std::format("{}.{}", NomTablePrincipale, nom_colonne);
     }
 }
 
-std::unique_ptr<Table> ConversionEnArbre_ET_excution(std::unique_ptr<Database::Parsing::SelectStmt> Selection)
+void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection,Storing::File * File,std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo> * IndexGet)
 {
     // Implémentation d'une conversion en arbre d'une query simple
 
@@ -36,13 +34,14 @@ std::unique_ptr<Table> ConversionEnArbre_ET_excution(std::unique_ptr<Database::P
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, Database::Parsing::SelectField>) { // si c'est un nom de colonne
                 if (arg.isWildCard()) { // on vérifie si le nom de la colonne c'est pas "*"
-
+                    
                 } else { // il faut savoir de quelle table vient cette colonne
                     if (arg.m_Field.has_value()) { // on vérifie que y'as bien une valeur, c'est un type optional
                         std::string NomColonne = GetColumnFullName(Table_nom, &(arg.m_Field.value()));
                         colonnes_de_retour.push_back(ReturnType(NomColonne, AggrType::NOTHING_F));
                         ColonneUsed.push_back(NomColonne);
                         NomColonneDeRetour.push_back(NomColonne);
+
                     } else {
                         // bizare, c'est normalement impossible
                     }
@@ -104,7 +103,8 @@ std::unique_ptr<Table> ConversionEnArbre_ET_excution(std::unique_ptr<Database::P
 
     if (Tables_secondaires.has_value()) { // cas avec des joins pas traité pour l'instant
 
-    } else {
+    } else {        
+
         // pour l'instant le seul cas "fonctionnel" est le cas où la requete ressemble à : Select Personne.nom, Personne.age From Personne
         // on doit creer la table, pour cela on doit creer les racines et les Colonnes
         std::vector<std::shared_ptr<Racine>> Racines;
@@ -112,26 +112,25 @@ std::unique_ptr<Table> ConversionEnArbre_ET_excution(std::unique_ptr<Database::P
         std::vector<std::shared_ptr<Colonne>> Colonnes;
         Colonnes.reserve(ColonneUsed.size());
         for (std::string colonne_nom : ColonneUsed) {
-            std::shared_ptr<Racine> RacinePtr = std::make_shared<Racine>(Racine(colonne_nom));
+            std::shared_ptr<Racine> RacinePtr = std::make_shared<Racine>(Racine(colonne_nom,File->Fd(),IndexGet));
             Racines.push_back(RacinePtr);
             std::shared_ptr<Colonne> ColonnePtr = std::make_shared<Colonne>(Colonne(RacinePtr, colonne_nom));
             Colonnes.push_back(ColonnePtr);
         }
         // étant donné qu'il n'y as qu'une seul Table on n'en créer qu'une seule avec tout les paramètre
         Table* table_principale = new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(Colonnes), ColonneUsed,Table_nom);
-
+        
         // il faut maintenant creer la query
-        Node Racine = Node(new Select(NomColonneDeRetour)); //le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
+        Node Racine = Node(new Proj(NomColonneDeRetour)); //le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
         
         Final filtre_fin = Final(colonnes_de_retour) ;
 
-        std::vector<std::shared_ptr<Table>> Tables;
-        Tables.push_back(std::make_shared<Table>(*table_principale));
+        std::vector<Table*> Tables;
+        Tables.push_back(table_principale);
         Ikea Magasin = Ikea(Tables);
 
         Table* Table_Finale = Racine.Pronf(Magasin);
-
-        filtre_fin.AfficheResultat(filtre_fin.AppliqueAgregate(Table_Finale));
+        filtre_fin.AfficheResultat(Table_Finale);
     }
 }
 };

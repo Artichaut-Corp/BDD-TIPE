@@ -5,11 +5,11 @@ namespace Database::QueryPlanning {
 
 class Ikea {
 private:
-    std::vector<std::shared_ptr<Table>> allée;
+    std::vector<Table*> allée;
     std::map<std::string,int> catalogue;
 
 public:
-    Ikea(std::vector<std::shared_ptr<Table>> allée_)
+    Ikea(std::vector<Table*> allée_)
         : allée(allée_)
     {
         std::map<std::string,int> catalogue;
@@ -18,7 +18,7 @@ public:
         }
     }
 
-    std::shared_ptr<Table> GetTableByName(std::string nom){return allée[catalogue[nom]];}
+    Table* GetTableByName(std::string nom){return allée[catalogue[nom]];}
 
 };
 };

@@ -16,21 +16,22 @@ class Table {
 private:
     std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> data; // données immuables
     std::map<std::string, size_t> map; // permet de trouver la position d'une colonne à partir de son nom
-    std::shared_ptr<std::vector<std::string>> Colonnes_names; // contient les noms de toute les colonnes présente dans la table (ces noms sont de la forme Table@colonnes) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
+    std::vector<std::string> Colonnes_names; // contient les noms de toute les colonnes présente dans la table (ces noms sont de la forme Table@colonnes) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
     std::string Name;
 
 public:
     Table(std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> data_, const std::vector<std::string>& nom_colonne, std::string Name_) // noms et colonnes dans le bon ordre
         : data(std::move(data_))
         ,Name(Name_)
+        ,Colonnes_names(nom_colonne)
     {
         for (size_t i = 0; i < nom_colonne.size(); ++i) {
             map[nom_colonne[i]] = i;
         }
     }
 
-    void Projection(const std::shared_ptr<std::vector<std::shared_ptr<Predicat_list>>> preds, const std::shared_ptr<std::vector<std::string>> nom_colonnes);
-    void Selection(std::shared_ptr<std::vector<std::string>> ColumnToSave);
+    void Selection(const std::shared_ptr<std::vector<std::shared_ptr<Predicat_list>>> preds, const std::shared_ptr<std::vector<std::string>> nom_colonnes);
+    void Projection(std::unique_ptr<std::vector<std::string>> ColumnToSave);
 
     int size()
     {
@@ -55,7 +56,11 @@ public:
     {
         return !(map.end() == map.find(clef_testé)); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
     }
-    std::string Get_name(){return Name;}
+    std::string Get_name(){return Name;};
+
+    std::map<std::string, size_t> GetMap(){
+        return map;
+    }; 
 };
 
 } // Database::QueryPlanning

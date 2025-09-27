@@ -1,6 +1,8 @@
 
+#include <optional>
 #include <string>
 #include <vector>
+
 #include "../data_process_system/table.h"
 #ifndef agreg_H
 
@@ -41,15 +43,24 @@ public:
 class Final {
 private:
     std::vector<ReturnType> ColonneInfo;
+    std::optional<std::vector<std::string>> ColumnsToGroubBy;
+    
 public:
     Final(std::vector<ReturnType> ColonneInfo_)
     : ColonneInfo(ColonneInfo_)
+    , ColumnsToGroubBy(std::nullopt)
+    {
+    }
+
+    Final(std::vector<ReturnType> ColonneInfo_,std::vector<std::string> GroupByInfo_)
+    : ColonneInfo(ColonneInfo_)
+    , ColumnsToGroubBy(GroupByInfo_)
     {
     };
 
-    Table* AppliqueAgregate(Table*);
+    Table* AppliqueAgregate(Table* table);
 
-    void AfficheResultat(Table*);
+    void AfficheResultat(Table* table);
 };
 
 } // Database::QueryPlanning

@@ -1,7 +1,7 @@
 #include "database.h"
 #include "data_process_system/racine.h"
 #include "storage/record.h"
-
+#include "algebrizer/algebrizer.h"
 #include <numeric>
 #include <ostream>
 
@@ -367,72 +367,74 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
     if (std::holds_alternative<Parsing::SelectStmt*>(stmt)) {
         auto select = std::get<Parsing::SelectStmt*>(stmt);
 
-        auto fields = select->getFields()->getField();
+        QueryPlanning::ConversionEnArbre_ET_excution(select,File,Index.get());
 
-        if (fields.size() != 1) {
-            throw std::runtime_error("Erreur provisoire, pour l'instant une colonne à la fois pour tester.");
-        }
+        // auto fields = select->getFields()->getField();
 
-        auto column = std::holds_alternative<Parsing::SelectField>(fields[0]) ? std::get<Parsing::SelectField>(fields[0]) : throw std::runtime_error("Erreur provisoire, on ne teste pas encore les fonctions d'aggrégation.");
+        // if (fields.size() != 1) {
+        //     throw std::runtime_error("Erreur provisoire, pour l'instant une colonne à la fois pour tester.");
+        // }
 
-        auto read_result = Storing::Store::GetDBColumn(File->Fd(), Index.get(), select->getTable()->getTableName(), column.m_Field.value().getColumnName());
+        // auto column = std::holds_alternative<Parsing::SelectField>(fields[0]) ? std::get<Parsing::SelectField>(fields[0]) : throw std::runtime_error("Erreur provisoire, on ne teste pas encore les fonctions d'aggrégation.");
 
-        if (std::holds_alternative<Errors::Error>(read_result)) {
-            Errors::Error e = std::get<Errors::Error>(read_result);
+        // auto read_result = Storing::Store::GetDBColumn(File->Fd(), Index.get(), select->getTable()->getTableName(), column.m_Field.value().getColumnName());
 
-            throw e;
-        }
+        // if (std::holds_alternative<Errors::Error>(read_result)) {
+        //     Errors::Error e = std::get<Errors::Error>(read_result);
 
-        auto column_data = std::get<Column>(std::move(read_result));
+        //     throw e;
+        // }
+        
+        //auto column_data = std::get<Column>(std::move(read_result));
 
-        // Probablement une fonction qui affichera un joli tableau du résultat
-        std::ostringstream oss;
+        // // Probablement une fonction qui affichera un joli tableau du résultat
+        // std::ostringstream oss;
 
-        if (std::holds_alternative<std::unique_ptr<std::vector<DbString>>>(column_data)) {
+        // if (std::holds_alternative<std::unique_ptr<std::vector<DbString>>>(column_data)) {
 
-            auto result = std::get<std::unique_ptr<std::vector<DbString>>>(std::move(column_data));
+        //     auto result = std::get<std::unique_ptr<std::vector<DbString>>>(std::move(column_data));
 
-            for (size_t i = 0; i < result->size(); i++) {
-                oss << Convert::DbStringToString(result->at(i));
+        //     for (size_t i = 0; i < result->size(); i++) {
+        //         oss << Convert::DbStringToString(result->at(i));
 
-                if (i < result->size() - 1) {
-                    oss << ", ";
-                }
-            }
-        } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt>>>(column_data)) {
-            auto result = std::get<std::unique_ptr<std::vector<DbInt>>>(std::move(column_data));
+        //         if (i < result->size() - 1) {
+        //             oss << ", ";
+        //         }
+        //     }
+        // } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt>>>(column_data)) {
+        //     auto result = std::get<std::unique_ptr<std::vector<DbInt>>>(std::move(column_data));
 
-            for (size_t i = 0; i < result->size(); i++) {
-                oss << result->at(i);
+        //     for (size_t i = 0; i < result->size(); i++) {
+        //         oss << result->at(i);
 
-                if (i < result->size() - 1) {
-                    oss << ", ";
-                }
-            }
-        } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt16>>>(column_data)) {
-            auto result = std::get<std::unique_ptr<std::vector<DbInt16>>>(std::move(column_data));
+        //         if (i < result->size() - 1) {
+        //             oss << ", ";
+        //         }
+        //     }
+        // } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt16>>>(column_data)) {
+        //     auto result = std::get<std::unique_ptr<std::vector<DbInt16>>>(std::move(column_data));
 
-            for (size_t i = 0; i < result->size(); i++) {
-                oss << result->at(i);
+        //     for (size_t i = 0; i < result->size(); i++) {
+        //         oss << result->at(i);
 
-                if (i < result->size() - 1) {
-                    oss << ", ";
-                }
-            }
+        //         if (i < result->size() - 1) {
+        //             oss << ", ";
+        //         }
+        //     }
 
-        } else {
-            auto result = std::get<std::unique_ptr<std::vector<DbInt8>>>(std::move(column_data));
+        // } else {
+        //     auto result = std::get<std::unique_ptr<std::vector<DbInt8>>>(std::move(column_data));
 
-            for (size_t i = 0; i < result->size(); i++) {
-                oss << result->at(i);
+        //     for (size_t i = 0; i < result->size(); i++) {
+        //         oss << result->at(i);
 
-                if (i < result->size() - 1) {
-                    oss << ", ";
-                }
-            }
-        }
+        //         if (i < result->size() - 1) {
+        //             oss << ", ";
+        //         }
+        //     }
+        // }
 
-        output = oss.str();
+        // output = oss.str();
 
         delete select;
     } else if (std::holds_alternative<Parsing::UpdateStmt*>(stmt)) {

@@ -4,15 +4,17 @@
 #include "../operation/pred.h"
 #include "../operation/join.h"
 #include "../operation/agreg.h"
+#include "../database.h"
+
 #ifndef ALGEBRIZER_H
 
 #define ALGEBRIZER_H
 
 namespace Database::QueryPlanning {
 
-std::string GetColumnFullName(std::string NomTablePrincipale, Database::Parsing::ColumnName* Colonne);
+std::string GetColumnFullName(const std::string& NomTablePrincipale, Database::Parsing::ColumnName* Colonne);
 
-std::unique_ptr<Node> ConversionEnArbre(std::unique_ptr<Database::Parsing::SelectStmt> Selection);
+void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection,Storing::File * File,std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo> * IndexGet);
 
 };
 #endif // ! ALGEBRIZER_H  ALGEBRIZER_H

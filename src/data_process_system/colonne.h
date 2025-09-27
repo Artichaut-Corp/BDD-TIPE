@@ -24,18 +24,26 @@ public:
     Colonne(std::shared_ptr<Racine> racine_, const std::string& nom_colonne_)
         : racine(racine_)
         , nom_colonne(nom_colonne_)
-    {   
-        std::vector<size_t> indices;
-        indices.reserve(racine->size());
+    {
+        std::vector<size_t> temp;
+        temp.reserve(racine->size());
         for (size_t i = 0; i < racine->size(); i++) {
-            indices.push_back(i);
+            temp.push_back(i);
         }
+        indices = temp;
+    }
+
+    Colonne(std::shared_ptr<Racine> racine_, const std::string& nom_, const std::vector<size_t>& indices_)
+        : racine(std::move(racine_))
+        , nom_colonne(nom_)
+        , indices(indices_)
+    {
     }
 
     // Accès à une valeur via l'indice de la colonne
     ColumnData getValue(const size_t idx) const
     {
-        return *racine->getValue((indices)[idx]);
+        return racine->getValue((indices)[idx]);
     }
 
     size_t size() const
@@ -47,7 +55,7 @@ public:
     print() const
     {
         for (size_t i = 0; i < indices.size(); i++) {
-            Database::Querying::afficherColumnData(*racine->getValue((indices)[i]));
+            Database::QueryPlanning::afficherColumnData(racine->getValue((indices)[i]));
         }
         std::cout << "\n";
     }

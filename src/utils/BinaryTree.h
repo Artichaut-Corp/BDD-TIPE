@@ -26,7 +26,7 @@ private:
     std::string Operator ; //est un "AND" ou un "OR"
     std::optional<std::variant<Var*,BinaryTree*>> LeftChild;
     std::optional<std::variant<Var*,BinaryTree*>> RightChild; //si ni fils droit ni fils gauche, c'est un arbre toujours Vrai, ce cas de base peut être utile lors des extraction
-    std::vector<std::string> ColonneUsed;//les noms de toute les colonne utilisé pour cette table
+    std::vector<std::string> ColonneUsed;//les noms de toute les colonne utilisé pour ce type binaire
 public:
     std::vector<std::string> CreateTableUsedVector (); //faire un parcours postfix pour récuperer les colonnes des enfants, puis faire l'union des deux, l'enregistrer pour ce type puis la renvoyer pour l'appel récursif
     

@@ -36,7 +36,7 @@ std::vector<size_t> merge_sorted_unique(const std::vector<size_t>& a,
 
     return result;
 }
-void Table::Projection(const std::shared_ptr<std::vector<std::shared_ptr<Predicat_list>>> preds, const std::shared_ptr<std::vector<std::string>> nom_colonnes) // colonnes qui vont être modifié
+void Table::Selection(const std::shared_ptr<std::vector<std::shared_ptr<Predicat_list>>> preds, const std::shared_ptr<std::vector<std::string>> nom_colonnes) // colonnes qui vont être modifié
 // les éléments de la colonne en position i doivent vérifier le prédicat en positions i
 {
     // Pour faire une projection, d'abord, il faut garder que les indices qui vérifient toute les conditions, ensuite, il faut modifier chaque colonne en ne gardant que ces indices, on rapelle que toute les colonne ont le même nombre d'indices mais ceux-ci diffère en valeur (voire explication.txt)
@@ -63,15 +63,19 @@ void Table::Projection(const std::shared_ptr<std::vector<std::shared_ptr<Predica
     }
 };
 
-void Table::Selection(std::shared_ptr<std::vector<std::string>> ColumnToSave)
+void Table::Projection(std::unique_ptr<std::vector<std::string>> ColumnToSave)
 {
+    
+
     std::vector<std::string> intersection;
     std::sort(ColumnToSave->begin(), ColumnToSave->end());
-    std::sort(Colonnes_names->begin(), Colonnes_names->end());
+    std::sort(Colonnes_names.begin(), Colonnes_names.end());
 
-    std::set_intersection(
+
+
+    std::set_difference(
+        Colonnes_names.begin(), Colonnes_names.end(),
         ColumnToSave->begin(), ColumnToSave->end(),
-        Colonnes_names->begin(), Colonnes_names->end(),
         std::back_inserter(intersection));
 
     for (size_t i = 0; i < intersection.size(); ++i) {
@@ -81,3 +85,5 @@ void Table::Selection(std::shared_ptr<std::vector<std::string>> ColumnToSave)
 }
 
 }
+
+

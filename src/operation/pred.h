@@ -1,6 +1,5 @@
 #include "../parser.h"
 #include <iostream>
-#include <memory>
 #include <vector>
 
 #include "../algebrizer_types.h"
@@ -11,7 +10,7 @@
 
 namespace Database::QueryPlanning {
 
-using namespace Database::Querying;
+using namespace Database::QueryPlanning;
 class Comparateur { // permet de comparer deux elements
 private:
     Database::Parsing::LogicalOperator m_Type;
