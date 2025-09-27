@@ -1,9 +1,11 @@
 #include <format>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
 #include <unordered_set>
 
+#include"../algebrizer_types.h"
 #include "../lexer/tokenizer.h"
 
 #ifndef EXPRESSION_H
@@ -175,10 +177,9 @@ public:
         return res;
     }
 
-    bool HaveSchema(){return m_SchemaName.has_value();};
+    bool HaveSchema() { return m_SchemaName.has_value(); };
 
-    bool HaveTable(){return m_TableName.has_value();};
-
+    bool HaveTable() { return m_TableName.has_value(); };
 
     static ColumnName* ParseColumnName(Lexing::Tokenizer* t);
 
@@ -245,28 +246,46 @@ public:
     }
 
     static std::pair<ClauseMember, std::string>
+
     ParseClauseMember(Lexing::Tokenizer* t);
 
-    static std::pair<Clause*, std::unordered_set<std::string>*> ParseClause(Lexing::Tokenizer* t);
+    static Clause* ParseClause(Lexing::Tokenizer* t);
+
+    std::vector<std::string> GetColumnUsed(); // permet d'avoir le nom des colonne utilisé
+
+    bool evalue(std::map<std::string, ColumnData> CombinaisonATester);
 };
 
 class BinaryExpression {
 
 public:
-    using Condition = std::variant<BinaryExpression, Clause>;
+    using Condition = std::variant<std::unique_ptr<BinaryExpression>,std::unique_ptr<Clause>>;
 
     BinaryExpression() = default;
+
+    BinaryExpression(LogicalOperator m_Op_, Condition m_Lhs_, Condition m_Rhs_)
+        : m_Op(m_Op_)
+        , m_Lhs(std::move(m_Lhs_))
+        , m_Rhs(std::move(m_Rhs_))
+    {
+    };
 
     static BinaryExpression::Condition* ParseCondition(Lexing::Tokenizer* t);
 
     auto Op() -> LogicalOperator { return m_Op; }
 
+    BinaryExpression* ExtraireTable(std::vector<std::string> ColonnesAExtraire);
+
+    bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
+
+    std::vector<std::string> ColumnUsedVector(); // faire un parcours postfix pour récuperer les colonnes des enfants, puis faire l'union des deux, l'enregistrer pour ce type puis la renvoyer pour l'appel récursif
+
 private:
     // Opérateur, ne peut être que AND / OR
     LogicalOperator m_Op;
 
-    std::unique_ptr<Condition> m_Lhs;
-    std::unique_ptr<Condition> m_Rhs;
+    Condition m_Lhs;
+    Condition m_Rhs;
 
     std::unique_ptr<std::unordered_set<std::string>> m_ColumnUsedBelow;
 };

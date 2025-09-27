@@ -1,6 +1,7 @@
 #include "expression.h"
 
 #include <bits/types/stack_t.h>
+#include <memory>
 #include <stack>
 #include <unordered_set>
 #include <variant>
@@ -315,18 +316,12 @@ Clause::ParseClauseMember(Lexing::Tokenizer* t)
     return { member, column_used };
 }
 
-std::pair<Clause*, std::unordered_set<std::string>*> Clause::ParseClause(Lexing::Tokenizer* t)
+Clause* Clause::ParseClause(Lexing::Tokenizer* t)
 {
     Lexing::Token next = t->peek();
     std::variant<LogicalOperator, Errors::Error> op;
 
-    auto column_used = new std::unordered_set<std::string>();
-
-    column_used->reserve(2);
-
     auto [lhs, column_used_l] = ParseClauseMember(t);
-
-    column_used->emplace(column_used_l);
 
     op = ParseLogicalOperator(t);
 
@@ -336,9 +331,7 @@ std::pair<Clause*, std::unordered_set<std::string>*> Clause::ParseClause(Lexing:
 
     auto [rhs, column_used_r] = ParseClauseMember(t);
 
-    column_used->emplace(column_used_r);
-
-    return { new Clause(std::get<LogicalOperator>(op), lhs, rhs), column_used };
+    return  new Clause(std::get<LogicalOperator>(op), lhs, rhs) ;
 }
 
 /*
@@ -362,6 +355,7 @@ std::pair<Clause*, std::unordered_set<std::string>*> Clause::ParseClause(Lexing:
 
 BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer* t)
 {
+    using Condition = std::variant<std::unique_ptr<BinaryExpression>,std::unique_ptr<Clause>>;
 
     Lexing::Token next = t->peek();
 
@@ -369,7 +363,7 @@ BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer*
     auto op_pile = std::stack<LogicalOperator>();
 
     int parenth_count = 0;
-    int nb_count_equal_zero = 1;
+    int nb_count_equal_zero = 0;
 
     do {
         switch (next.m_Token) {
@@ -379,19 +373,16 @@ BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer*
         case Database::Lexing::TokenType::RPAREN_T:
 
             parenth_count--;
-
-            Condition a = arg_pile.top();
-            Condition b = arg_pile.top();
-
-            arg_pile.push(BinaryExpression(op_pile.pop(), a, b));
+            if (parenth_count == 0) {
+                nb_count_equal_zero++;
+            }
+            arg_pile.push(std::make_unique<BinaryExpression>(BinaryExpression(op_pile.top(), std::move(arg_pile.top()),std::move(arg_pile.top()))));
             break;
         case Database::Lexing::TokenType::VAR_NAME_T:
-            auto [] = Clause::ParseClause(t)
-                          arg_pile.push();
+            arg_pile.push(std::make_unique<Clause>(*Clause::ParseClause(t)));
             break;
         case Database::Lexing::TokenType::OR_T:
             op_pile.push(LogicalOperator::OR);
-
             next = t->next();
             break;
         case Database::Lexing::TokenType::AND_T:
