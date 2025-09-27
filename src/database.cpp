@@ -361,6 +361,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
         throw e;
     }
 
+
     auto stmt = std::get<Parsing::Statement>(n);
 
     // Traiter chaque Statement

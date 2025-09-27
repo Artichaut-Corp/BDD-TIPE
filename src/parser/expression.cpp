@@ -1,4 +1,8 @@
 #include "expression.h"
+
+#include <bits/types/stack_t.h>
+#include <stack>
+#include <unordered_set>
 #include <variant>
 
 namespace Database::Parsing {
@@ -275,45 +279,54 @@ std::ostream& operator<<(std::ostream& os, const ColumnName& col)
     return os;
 }
 
-BinaryExpression::BinaryExpressionMember BinaryExpression::ParseMember(Lexing::Tokenizer* t)
+std::pair<ClauseMember, std::string>
+Clause::ParseClauseMember(Lexing::Tokenizer* t)
 {
 
     Lexing::Token next = t->peek();
 
-    std::variant<BinaryExpression*, ColumnName*, LitteralValue<int>*, LitteralValue<std::string>*> member;
+    ClauseMember member;
+
+    std::string column_used;
 
     switch (next.m_Token) {
     case Lexing::STRING_LITT_T: {
-        member = new LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
+        member = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
 
         t->next();
 
     } break;
     case Lexing::NUM_LITT_T: {
-        member = new LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value));
+        member = LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value));
 
         // Passer au suivant ici car Parse un nom de colonne le fait
         t->next();
     } break;
     case Lexing::VAR_NAME_T: {
-        member = ColumnName::ParseColumnName(t);
+        column_used = t->peek().m_Value;
+
+        member = *ColumnName::ParseColumnName(t);
 
     } break;
     default:
         throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected identifier or value", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
     }
 
-    return member;
+    return { member, column_used };
 }
 
-// Todo: Modifier cette fonction pour accepter plus qu'une condition
-BinaryExpression* BinaryExpression::ParseBinaryExpression(Lexing::Tokenizer* t)
+std::pair<Clause*, std::unordered_set<std::string>*> Clause::ParseClause(Lexing::Tokenizer* t)
 {
-
     Lexing::Token next = t->peek();
     std::variant<LogicalOperator, Errors::Error> op;
 
-    BinaryExpressionMember lhs = ParseMember(t);
+    auto column_used = new std::unordered_set<std::string>();
+
+    column_used->reserve(2);
+
+    auto [lhs, column_used_l] = ParseClauseMember(t);
+
+    column_used->emplace(column_used_l);
 
     op = ParseLogicalOperator(t);
 
@@ -321,9 +334,74 @@ BinaryExpression* BinaryExpression::ParseBinaryExpression(Lexing::Tokenizer* t)
         throw std::get<Errors::Error>(op);
     }
 
-    BinaryExpressionMember rhs = ParseMember(t);
+    auto [rhs, column_used_r] = ParseClauseMember(t);
 
-    return new BinaryExpression(lhs, std::get<LogicalOperator>(op), rhs);
+    column_used->emplace(column_used_r);
+
+    return { new Clause(std::get<LogicalOperator>(op), lhs, rhs), column_used };
+}
+
+/*
+ * a AND b AND c AND d AND e
+ *
+ * s = stack<cond>
+ *
+ *
+ * while s non vide:
+ *
+ *  if next = and  :
+ *     clause c2 = ParseClause
+ *
+ *     s.p
+ *
+ *
+ *  ret BinExpr(c, op, c2)
+ * else ret c
+ *
+ * */
+
+BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer* t)
+{
+
+    Lexing::Token next = t->peek();
+
+    auto arg_pile = std::stack<Condition>();
+    auto op_pile = std::stack<LogicalOperator>();
+
+    int parenth_count = 0;
+    int nb_count_equal_zero = 1;
+
+    do {
+        switch (next.m_Token) {
+        case Database::Lexing::TokenType::LPAREN_T:
+            parenth_count++;
+            break;
+        case Database::Lexing::TokenType::RPAREN_T:
+
+            parenth_count--;
+
+            Condition a = arg_pile.top();
+            Condition b = arg_pile.top();
+
+            arg_pile.push(BinaryExpression(op_pile.pop(), a, b));
+            break;
+        case Database::Lexing::TokenType::VAR_NAME_T:
+            auto [] = Clause::ParseClause(t)
+                          arg_pile.push();
+            break;
+        case Database::Lexing::TokenType::OR_T:
+            op_pile.push(LogicalOperator::OR);
+
+            next = t->next();
+            break;
+        case Database::Lexing::TokenType::AND_T:
+
+            op_pile.push(LogicalOperator::AND);
+            break;
+        default:
+            break;
+        }
+    } while (nb_count_equal_zero != 2);
 }
 
 } // namespace parsing

@@ -328,7 +328,7 @@ std::variant<OrderByClause*, Errors::Error> OrderByClause::ParseOrderBy(Lexing::
 
 WhereClause* WhereClause::ParseWhere(Lexing::Tokenizer* t)
 {
-    return new WhereClause(BinaryExpression::ParseBinaryExpression(t));
+    return new WhereClause(BinaryExpression::ParseCondition(t));
 }
 
 DeleteStmt* DeleteStmt::ParseDelete(Lexing::Tokenizer* t)

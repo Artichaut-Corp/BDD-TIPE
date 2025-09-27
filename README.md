@@ -37,6 +37,8 @@ TODO
 - [ ] BDD -> Créer les plans de requête 
 - [ ] BDD -> Comment organiser les données dans le fichier contenant la BDD (csv / json / vraie solution) 
 - [ ] Interface -> Présenter et recevoir les données
+- [ ] Présentation -> Trouver un jeu de données adapté et des opérations dessus optimisables par notre algorithme
+
 
 # Notes 'The design and implementation of modern column based databases'
 

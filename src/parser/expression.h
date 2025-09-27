@@ -2,6 +2,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_set>
 
 #include "../lexer/tokenizer.h"
 
@@ -212,33 +213,48 @@ public:
     static std::variant<AggregateFunction*, Errors::Error> ParseAggregateFunction(Lexing::Tokenizer* t);
 };
 
-class BinaryExpression : Expr {
-    // Opérateur
-    std::optional<LogicalOperator> m_Op;
+using ClauseMember = std::variant<ColumnName, LitteralValue<int>, LitteralValue<std::string>>;
+
+class Clause {
+
+    LogicalOperator m_Op;
+
+    ClauseMember m_Lhs;
+    ClauseMember m_Rhs;
 
 public:
-    using BinaryExpressionMember = std::variant<BinaryExpression*, ColumnName*, LitteralValue<int>*, LitteralValue<std::string>*>;
-    // Cas Récursifs
-    //
-    BinaryExpressionMember m_Lhs;
-    BinaryExpressionMember m_Rhs;
-
-    // Un ou deux cas récursifs: a = b OR b = c
-    BinaryExpression(BinaryExpressionMember lhs, LogicalOperator op,
-        BinaryExpressionMember rhs)
+    Clause(LogicalOperator op, ClauseMember lhs, ClauseMember rhs)
         : m_Op(op)
         , m_Lhs(lhs)
         , m_Rhs(rhs)
     {
     }
 
-    static BinaryExpression* ParseBinaryExpression(Lexing::Tokenizer* t);
+    static std::pair<ClauseMember, std::string>
+    ParseClauseMember(Lexing::Tokenizer* t);
 
-    static BinaryExpressionMember ParseMember(Lexing::Tokenizer* t);
+    static std::pair<Clause*, std::unordered_set<std::string>*> ParseClause(Lexing::Tokenizer* t);
+};
 
-    auto Op() -> std::optional<LogicalOperator>& { return m_Op; }
+class BinaryExpression {
 
-    auto Op() const -> const std::optional<LogicalOperator>& { return m_Op; }
+public:
+    using Condition = std::variant<BinaryExpression, Clause>;
+
+    BinaryExpression() = default;
+
+    static BinaryExpression::Condition* ParseCondition(Lexing::Tokenizer* t);
+
+    auto Op() -> LogicalOperator { return m_Op; }
+
+private:
+    // Opérateur, ne peut être que AND / OR
+    LogicalOperator m_Op;
+
+    std::unique_ptr<Condition> m_Lhs;
+    std::unique_ptr<Condition> m_Rhs;
+
+    std::unique_ptr<std::unordered_set<std::string>> m_ColumnUsedBelow;
 };
 
 std::ostream& operator<<(std::ostream& os, const BinaryExpression& binary_expr);
