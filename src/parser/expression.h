@@ -164,7 +164,21 @@ public:
 
     ~ColumnName() = default;
 
-    std::string getColumnName() const { return m_Name; }
+    std::string getColumnName() const
+    {
+        std::string res;
+        if (m_TableName.has_value())
+            res = std::format("{}.{}", m_TableName.value(), m_Name);
+        else
+            res = m_Name;
+
+        return res;
+    }
+
+    bool HaveSchema(){return m_SchemaName.has_value();};
+
+    bool HaveTable(){return m_TableName.has_value();};
+
 
     static ColumnName* ParseColumnName(Lexing::Tokenizer* t);
 

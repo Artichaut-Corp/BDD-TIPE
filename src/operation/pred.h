@@ -10,7 +10,7 @@
 
 namespace Database::QueryPlanning {
 
-using namespace Database::Querying;
+using namespace Database::QueryPlanning;
 class Comparateur { // permet de comparer deux elements
 private:
     Database::Parsing::LogicalOperator m_Type;
@@ -41,26 +41,7 @@ public:
     }
 };
 
-class Comparateur_list { // verifie si deux élements respectent bien une suite de comparaison
-private:
-    std::vector<Comparateur> m_Cond;
 
-public:
-    Comparateur_list(std::vector<Comparateur> cond)
-        : m_Cond(cond)
-    {
-    }
-
-    bool Eval(ColumnData val1, ColumnData val2)
-    {
-        for (Comparateur p : m_Cond) {
-            if (!p.Eval(val1, val2)) {
-                return false;
-            }
-        }
-        return true;
-    };
-};
 class Predicat { // verifie si un element respecte un prédicat
 private:
     Database::Parsing::LogicalOperator m_Type;

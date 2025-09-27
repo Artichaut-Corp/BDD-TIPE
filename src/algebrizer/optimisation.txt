@@ -1,0 +1,9 @@
+Dans le document (The Design and Implementation of Modern Column-Oriented Database Systems), page 50, on voit que la construction de la table R se fait étape par étape, d'abord on fait une selection sur R.a puis on récupère les info de R.b correspondant aux indices valides etc
+
+Une idée d'opti, pourrait être qu'en cas de projection, sur les colonnes R.a R.b etc, ne créer dans la table R, que la colonne a au début, en séparant les projection, après avoir fait celle sur R.a , ajoute ensuite R.b avec les indices encore valide etc , exemple :
+
+supposons qu'on a R un table avec les colonnes a b et c, chacune des ces colonnes doivent respecter un projecteur différent, alors au lieu de charger tout R (donc les colonnes a b et c avec les valeur correspondante) on pourrait enfaite ne charger que R.a, faire son projecteur et donc avoir une liste d'indice à ajouter dans quand on créer R.b etc exemple :
+
+charger R avec R.a , tester les conditons de R.a, rajouter R.b dans R avec seulement les indices valide, tester sur R.b etc 
+
+et donc comment mentionner dans le "../data_process_system/todo.txt" la création d'une relation d'entre entre les projection en métant les plus radicales permetrait d'optimiser l'éxécution de la requête en enlevant le plus d'indices dès le début

@@ -1,0 +1,10 @@
+- faire la foction de modification des sorties
+- Les différent type de join
+- Prendre en compte les schéma dans les noms colonne
+
+
+ Select Inf.nom; sup.nom; sup.role 
+ FROM TP as inf
+ Join Ts ON inf.id = TS.id_inf
+ Join TP AS sup ON sup.id = TS.id
+ Where inf.nom = "pierre" and sup.role = "dirlo"

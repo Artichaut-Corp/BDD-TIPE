@@ -1,39 +1,37 @@
 #include "../algebrizer_types.h"
 #include "../data_process_system/table.h"
 
-#include "pred.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #ifndef PROJ_H
 
+#define PROJ_H
+
 namespace Database::QueryPlanning {
+
 class Proj {
 private:
-    ;
-    std::vector<std::string> m_Cols; // list of all the column who are being checked
-    std::vector<Predicat_list> m_Conds; // the list of condition those column are being test on, m_cols[x] is tested on m_comps[x]
-    Table m_Table;
-
+    std::vector<std::string> m_Cols; // all the column who stays once they got there
+    std::string TableNameToExec;
 public:
-    Proj(std::vector<std::string> cols, std::vector<Predicat_list> cond, Table table)
+    Proj(std::vector<std::string> cols)
         : m_Cols(cols)
-        , m_Conds(cond)
-        , m_Table(table)
 
     {
-    };
+        TableNameToExec = "country";
+    }
 
-    Table Exec()
+    Table* Exec(Table* table)
     {
-        m_Table.Projection(m_Conds, m_Cols);
-        return m_Table;
+        table->Projection(std::make_unique<std::vector<std::string>> (m_Cols));
+
+        return table;
     }
-    void edit_table(Table new_table)
-    {
-        m_Table = new_table;
-    }
+    std::string GetTableName(){return TableNameToExec;}
+
 };
 
 } // Database::QueryPlanning
