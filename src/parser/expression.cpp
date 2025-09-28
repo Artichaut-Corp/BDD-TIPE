@@ -1,8 +1,11 @@
 #include "expression.h"
+#include "../algebrizer/algebrizer.h"
+
 
 #include <bits/types/stack_t.h>
 #include <memory>
 #include <stack>
+#include <type_traits>
 #include <unordered_set>
 #include <variant>
 
@@ -331,7 +334,18 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
 
     auto [rhs, column_used_r] = ParseClauseMember(t);
 
-    return  new Clause(std::get<LogicalOperator>(op), lhs, rhs) ;
+    return new Clause(std::get<LogicalOperator>(op), lhs, rhs);
+}
+
+std::unordered_set<std::string> Clause::GetColumnUsed(std::string TablePrincipale){
+    std::unordered_set<std::string> m_ColumnUsed;
+    if (auto* col = std::get_if<ColumnName>(&m_Lhs)){
+        m_ColumnUsed.insert(QueryPlanning::GetColumnFullName(TablePrincipale,col));
+    }
+        if (auto* col = std::get_if<ColumnName>(&m_Rhs)){
+        m_ColumnUsed.insert(QueryPlanning::GetColumnFullName(TablePrincipale,col));
+    }
+    return m_ColumnUsed;
 }
 
 /*
@@ -355,7 +369,7 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
 
 BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer* t)
 {
-    using Condition = std::variant<std::unique_ptr<BinaryExpression>,std::unique_ptr<Clause>>;
+    using Condition = std::variant<std::unique_ptr<BinaryExpression>, std::unique_ptr<Clause>>;
 
     Lexing::Token next = t->peek();
 
@@ -376,7 +390,7 @@ BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer*
             if (parenth_count == 0) {
                 nb_count_equal_zero++;
             }
-            arg_pile.push(std::make_unique<BinaryExpression>(BinaryExpression(op_pile.top(), std::move(arg_pile.top()),std::move(arg_pile.top()))));
+            arg_pile.push(std::make_unique<BinaryExpression>(BinaryExpression(op_pile.top(), std::move(arg_pile.top()), std::move(arg_pile.top()))));
             break;
         case Database::Lexing::TokenType::VAR_NAME_T:
             arg_pile.push(std::make_unique<Clause>(*Clause::ParseClause(t)));
@@ -393,6 +407,34 @@ BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer*
             break;
         }
     } while (nb_count_equal_zero != 2);
+}
+
+std::unordered_set<std::string> BinaryExpression::ColumnUsedUnderCalcul(std::string TablePrincipale)
+{
+    std::unordered_set<std::string> RésultatGauche = std::visit([&](auto& child) {
+        using T = std::decay_t<decltype(child)>;
+        if constexpr (std::is_same_v<T, std::unique_ptr<BinaryExpression>>) {
+            return child->ColumnUsedUnderCalcul(TablePrincipale);
+        } else if constexpr (std::is_same_v<T, std::unique_ptr<Clause>>) {
+            return child->GetColumnUsed(TablePrincipale);
+        }
+    },
+        m_Lhs);
+
+    std::unordered_set<std::string> RésultatDroit = std::visit([&](auto& child) {
+        using T = std::decay_t<decltype(child)>;
+        if constexpr (std::is_same_v<T, std::unique_ptr<BinaryExpression>>) {
+            return child->ColumnUsedUnderCalcul(TablePrincipale);
+        } else if constexpr (std::is_same_v<T, std::unique_ptr<Clause>>) {
+            return child->GetColumnUsed(TablePrincipale);
+        }
+    },
+        m_Rhs);
+    std::unordered_set<std::string> m_ColumnUsedBelow;
+    m_ColumnUsedBelow.insert(RésultatGauche.begin(),RésultatGauche.end());
+    m_ColumnUsedBelow.insert(RésultatDroit.begin(),RésultatDroit.end());
+    return m_ColumnUsedBelow;
+
 }
 
 } // namespace parsing

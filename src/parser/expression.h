@@ -236,6 +236,7 @@ class Clause {
 
     ClauseMember m_Lhs;
     ClauseMember m_Rhs;
+    std::unordered_set<std::string> m_ColumnUsed;
 
 public:
     Clause(LogicalOperator op, ClauseMember lhs, ClauseMember rhs)
@@ -251,7 +252,7 @@ public:
 
     static Clause* ParseClause(Lexing::Tokenizer* t);
 
-    std::vector<std::string> GetColumnUsed(); // permet d'avoir le nom des colonne utilisé
+    std::unordered_set<std::string> GetColumnUsed(std::string TablePrincipale); // permet d'avoir le nom des colonne utilisé
 
     bool evalue(std::map<std::string, ColumnData> CombinaisonATester);
 };
@@ -278,7 +279,7 @@ public:
 
     bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
 
-    std::vector<std::string> ColumnUsedVector(); // faire un parcours postfix pour récuperer les colonnes des enfants, puis faire l'union des deux, l'enregistrer pour ce type puis la renvoyer pour l'appel récursif
+    std::unordered_set<std::string> ColumnUsedUnderCalcul(std::string TablePrincipale); // faire un parcours postfix pour récuperer les colonnes des enfants, puis faire l'union des deux, l'enregistrer pour ce type puis la renvoyer pour l'appel récursif
 
 private:
     // Opérateur, ne peut être que AND / OR
@@ -287,7 +288,7 @@ private:
     Condition m_Lhs;
     Condition m_Rhs;
 
-    std::unique_ptr<std::unordered_set<std::string>> m_ColumnUsedBelow;
+    std::unordered_set<std::string> m_ColumnUsedBelow;
 };
 
 std::ostream& operator<<(std::ostream& os, const BinaryExpression& binary_expr);
