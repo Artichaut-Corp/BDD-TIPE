@@ -17,4 +17,4 @@ std::string GetColumnFullName(const std::string& NomTablePrincipale, Database::P
 void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection,Storing::File * File,std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo> * IndexGet);
 
 };
-#endif // ! ALGEBRIZER_H  ALGEBRIZER_H
+#endif // ! ALGEBRIZER_H  

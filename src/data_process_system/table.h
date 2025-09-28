@@ -30,7 +30,7 @@ public:
         }
     }
 
-    void Selection(const std::shared_ptr<std::vector<std::shared_ptr<Predicat_list>>> preds, const std::shared_ptr<std::vector<std::string>> nom_colonnes);
+    void Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<std::string>> nom_colonnes,std::string TablePrincipale);
     void Projection(std::unique_ptr<std::vector<std::string>> ColumnToSave);
 
     int size()

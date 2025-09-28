@@ -1,10 +1,12 @@
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
+
 
 #include <assert.h>
 
@@ -111,6 +113,15 @@ public:
         }
 
         return r;
+    }
+
+    static ColumnData intToColumnData(int value)
+    {
+        if (value <= std::numeric_limits<DbInt8>::max())
+            return static_cast<DbInt8>(value);
+        if (value <= std::numeric_limits<DbInt16>::max())
+            return static_cast<DbInt16>(value);
+        return static_cast<DbInt>(value);
     }
 };
 
