@@ -4,7 +4,6 @@
 
 #include "storage/types.h"
 
-
 #ifndef AlGEBRIZER_TYPE_H
 
 #define AlGEBRIZER_TYPE_H
@@ -48,36 +47,49 @@ inline std::string getColumnTypeName(const ColumnData& col)
             }
         },
         col);
-}// Convert string array to string_view (up to first '\0')
-inline std::string_view to_string_view(const DbString& arr) {
+} // Convert string array to string_view (up to first '\0')
+inline std::string_view to_string_view(const DbString& arr)
+{
     size_t len = 0;
     for (; len < arr.size(); ++len) {
-        if (arr[len] == 0) break;  // '\0'
+        if (arr[len] == 0)
+            break; // '\0'
     }
     return std::string_view(reinterpret_cast<const char*>(arr.data()), len);
 }
 // Compare two ColumnData
-inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs) {
+inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
+{
     if (lhs.index() == rhs.index()) {
         switch (lhs.index()) {
-            case 0: return std::get<0>(lhs) == std::get<0>(rhs); // DbInt8
-            case 1: return std::get<1>(lhs) == std::get<1>(rhs); // DbInt16
-            case 2: return std::get<2>(lhs) == std::get<2>(rhs); // DbInt
-            case 3: return std::get<3>(lhs) == std::get<3>(rhs); // DbInt64
-            case 4: return to_string_view(std::get<4>(lhs)) == to_string_view(std::get<4>(rhs)); // DbString
+        case 0:
+            return std::get<0>(lhs) == std::get<0>(rhs); // DbInt8
+        case 1:
+            return std::get<1>(lhs) == std::get<1>(rhs); // DbInt16
+        case 2:
+            return std::get<2>(lhs) == std::get<2>(rhs); // DbInt
+        case 3:
+            return std::get<3>(lhs) == std::get<3>(rhs); // DbInt64
+        case 4:
+            return to_string_view(std::get<4>(lhs)) == to_string_view(std::get<4>(rhs)); // DbString
         }
     }
 
     // Si deux entiers différents → comparer via uint64_t
-    auto is_integer = [](size_t idx){ return idx <= 3; };
+    auto is_integer = [](size_t idx) { return idx <= 3; };
     if (is_integer(lhs.index()) && is_integer(rhs.index())) {
         auto to_u64 = [](const ColumnData& c) -> uint64_t {
             switch (c.index()) {
-                case 0: return std::get<0>(c);
-                case 1: return std::get<1>(c);
-                case 2: return std::get<2>(c);
-                case 3: return std::get<3>(c);
-                default: return 0;
+            case 0:
+                return std::get<0>(c);
+            case 1:
+                return std::get<1>(c);
+            case 2:
+                return std::get<2>(c);
+            case 3:
+                return std::get<3>(c);
+            default:
+                return 0;
             }
         };
         return to_u64(lhs) == to_u64(rhs);
@@ -87,27 +99,38 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs) {
 }
 
 // Less than
-inline bool column_less(const ColumnData& lhs, const ColumnData& rhs) {
+inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
+{
     if (lhs.index() == rhs.index()) {
         switch (lhs.index()) {
-            case 0: return std::get<0>(lhs) < std::get<0>(rhs);
-            case 1: return std::get<1>(lhs) < std::get<1>(rhs);
-            case 2: return std::get<2>(lhs) < std::get<2>(rhs);
-            case 3: return std::get<3>(lhs) < std::get<3>(rhs);
-            case 4: return to_string_view(std::get<4>(lhs)) < to_string_view(std::get<4>(rhs));
+        case 0:
+            return std::get<0>(lhs) < std::get<0>(rhs);
+        case 1:
+            return std::get<1>(lhs) < std::get<1>(rhs);
+        case 2:
+            return std::get<2>(lhs) < std::get<2>(rhs);
+        case 3:
+            return std::get<3>(lhs) < std::get<3>(rhs);
+        case 4:
+            return to_string_view(std::get<4>(lhs)) < to_string_view(std::get<4>(rhs));
         }
     }
 
     // Si deux entiers différents
-    auto is_integer = [](size_t idx){ return idx <= 3; };
+    auto is_integer = [](size_t idx) { return idx <= 3; };
     if (is_integer(lhs.index()) && is_integer(rhs.index())) {
         auto to_u64 = [](const ColumnData& c) -> uint64_t {
             switch (c.index()) {
-                case 0: return std::get<0>(c);
-                case 1: return std::get<1>(c);
-                case 2: return std::get<2>(c);
-                case 3: return std::get<3>(c);
-                default: return 0;
+            case 0:
+                return std::get<0>(c);
+            case 1:
+                return std::get<1>(c);
+            case 2:
+                return std::get<2>(c);
+            case 3:
+                return std::get<3>(c);
+            default:
+                return 0;
             }
         };
         return to_u64(lhs) < to_u64(rhs);
@@ -118,11 +141,14 @@ inline bool column_less(const ColumnData& lhs, const ColumnData& rhs) {
 }
 
 // Autres opérateurs dérivés
-inline bool operator==(const ColumnData& lhs, const ColumnData& rhs){ return column_equal(lhs,rhs); }
-inline bool operator!=(const ColumnData& lhs, const ColumnData& rhs){ return !column_equal(lhs,rhs); }
-inline bool operator<(const ColumnData& lhs, const ColumnData& rhs){ return column_less(lhs,rhs); }
-inline bool operator>(const ColumnData& lhs, const ColumnData& rhs){ return column_less(rhs,lhs); }
-inline bool operator<=(const ColumnData& lhs, const ColumnData& rhs){ return !column_less(rhs,lhs); }
-inline bool operator>=(const ColumnData& lhs, const ColumnData& rhs){ return !column_less(lhs,rhs); }
+inline bool operator==(const ColumnData& lhs, const ColumnData& rhs)
+{
+    return column_equal(lhs, rhs);
+}
+inline bool operator!=(const ColumnData& lhs, const ColumnData& rhs) { return !column_equal(lhs, rhs); }
+inline bool operator<(const ColumnData& lhs, const ColumnData& rhs) { return column_less(lhs, rhs); }
+inline bool operator>(const ColumnData& lhs, const ColumnData& rhs) { return column_less(rhs, lhs); }
+inline bool operator<=(const ColumnData& lhs, const ColumnData& rhs) { return !column_less(rhs, lhs); }
+inline bool operator>=(const ColumnData& lhs, const ColumnData& rhs) { return !column_less(lhs, rhs); }
 }
 #endif // !ALGEBRIZER_TYPES_H

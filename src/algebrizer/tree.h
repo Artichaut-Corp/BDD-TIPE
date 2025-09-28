@@ -59,7 +59,6 @@ public:
                 }
             } else if constexpr (std::is_same_v<T, Select>) {
                 if (tFg) {
-
                     return op->Exec(tFg); // doit retourner Table*
                 } else {
                     return op->Exec(Tables.GetTableByName(op->GetTableName()));

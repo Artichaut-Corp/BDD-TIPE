@@ -348,8 +348,6 @@ Clause::ParseClauseMember(Lexing::Tokenizer* t)
 
         member = parsed_col;
 
-        std::cout << column_used << std::endl;
-
     } break;
     default:
         throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected identifier or value", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
@@ -661,63 +659,35 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<st
 
 bool Clause::Eval(std::map<std::string, ColumnData> CombinaisonATester, std::string tablePrincipale)
 {
-
-    auto left = Lhs();
-    ColumnData LeftVal;
-
-    if (std::holds_alternative<ColumnName>(left)) {
-        LeftVal = CombinaisonATester[Database::QueryPlanning::GetColumnFullName(tablePrincipale, &std::get<ColumnName>(left))];
-    } else if (std::holds_alternative<ColumnData>(left)) {
-        LeftVal = std::get<ColumnData>(left);
-    } else {
-        throw Errors::Error(Errors::ErrorType::RuntimeError, "Uknown type in the BinaryExpression Tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
-    }
-
-    auto right = Rhs();
-    ColumnData RightVal;
-    if (std::holds_alternative<ColumnName>(right)) {
-        RightVal = CombinaisonATester[Database::QueryPlanning::GetColumnFullName(tablePrincipale, &std::get<ColumnName>(right))];
-    } else if (std::holds_alternative<ColumnData>(right)) {
-        RightVal = std::get<ColumnData>(right);
-    } else {
-        throw Errors::Error(Errors::ErrorType::RuntimeError, "Uknown type in the BinaryExpression Tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
-    }
-    std::visit([](auto&& elem) {
-        using T = std::decay_t<decltype(elem)>;
-        if constexpr (std::is_same_v<T, DbString>) {
-            std::cout << Convert::DbStringToString(elem) << std::endl;
-
-        } else if constexpr (std::is_integral_v<T>) {
-            std::cout << std::to_string(elem) << std::endl;
+    auto resolveOperand = [&](auto&& operand) -> ColumnData {
+        using T = std::decay_t<decltype(operand)>;
+        if constexpr (std::is_same_v<T, ColumnName>) {
+            return CombinaisonATester.at(Database::QueryPlanning::GetColumnFullName(tablePrincipale, &operand));
+        } else if constexpr (std::is_same_v<T, ColumnData>) {
+            return operand;
+        } else {
+            throw Errors::Error(Errors::ErrorType::RuntimeError,
+                                "Unknown type in the BinaryExpression Tree", 
+                                0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
         }
-    },
-        LeftVal);
-    std::visit([](auto&& elem) {
-        using T = std::decay_t<decltype(elem)>;
-        if constexpr (std::is_same_v<T, DbString>) {
-            std::cout << Convert::DbStringToString(elem) << std::endl;
+    };
 
-        } else if constexpr (std::is_integral_v<T>) {
-            std::cout << std::to_string(elem) << std::endl;
-        }
-    },
-        RightVal);
-    if (Op() == Parsing::LogicalOperator::EQ) {
-        return LeftVal == RightVal;
-    } else if (Op() == Parsing::LogicalOperator::GT) {
-        return LeftVal > RightVal;
-    } else if (Op() == Parsing::LogicalOperator::LT) {
-        return LeftVal < RightVal;
-    } else if (Op() == Parsing::LogicalOperator::GTE) {
-        return LeftVal >= RightVal;
-    } else if (Op() == Parsing::LogicalOperator::LTE) {
-        return LeftVal <= RightVal;
-    } else if (Op() == Parsing::LogicalOperator::NE) {
-        return LeftVal != RightVal;
+    ColumnData LeftVal  = std::visit(resolveOperand, Lhs());
+    ColumnData RightVal = std::visit(resolveOperand, Rhs());
+    switch (Op()) {
+    case Parsing::LogicalOperator::EQ:  return LeftVal == RightVal;
+    case Parsing::LogicalOperator::GT:  return LeftVal > RightVal;
+    case Parsing::LogicalOperator::LT:  return LeftVal < RightVal;
+    case Parsing::LogicalOperator::GTE: return LeftVal >= RightVal;
+    case Parsing::LogicalOperator::LTE: return LeftVal <= RightVal;
+    case Parsing::LogicalOperator::NE:  return LeftVal != RightVal;
+    default:
+        throw Errors::Error(Errors::ErrorType::RuntimeError,
+                            "Unknown Logical Operator",
+                            0, 0, Errors::ERROR_UNKNOW_LOGICAL_OPERATOR);
     }
-    throw Errors::Error(Errors::ErrorType::RuntimeError, "Unknow Logical Operator", 0, 0, Errors::ERROR_UNKNOW_LOGICAL_OPERATOR);
-    return false;
 }
+
 bool BinaryExpression::Eval(std::map<std::string, ColumnData> CombinaisonATester, std::string TablePrincipale)
 {
     bool ResultAGauche;

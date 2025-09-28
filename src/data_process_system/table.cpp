@@ -47,11 +47,10 @@ void Table::Selection(const Parsing::BinaryExpression::Condition pred, const std
 
     for (int i = 0; i<taille; i++) {
         for (auto e : *nom_colonnes) {
-                std::cout << e  << std::endl;
-
+            
             CoupleTesté[e] = (*data)[map[e]]->getValue(i);
         }
-        bool eval;
+        bool eval = false;
         if (std::holds_alternative<Parsing::Clause*>(pred)) {
             eval = std::get<Parsing::Clause*>(pred)->Eval(CoupleTesté, TablePrincipale);
         } else if (std::holds_alternative<Parsing::BinaryExpression*>(pred)) {
@@ -60,16 +59,17 @@ void Table::Selection(const Parsing::BinaryExpression::Condition pred, const std
             throw Errors::Error(Errors::ErrorType::RuntimeError, "Uknown type in the BinaryExpression Tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
         }
         if(eval){
-            indices_valides.push_back(i);// n'ajoute pas la ligne ne vérifiant pas le prédicat
+            indices_valides.push_back(i);// ajoute  la ligne  vérifiant  le prédicat
         }
         
     }
     // quand on arrive ici, les élément dans indices_valides sont les positions vérifiant tout les prédicat dans les liste des colonnes, il faut alors les modifié ne gardé que les bons
-    std::unique_ptr<std::vector<size_t>> indices_valides_ptr = std::make_unique<std::vector<size_t>>(indices_valides);
-    for (auto e : *nom_colonnes){
+    std::shared_ptr<std::vector<size_t>> indices_valides_ptr = std::make_shared<std::vector<size_t>>(indices_valides);
+    for (auto e : Colonnes_names){ 
         std::shared_ptr<Colonne> colonne_testé = (*data)[map[e]];
-        colonne_testé->garder_indice_valide(std::move(indices_valides_ptr));
+        colonne_testé->garder_indice_valide(indices_valides_ptr);
     }
+
 };
 
 void Table::Projection(std::unique_ptr<std::vector<std::string>> ColumnToSave)
