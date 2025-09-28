@@ -1,11 +1,12 @@
 // Le but ici est de transformer l'arbre former par le parser un arbre très naïf qui seras ensuite modifié par l'optimiser
 #include "../algebrizer/algebrizer.h"
 #include "../data_process_system/table.h"
+#include "../parser.h"
 #include "../storage.h"
-#include "../utils/BinaryTree.h"
 #include <memory>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace Database::QueryPlanning {
@@ -20,7 +21,7 @@ std::string GetColumnFullName(const std::string& NomTablePrincipale, Database::P
     }
 }
 
-void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection,Storing::File * File,std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo> * IndexGet)
+void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo>* IndexGet)
 {
     // Implémentation d'une conversion en arbre d'une query simple
 
@@ -29,12 +30,13 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection,Stor
     std::vector<ReturnType> colonnes_de_retour;
     std::vector<std::string> NomColonneDeRetour;
     std::vector<std::string> ColonneUsed;
-    for (std::variant<Database::Parsing::SelectField, Database::Parsing::AggregateFunction> colonne_info : Selection->getFields()->getField()) { // permet de convertir m_fields list en un autre type plus utile
+
+    for (std::variant<Parsing::SelectField, Parsing::AggregateFunction> colonne_info : Selection->getFields()->getField()) { // permet de convertir m_fields list en un autre type plus utile
         std::visit([&](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, Database::Parsing::SelectField>) { // si c'est un nom de colonne
+            if constexpr (std::is_same_v<T, Parsing::SelectField>) { // si c'est un nom de colonne
                 if (arg.isWildCard()) { // on vérifie si le nom de la colonne c'est pas "*"
-                    
+
                 } else { // il faut savoir de quelle table vient cette colonne
                     if (arg.m_Field.has_value()) { // on vérifie que y'as bien une valeur, c'est un type optional
                         std::string NomColonne = GetColumnFullName(Table_nom, &(arg.m_Field.value()));
@@ -46,25 +48,29 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection,Stor
                         // bizare, c'est normalement impossible
                     }
                 }
-            } else if constexpr (std::is_same_v<T, Database::Parsing::AggregateFunction>) { // est une fonction d'agrégation
+            } else if constexpr (std::is_same_v<T, Parsing::AggregateFunction>) { // est une fonction d'agrégation
                 if (!arg.isAll()) {
                     // on vérifie que y'as bien une valeur, c'est un type optinal
                     std::string nom_colonne = GetColumnFullName(Table_nom, arg.getColumnName());
                     ColonneUsed.push_back(nom_colonne);
                     NomColonneDeRetour.push_back(nom_colonne);
 
-                    if (arg.getType() == Database::Parsing::AggrFuncType::AVG_F) {
+                    switch (arg.getType()) {
+                    case Parsing::AggrFuncType::AVG_F:
                         colonnes_de_retour.push_back(ReturnType(nom_colonne, AggrType::AVG_F));
-                    } else if (arg.getType() == Database::Parsing::AggrFuncType::COUNT_F) {
+                        break;
+                    case Parsing::AggrFuncType::COUNT_F:
                         colonnes_de_retour.push_back(ReturnType(nom_colonne, AggrType::COUNT_F));
-                    } else if (arg.getType() == Database::Parsing::AggrFuncType::MAX_F) {
+                        break;
+                    case Parsing::AggrFuncType::MAX_F:
                         colonnes_de_retour.push_back(ReturnType(nom_colonne, AggrType::MAX_F));
-                    } else if (arg.getType() == Database::Parsing::AggrFuncType::MIN_F) {
+                        break;
+                    case Parsing::AggrFuncType::MIN_F:
                         colonnes_de_retour.push_back(ReturnType(nom_colonne, AggrType::MIN_F));
-                    } else if (arg.getType() == Database::Parsing::AggrFuncType::SUM_F) {
+                        break;
+                    case Parsing::AggrFuncType::SUM_F:
                         colonnes_de_retour.push_back(ReturnType(nom_colonne, AggrType::SUM_F));
-                    } else {
-                        std::cout << "type inconu dans la conversion en arbre\n"; // erreur
+                        break;
                     }
                 } else {
                     std::cout << "type inconu parmis AggrFuncType lors de la création des colonnes de retour\n"; // erreur
@@ -76,12 +82,12 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection,Stor
             colonne_info);
     }
 
-    //pour les join
+    // pour les join
     std::optional<std::vector<std::string>> Tables_secondaires;
     std::optional<std::vector<Join>> Join_list;
     if (Selection->getJoins() != nullptr) { // si il y as des join, on suppose que ce sont tous des join classique càd des inner join
-        for (Database::Parsing::Join j : *Selection->getJoins()) {
-            if (j.getJoinType() == Database::Parsing::JoinType::INNER_J) {
+        for (Parsing::Join j : *Selection->getJoins()) {
+            if (j.getJoinType() == Parsing::JoinType::INNER_J) {
                 Tables_secondaires->push_back(j.getTable()->getTableName());
                 std::string colonne_gauche = GetColumnFullName(Table_nom, j.getLeftColumn());
                 std::string colonne_droite = GetColumnFullName(Table_nom, j.getRightColumn());
@@ -98,12 +104,22 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection,Stor
     }
 
     // il faut maintenant choper les conditions càd les where
-    std::optional<Database::QueryPlanning::BinaryTree> clause; // Selection->getWhere();
+    auto where = Selection->getWhere();
+
+    if (where != nullptr) {
+
+        Parsing::BinaryExpression::Condition clause = where->m_Condition;
+
+        if (std::holds_alternative<Parsing::BinaryExpression*>(clause))
+        {
+            std::get<Parsing::BinaryExpression*>(clause)->PrintCondition(std::cout);
+        }
+    }
     // a modifier une fois le BinaryTree type fini !
 
     if (Tables_secondaires.has_value()) { // cas avec des joins pas traité pour l'instant
 
-    } else {        
+    } else {
 
         // pour l'instant le seul cas "fonctionnel" est le cas où la requete ressemble à : Select Personne.nom, Personne.age From Personne
         // on doit creer la table, pour cela on doit creer les racines et les Colonnes
@@ -112,18 +128,18 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection,Stor
         std::vector<std::shared_ptr<Colonne>> Colonnes;
         Colonnes.reserve(ColonneUsed.size());
         for (std::string colonne_nom : ColonneUsed) {
-            std::shared_ptr<Racine> RacinePtr = std::make_shared<Racine>(Racine(colonne_nom,File->Fd(),IndexGet));
+            std::shared_ptr<Racine> RacinePtr = std::make_shared<Racine>(Racine(colonne_nom, File->Fd(), IndexGet));
             Racines.push_back(RacinePtr);
             std::shared_ptr<Colonne> ColonnePtr = std::make_shared<Colonne>(Colonne(RacinePtr, colonne_nom));
             Colonnes.push_back(ColonnePtr);
         }
         // étant donné qu'il n'y as qu'une seul Table on n'en créer qu'une seule avec tout les paramètre
-        Table* table_principale = new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(Colonnes), ColonneUsed,Table_nom);
-        
+        Table* table_principale = new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(Colonnes), ColonneUsed, Table_nom);
+
         // il faut maintenant creer la query
-        Node Racine = Node(new Proj(NomColonneDeRetour)); //le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
-        
-        Final filtre_fin = Final(colonnes_de_retour) ;
+        Node Racine = Node(new Proj(NomColonneDeRetour)); // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
+
+        Final filtre_fin = Final(colonnes_de_retour);
 
         std::vector<Table*> Tables;
         Tables.push_back(table_principale);

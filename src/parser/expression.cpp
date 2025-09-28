@@ -1,8 +1,11 @@
 #include "expression.h"
+#include "../utils.h"
 
 #include <bits/types/stack_t.h>
+#include <cstddef>
+#include <ios>
 #include <memory>
-#include <stack>
+#include <ostream>
 #include <unordered_set>
 #include <variant>
 
@@ -82,6 +85,41 @@ std::variant<LogicalOperator, Errors::Error> ParseLogicalOperator(Lexing::Tokeni
     default:
         return Errors::Error(Errors::ErrorType::SyntaxError, "Expected a Logical Operator in Expression", 0, 0, Errors::ERROR_EXPECTED_SYMBOL);
     }
+}
+
+std::ostream& operator<<(std::ostream& out, const LogicalOperator& op)
+{
+    switch (op) {
+    case LogicalOperator::EQ:
+        out << "=";
+        break;
+    case LogicalOperator::GT:
+        out << ">";
+        break;
+    case LogicalOperator::LT:
+        out << "<";
+        break;
+    case LogicalOperator::GTE:
+        out << ">=";
+        break;
+    case LogicalOperator::LTE:
+        out << "<=";
+        break;
+    case LogicalOperator::NE:
+        out << "!=";
+        break;
+    case LogicalOperator::AND:
+        out << "&&";
+        break;
+    case LogicalOperator::OR:
+        out << "||";
+        break;
+    case LogicalOperator::NOT:
+        out << "!";
+        break;
+    }
+
+    return out;
 }
 
 AggrFuncType ParseAggregateFunctionType(Lexing::Tokenizer* t)
@@ -288,7 +326,7 @@ Clause::ParseClauseMember(Lexing::Tokenizer* t)
 
     ClauseMember member;
 
-    std::string column_used;
+    std::string column_used = "";
 
     switch (next.m_Token) {
     case Lexing::STRING_LITT_T: {
@@ -316,9 +354,30 @@ Clause::ParseClauseMember(Lexing::Tokenizer* t)
     return { member, column_used };
 }
 
+std::ostream& operator<<(std::ostream& out, const ClauseMember& member)
+{
+    if (std::holds_alternative<ColumnName>(member)) {
+        out << std::get<ColumnName>(member).getColumnName();
+    } else if (std::holds_alternative<LitteralValue<std::string>>(member)) {
+
+        out << std::get<LitteralValue<std::string>>(member).getData();
+    } else {
+        out << std::get<LitteralValue<int>>(member).getData();
+    }
+
+    return out;
+}
+
+void Clause::Print(std::ostream& out)
+{
+
+    out << "(" << m_Lhs << " " << m_Op << " " << m_Rhs << ") ";
+}
+
 Clause* Clause::ParseClause(Lexing::Tokenizer* t)
 {
     Lexing::Token next = t->peek();
+
     std::variant<LogicalOperator, Errors::Error> op;
 
     auto [lhs, column_used_l] = ParseClauseMember(t);
@@ -329,9 +388,21 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
         throw std::get<Errors::Error>(op);
     }
 
+    next = t->peek();
+
     auto [rhs, column_used_r] = ParseClauseMember(t);
 
-    return  new Clause(std::get<LogicalOperator>(op), lhs, rhs) ;
+    auto col_used = std::unordered_set<std::string>();
+
+    col_used.reserve(2);
+
+    if (column_used_l != "")
+        col_used.emplace(column_used_l);
+
+    if (column_used_r != "")
+        col_used.emplace(column_used_r);
+
+    return new Clause(std::get<LogicalOperator>(op), lhs, rhs, col_used);
 }
 
 /*
@@ -353,46 +424,138 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
  *
  * */
 
-BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer* t)
+std::unordered_set<std::string> BinaryExpression::MergeColumns(Condition lhs, Condition rhs)
 {
-    using Condition = std::variant<std::unique_ptr<BinaryExpression>,std::unique_ptr<Clause>>;
+    auto res = new std::unordered_set<std::string>();
+
+    std::unordered_set<std::string> left;
+    std::unordered_set<std::string> right;
+
+    if (std::holds_alternative<BinaryExpression*>(lhs)) {
+
+        BinaryExpression* b = std::get<BinaryExpression*>(lhs);
+
+        left = b->m_ColumnUsedBelow;
+    } else {
+        left = std::get<Clause*>(lhs)->m_ColumnUsed;
+    }
+
+    if (std::holds_alternative<BinaryExpression*>(rhs)) {
+
+        BinaryExpression* b = std::get<BinaryExpression*>(rhs);
+
+        right = b->m_ColumnUsedBelow;
+
+    } else {
+        left = std::get<Clause*>(lhs)->m_ColumnUsed;
+    }
+
+    size_t tot_size = left.size() + right.size();
+
+    res->reserve(tot_size);
+
+    for (auto e : left) {
+        res->emplace(e);
+    }
+
+    for (auto e : right) {
+        res->emplace(e);
+    }
+
+    return *res;
+}
+
+BinaryExpression::Condition BinaryExpression::ParseCondition(Lexing::Tokenizer* t)
+{
 
     Lexing::Token next = t->peek();
 
-    auto arg_pile = std::stack<Condition>();
-    auto op_pile = std::stack<LogicalOperator>();
+    auto arg_pile = Utils::Stack<Condition>();
+    auto op_pile = Utils::Stack<LogicalOperator>();
 
     int parenth_count = 0;
     int nb_count_equal_zero = 0;
 
     do {
+        next = t->peek();
+
         switch (next.m_Token) {
-        case Database::Lexing::TokenType::LPAREN_T:
+        case Database::Lexing::TokenType::LPAREN_T: {
             parenth_count++;
-            break;
-        case Database::Lexing::TokenType::RPAREN_T:
+            t->next();
+        } break;
+        case Database::Lexing::TokenType::RPAREN_T: {
 
             parenth_count--;
+
+            t->next();
+
             if (parenth_count == 0) {
                 nb_count_equal_zero++;
             }
-            arg_pile.push(std::make_unique<BinaryExpression>(BinaryExpression(op_pile.top(), std::move(arg_pile.top()),std::move(arg_pile.top()))));
-            break;
+
+            auto lhs = arg_pile.pop();
+
+            if (!arg_pile.empty()) {
+                auto rhs = arg_pile.pop();
+
+                arg_pile.push(new BinaryExpression(op_pile.pop(), lhs, rhs, MergeColumns(lhs, rhs)));
+
+            } else {
+                arg_pile.push(lhs);
+            }
+        } break;
         case Database::Lexing::TokenType::VAR_NAME_T:
-            arg_pile.push(std::make_unique<Clause>(*Clause::ParseClause(t)));
+        case Database::Lexing::TokenType::STRING_LITT_T:
+        case Database::Lexing::TokenType::NUM_LITT_T:
+            arg_pile.push(Clause::ParseClause(t));
             break;
-        case Database::Lexing::TokenType::OR_T:
+        case Database::Lexing::TokenType::OR_T: {
             op_pile.push(LogicalOperator::OR);
-            next = t->next();
-            break;
-        case Database::Lexing::TokenType::AND_T:
+            t->next();
+        } break;
+        case Database::Lexing::TokenType::AND_T: {
 
             op_pile.push(LogicalOperator::AND);
-            break;
-        default:
-            break;
+
+            t->next();
+        } break;
+        default: {
+            if (!op_pile.empty()) {
+                throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected clause after AND/OR", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+            }
+
+            return arg_pile.pop();
+        } break;
         }
     } while (nb_count_equal_zero != 2);
+
+    return arg_pile.pop();
 }
 
+void BinaryExpression::PrintCondition(std::ostream& out)
+{
+    auto s = Utils::Stack<Condition>();
+
+    s.push(this);
+
+    while (!s.empty()) {
+        auto n = s.pop();
+
+        if (std::holds_alternative<Clause*>(n)) {
+            auto cl = std::get<Clause*>(n);
+
+            cl->Print(out);
+        } else {
+            auto bexpr = std::get<BinaryExpression*>(n);
+
+            out << (bexpr->m_Op == LogicalOperator::AND ? "AND " : "OR ");
+
+            s.push(bexpr->m_Lhs);
+            s.push(bexpr->m_Rhs);
+        }
+    }
+
+    out << std::endl;;
+}
 } // namespace parsing

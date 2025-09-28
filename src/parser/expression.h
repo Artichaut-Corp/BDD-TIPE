@@ -2,11 +2,13 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <string>
 #include <unordered_set>
 
-#include"../algebrizer_types.h"
+#include "../algebrizer_types.h"
 #include "../lexer/tokenizer.h"
+#include "../utils.h"
 
 #ifndef EXPRESSION_H
 
@@ -25,6 +27,8 @@ enum class LogicalOperator { EQ,
     NOT };
 
 std::variant<LogicalOperator, Errors::Error> ParseLogicalOperator(Lexing::Tokenizer* t);
+
+std::ostream& operator<<(std::ostream& out, const LogicalOperator& member);
 
 enum class AggrFuncType {
     AVG_F,
@@ -230,6 +234,8 @@ public:
 
 using ClauseMember = std::variant<ColumnName, LitteralValue<int>, LitteralValue<std::string>>;
 
+std::ostream& operator<<(std::ostream& out, const ClauseMember& member);
+
 class Clause {
 
     LogicalOperator m_Op;
@@ -238,47 +244,64 @@ class Clause {
     ClauseMember m_Rhs;
 
 public:
-    Clause(LogicalOperator op, ClauseMember lhs, ClauseMember rhs)
+    std::unordered_set<std::string> m_ColumnUsed;
+
+    Clause(LogicalOperator op, ClauseMember lhs, ClauseMember rhs, std::unordered_set<std::string> col_used)
         : m_Op(op)
         , m_Lhs(lhs)
         , m_Rhs(rhs)
+        , m_ColumnUsed(col_used)
     {
     }
 
-    static std::pair<ClauseMember, std::string>
+    std::vector<std::string> GetColumnUsed(); // permet d'avoir le nom des colonne utilisé
 
-    ParseClauseMember(Lexing::Tokenizer* t);
+    auto Lhs() -> ClauseMember { return m_Lhs; }
+    auto Rhs() -> ClauseMember { return m_Rhs; }
+    auto Op() -> LogicalOperator { return m_Op; }
+
+    void Print(std::ostream& out);
+
+    static std::pair<ClauseMember, std::string> ParseClauseMember(Lexing::Tokenizer* t);
 
     static Clause* ParseClause(Lexing::Tokenizer* t);
 
-    std::vector<std::string> GetColumnUsed(); // permet d'avoir le nom des colonne utilisé
-
-    bool evalue(std::map<std::string, ColumnData> CombinaisonATester);
+    bool Evaluate(std::map<std::string, ColumnData> CombinaisonATester);
 };
 
 class BinaryExpression {
 
 public:
-    using Condition = std::variant<std::unique_ptr<BinaryExpression>,std::unique_ptr<Clause>>;
+    using Condition = std::variant<BinaryExpression*, Clause*>;
+
+    std::unordered_set<std::string> m_ColumnUsedBelow;
 
     BinaryExpression() = default;
 
-    BinaryExpression(LogicalOperator m_Op_, Condition m_Lhs_, Condition m_Rhs_)
-        : m_Op(m_Op_)
-        , m_Lhs(std::move(m_Lhs_))
-        , m_Rhs(std::move(m_Rhs_))
-    {
-    };
+    BinaryExpression(LogicalOperator op, Condition lhs, Condition rhs, std::unordered_set<std::string> col_used)
+        : m_Op(op)
+        , m_Lhs(lhs)
+        , m_Rhs(rhs)
+        , m_ColumnUsedBelow(col_used) {};
 
-    static BinaryExpression::Condition* ParseCondition(Lexing::Tokenizer* t);
+    // Parsing utilities
+    static std::unordered_set<std::string> MergeColumns(Condition lhs, Condition rhs);
+
+    static BinaryExpression::Condition ParseCondition(Lexing::Tokenizer* t);
+
+    // Data accesing methods
+
+    void PrintCondition(std::ostream& out);
 
     auto Op() -> LogicalOperator { return m_Op; }
+
+    // Evaluation methods
+
+    std::unordered_set<std::string> ColumnUsedVector(); // faire un parcours postfix pour récuperer les colonnes des enfants, puis faire l'union des deux, l'enregistrer pour ce type puis la renvoyer pour l'appel récursif
 
     BinaryExpression* ExtraireTable(std::vector<std::string> ColonnesAExtraire);
 
     bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
-
-    std::vector<std::string> ColumnUsedVector(); // faire un parcours postfix pour récuperer les colonnes des enfants, puis faire l'union des deux, l'enregistrer pour ce type puis la renvoyer pour l'appel récursif
 
 private:
     // Opérateur, ne peut être que AND / OR
@@ -286,11 +309,7 @@ private:
 
     Condition m_Lhs;
     Condition m_Rhs;
-
-    std::unique_ptr<std::unordered_set<std::string>> m_ColumnUsedBelow;
 };
-
-std::ostream& operator<<(std::ostream& os, const BinaryExpression& binary_expr);
 
 } // namespace parsing
 

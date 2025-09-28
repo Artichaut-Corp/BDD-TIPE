@@ -328,6 +328,8 @@ std::variant<OrderByClause*, Errors::Error> OrderByClause::ParseOrderBy(Lexing::
 
 WhereClause* WhereClause::ParseWhere(Lexing::Tokenizer* t)
 {
+
+    auto tok = t->peek();
     return new WhereClause(BinaryExpression::ParseCondition(t));
 }
 
@@ -644,9 +646,13 @@ SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
     std::variant<WhereClause*, Errors::Error> where = nullptr;
 
     if (next.m_Token == Lexing::WHERE_T) {
-        t->next();
+        next = t->next();
 
         where = WhereClause::ParseWhere(t);
+
+        if (std::holds_alternative<Errors::Error>(where)) {
+            throw std::get<Errors::Error>(where);
+        }
 
         next = t->peek();
     }

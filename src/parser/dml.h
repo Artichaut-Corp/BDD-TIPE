@@ -270,15 +270,13 @@ public:
 };
 
 class WhereClause {
-    std::unique_ptr<BinaryExpression::Condition> m_Condition;
-
 public:
-    WhereClause(BinaryExpression::Condition* cond)
-        : m_Condition(std::unique_ptr<BinaryExpression::Condition>(cond))
+    BinaryExpression::Condition m_Condition;
+
+    WhereClause(BinaryExpression::Condition cond)
+        : m_Condition(BinaryExpression::Condition(std::move(cond)))
     {
     }
-
-    BinaryExpression::Condition* getCondition() const { return m_Condition.get(); }
 
     static WhereClause* ParseWhere(Lexing::Tokenizer* t);
 };
