@@ -1,11 +1,13 @@
 #include "expression.h"
 #include "../utils.h"
+#include "../algebrizer/algebrizer.h"
+
 
 #include <bits/types/stack_t.h>
 #include <cstddef>
-#include <ios>
 #include <memory>
 #include <ostream>
+#include <type_traits>
 #include <unordered_set>
 #include <variant>
 
@@ -558,4 +560,34 @@ void BinaryExpression::PrintCondition(std::ostream& out)
 
     out << std::endl;;
 }
+std::unordered_set<std::string> BinaryExpression::ColumnUsedUnderCalcul(std::string TablePrincipale)
+{
+    std::unordered_set<std::string> left_res = std::visit([&](auto& child) {
+        using T = std::decay_t<decltype(child)>;
+        if constexpr (std::is_same_v<T, BinaryExpression*>) {
+            return child->m_ColumnUsedBelow;
+        } else if constexpr (std::is_same_v<T, Clause*>) {
+            return child->m_ColumnUsed;
+        }
+    },
+        m_Lhs);
+
+    std::unordered_set<std::string> right_res = std::visit([&](auto& child) {
+        using T = std::decay_t<decltype(child)>;
+        if constexpr (std::is_same_v<T, BinaryExpression*>) {
+            return child->m_ColumnUsedBelow;
+        } else if constexpr (std::is_same_v<T, Clause*>) {
+            return child->m_ColumnUsed;
+        }
+    },
+        m_Rhs);
+    std::unordered_set<std::string> m_ColumnUsedBelow;
+
+    m_ColumnUsedBelow.insert(left_res.begin(), left_res.end());
+    m_ColumnUsedBelow.insert(right_res.begin(), right_res.end());
+
+    return m_ColumnUsedBelow;
+
+}
+
 } // namespace parsing

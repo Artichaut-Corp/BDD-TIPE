@@ -1,6 +1,5 @@
 #include <format>
 #include <map>
-#include <memory>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -266,7 +265,9 @@ public:
 
     static Clause* ParseClause(Lexing::Tokenizer* t);
 
-    bool Evaluate(std::map<std::string, ColumnData> CombinaisonATester);
+    std::unordered_set<std::string> GetColumnUsed(std::string TablePrincipale); // permet d'avoir le nom des colonne utilisé
+
+    bool Evalue(std::map<std::string, ColumnData> CombinaisonATester);
 };
 
 class BinaryExpression {
@@ -303,12 +304,15 @@ public:
 
     bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
 
+    std::unordered_set<std::string> ColumnUsedUnderCalcul(std::string TablePrincipale); // faire un parcours postfix pour récuperer les colonnes des enfants, puis faire l'union des deux, l'enregistrer pour ce type puis la renvoyer pour l'appel récursif
+
 private:
     // Opérateur, ne peut être que AND / OR
     LogicalOperator m_Op;
 
     Condition m_Lhs;
     Condition m_Rhs;
+
 };
 
 } // namespace parsing

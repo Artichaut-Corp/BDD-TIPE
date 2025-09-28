@@ -35,6 +35,8 @@ const ErrorCode ERROR_UNGIVEN_ARGUMENT = std::pair(19, "Passed command without r
 const ErrorCode ERROR_UNRECOGNIZED_STMT = std::pair(20, "Used unrecognized statement");
 const ErrorCode ERROR_NETWORK_FAILURE = std::pair(21, "Networking capabilities have failed");
 const ErrorCode ERROR_TABLE_EMPTY = std::pair(22, "Requested an empty table");
+const ErrorCode ERROR_UNKNOW_TYPE_BINARYEXPR = std::pair(23, "Uknown type in the BinaryExpr Tree");
+
 
 enum class ErrorType { CLIArgument,
     ParserError,
