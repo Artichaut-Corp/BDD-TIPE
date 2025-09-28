@@ -10,11 +10,11 @@ std::variant<Column, Errors::Error> Store::GetDBColumn(int fd, DBTableIndex* Ind
     try {
         t = &Index->at(table_name);
     } catch (std::out_of_range) {
-        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table {} does not exist", table_name), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
+        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table '{}' does not exist", table_name), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
     }
 
     if (t->GetElementNumber() == 0) {
-        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table {} is empty", table_name), 0, 0, Errors::ERROR_TABLE_EMPTY);
+        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table '{}' is empty", table_name), 0, 0, Errors::ERROR_TABLE_EMPTY);
     }
 
     ColumnInfo c;
@@ -22,7 +22,7 @@ std::variant<Column, Errors::Error> Store::GetDBColumn(int fd, DBTableIndex* Ind
     try {
         c = t->GetColumnInfo(column_name);
     } catch (std::out_of_range) {
-        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Column {} does not exist", column_name), 0, 0, Errors::ERROR_COLUMN_DOES_NOT_EXIST);
+        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Column '{}' does not exist", column_name), 0, 0, Errors::ERROR_COLUMN_DOES_NOT_EXIST);
     }
 
     switch (c.GetElementSize()) {
@@ -49,7 +49,7 @@ std::optional<Errors::Error> Store::SetRecord(int fd, DBTableIndex* Index, const
     try {
         t = &Index->at(table_name);
     } catch (std::out_of_range) {
-        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table {} does not exist", table_name), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
+        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table '{}' does not exist", table_name), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
     }
 
     Record::Write(fd, t, record);
@@ -64,7 +64,7 @@ std::optional<Errors::Error> Store::SetData(int fd, DBTableIndex* Index, const s
     try {
         t = &Index->at(table_name);
     } catch (std::out_of_range) {
-        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table {} does not exist", table_name), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
+        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table '{}' does not exist", table_name), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
     }
 
     Record::Write(fd, t, data);

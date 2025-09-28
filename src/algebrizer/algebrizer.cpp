@@ -110,9 +110,10 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
         Parsing::BinaryExpression::Condition clause = where->m_Condition;
 
-        if (std::holds_alternative<Parsing::BinaryExpression*>(clause))
-        {
+        if (std::holds_alternative<Parsing::BinaryExpression*>(clause)) {
             std::get<Parsing::BinaryExpression*>(clause)->PrintCondition(std::cout);
+        } else {
+            std::get<Parsing::Clause*>(clause)->Print(std::cout);
         }
     }
     // a modifier une fois le BinaryTree type fini !

@@ -1,7 +1,6 @@
 #include "expression.h"
-#include "../utils.h"
 #include "../algebrizer/algebrizer.h"
-
+#include "../utils.h"
 
 #include <bits/types/stack_t.h>
 #include <cstddef>
@@ -297,7 +296,7 @@ ColumnName* ColumnName::ParseColumnName(Lexing::Tokenizer* t)
 
     if (next_next.m_Token != Lexing::DOT_T) {
         //  Table et Colonne
-        return new ColumnName(tok.m_Value, next.m_Value);
+        return new ColumnName(next.m_Value, tok.m_Value);
     }
 
     t->next();
@@ -344,9 +343,11 @@ Clause::ParseClauseMember(Lexing::Tokenizer* t)
         t->next();
     } break;
     case Lexing::VAR_NAME_T: {
-        column_used = t->peek().m_Value;
+        auto parsed_col = *ColumnName::ParseColumnName(t);
 
-        member = *ColumnName::ParseColumnName(t);
+        column_used = parsed_col.getColumnName();
+        std::cout << column_used;
+        member = parsed_col;
 
     } break;
     default:
@@ -558,7 +559,8 @@ void BinaryExpression::PrintCondition(std::ostream& out)
         }
     }
 
-    out << std::endl;;
+    out << std::endl;
+    ;
 }
 std::unordered_set<std::string> BinaryExpression::ColumnUsedUnderCalcul(std::string TablePrincipale)
 {
@@ -587,7 +589,6 @@ std::unordered_set<std::string> BinaryExpression::ColumnUsedUnderCalcul(std::str
     m_ColumnUsedBelow.insert(right_res.begin(), right_res.end());
 
     return m_ColumnUsedBelow;
-
 }
 
 } // namespace parsing
