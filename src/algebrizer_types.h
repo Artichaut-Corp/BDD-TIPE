@@ -50,7 +50,7 @@ inline std::string getColumnTypeName(const ColumnData& col)
 } // Convert string array to string_view (up to first '\0')
 inline std::string_view to_string_view(const DbString& arr)
 {
-    size_t len = 0;
+    int len = 0;
     for (; len < arr.size(); ++len) {
         if (arr[len] == 0)
             break; // '\0'
@@ -76,7 +76,7 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
     }
 
     // Si deux entiers différents → comparer via uint64_t
-    auto is_integer = [](size_t idx) { return idx <= 3; };
+    auto is_integer = [](int idx) { return idx <= 3; };
     if (is_integer(lhs.index()) && is_integer(rhs.index())) {
         auto to_u64 = [](const ColumnData& c) -> uint64_t {
             switch (c.index()) {
@@ -117,7 +117,7 @@ inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
     }
 
     // Si deux entiers différents
-    auto is_integer = [](size_t idx) { return idx <= 3; };
+    auto is_integer = [](int idx) { return idx <= 3; };
     if (is_integer(lhs.index()) && is_integer(rhs.index())) {
         auto to_u64 = [](const ColumnData& c) -> uint64_t {
             switch (c.index()) {

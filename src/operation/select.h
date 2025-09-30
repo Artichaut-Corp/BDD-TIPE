@@ -19,14 +19,12 @@ private:
     std::string TablePrincipale;
 
 public:
-    Select(std::unique_ptr<std::unordered_set<std::string>> cols,Parsing::BinaryExpression::Condition cond,std::string TablePrincipale_)
+    Select(std::unique_ptr<std::unordered_set<std::string>> cols, Parsing::BinaryExpression::Condition cond, std::string TablePrincipale_)
         : m_Cols(std::move(cols))
         , m_Conds(cond)
-        ,TablePrincipale(TablePrincipale_)
+        , TablePrincipale(TablePrincipale_)
 
     {
-        TableNameToExec = "city";
-
     };
 
     Table* Exec(Table* table)
@@ -34,8 +32,14 @@ public:
         table->Selection(m_Conds, std::move(m_Cols), TablePrincipale);
         return table;
     }
-    std::string GetTableName(){return TableNameToExec;}
-
+    std::string GetTableName()
+    {
+        return TableNameToExec;
+    }
+    void SetRootInfo(std::string TableName)
+    {
+        TableNameToExec = TableName;
+    }
 };
 
 } // Database::QueryPlanning

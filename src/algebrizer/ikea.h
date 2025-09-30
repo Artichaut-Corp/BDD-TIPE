@@ -1,24 +1,22 @@
-//le nom vien du faite que la classe contient plussieur Table, comme ikea "drumroll.mp3"
+// le nom vien du faite que la classe contient plussieur Table, comme ikea "drumroll.mp3"
 #include "../data_process_system/table.h"
 #include <vector>
 namespace Database::QueryPlanning {
 
 class Ikea {
 private:
-    std::vector<Table*> allée;
-    std::map<std::string,int> catalogue;
+    std::map<std::string, Table*> catalogue;
 
 public:
-    Ikea(std::vector<Table*> allée_)
-        : allée(allée_)
+    Ikea(std::vector<Table>& allée_)
     {
-        std::map<std::string,int> catalogue;
-        for(int i = 0;i<allée.size();i++){
-            catalogue[allée[i]->Get_name()] = i;
+
+        for (int i = 0; i < allée_.size(); i++) {
+
+            catalogue.insert({ allée_[i].Get_name(), &allée_[i] });
         }
     }
 
-    Table* GetTableByName(std::string nom){return allée[catalogue[nom]];}
-
+    Table* GetTableByName(std::string nom) { return catalogue.at(nom); }
 };
 };

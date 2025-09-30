@@ -666,25 +666,31 @@ bool Clause::Eval(std::map<std::string, ColumnData> CombinaisonATester, std::str
             return operand;
         } else {
             throw Errors::Error(Errors::ErrorType::RuntimeError,
-                                "Unknown type in the BinaryExpression Tree", 
-                                0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+                "Unknown type in the BinaryExpression Tree",
+                0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
         }
     };
 
-
-    ColumnData LeftVal  = std::visit(resolveOperand, Lhs());
+    ColumnData LeftVal = std::visit(resolveOperand, Lhs());
     ColumnData RightVal = std::visit(resolveOperand, Rhs());
+
     switch (Op()) {
-    case Parsing::LogicalOperator::EQ:  return LeftVal == RightVal;
-    case Parsing::LogicalOperator::GT:  return LeftVal > RightVal;
-    case Parsing::LogicalOperator::LT:  return LeftVal < RightVal;
-    case Parsing::LogicalOperator::GTE: return LeftVal >= RightVal;
-    case Parsing::LogicalOperator::LTE: return LeftVal <= RightVal;
-    case Parsing::LogicalOperator::NE:  return LeftVal != RightVal;
+    case Parsing::LogicalOperator::EQ:
+        return LeftVal == RightVal;
+    case Parsing::LogicalOperator::GT:
+        return LeftVal > RightVal;
+    case Parsing::LogicalOperator::LT:
+        return LeftVal < RightVal;
+    case Parsing::LogicalOperator::GTE:
+        return LeftVal >= RightVal;
+    case Parsing::LogicalOperator::LTE:
+        return LeftVal <= RightVal;
+    case Parsing::LogicalOperator::NE:
+        return LeftVal != RightVal;
     default:
         throw Errors::Error(Errors::ErrorType::RuntimeError,
-                            "Unknown Logical Operator",
-                            0, 0, Errors::ERROR_UNKNOW_LOGICAL_OPERATOR);
+            "Unknown Logical Operator",
+            0, 0, Errors::ERROR_UNKNOW_LOGICAL_OPERATOR);
     }
 }
 
@@ -699,8 +705,10 @@ bool BinaryExpression::Eval(std::map<std::string, ColumnData> CombinaisonATester
     } else {
         throw Errors::Error(Errors::ErrorType::RuntimeError, "Uknown type in the BinaryExpression Tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
     }
-    if (Op() == LogicalOperator::OR || ResultAGauche) {
+    if (Op() == LogicalOperator::OR && ResultAGauche) {
         return true; // on rend paraisseuse l'évaluation
+    } else if (m_Op == LogicalOperator::AND && !ResultAGauche) {
+        return false;
     } else {
         bool ResultADroite;
         auto droite = Rhs();

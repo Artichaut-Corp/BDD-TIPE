@@ -17,7 +17,7 @@ namespace Database::QueryPlanning {
 class Colonne {
 private:
     std::shared_ptr<Racine> racine;
-    std::vector<size_t> indices; // indices valides dans racine
+    std::vector<int> indices; // indices valides dans racine
     std::string nom_colonne; // nom de la colonne de la forme "Table.nom_colonne"
 
 public:
@@ -25,15 +25,15 @@ public:
         : racine(racine_)
         , nom_colonne(nom_colonne_)
     {
-        std::vector<size_t> temp;
+        std::vector<int> temp;
         temp.reserve(racine->size());
-        for (size_t i = 0; i < racine->size(); i++) {
+        for (int i = 0; i < racine->size(); i++) {
             temp.push_back(i);
         }
         indices = temp;
     }
 
-    Colonne(std::shared_ptr<Racine> racine_, const std::string& nom_, const std::vector<size_t>& indices_)
+    Colonne(std::shared_ptr<Racine> racine_, const std::string& nom_, const std::vector<int>& indices_)
         : racine(std::move(racine_))
         , nom_colonne(nom_)
         , indices(indices_)
@@ -41,12 +41,12 @@ public:
     }
 
     // Accès à une valeur via l'indice de la colonne
-    ColumnData getValue(const size_t idx) const
+    ColumnData getValue(const int idx) const
     {
         return racine->getValue((indices)[idx]);
     }
 
-    size_t size() const
+    int size() const
     {
         return indices.size();
     }
@@ -54,7 +54,7 @@ public:
     void
     print() const
     {
-        for (size_t i = 0; i < indices.size(); i++) {
+        for (int i = 0; i < indices.size(); i++) {
             Database::QueryPlanning::afficherColumnData(racine->getValue((indices)[i]));
         }
         std::cout << "\n";
@@ -68,16 +68,16 @@ public:
     {
         return racine.get();
     }
-    size_t get_pos_at_pos(int i)
+    int get_pos_at_pos(int i)
     {
         return indices[i];
     }
-    void garder_indice_valide(std::shared_ptr<std::vector<size_t>> indices_valide)
-    {   
-        std::vector<size_t> filtré;
+    void garder_indice_valide(std::shared_ptr<std::vector<int>> indices_valide)
+    {
+        std::vector<int> filtré;
         filtré.reserve(indices_valide->size()); // optimisation (merci chat gpt)
 
-        for (size_t idx : *indices_valide) {
+        for (int idx : *indices_valide) {
             if (idx < indices.size()) {
                 filtré.push_back(indices[idx]);
             }
