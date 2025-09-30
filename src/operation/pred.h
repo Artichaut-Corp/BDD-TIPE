@@ -36,7 +36,7 @@ public:
         if (m_Type == Parsing::LogicalOperator::NE)
             return val1 != val2;
 
-        std::cerr << "Erreur \n"; // il faudrait changer les erreurs pour les rendres plus explicites
+        std::cerr << "Erreur à l'éval du join\n"; // il faudrait changer les erreurs pour les rendres plus explicites
         return false;
     }
 };

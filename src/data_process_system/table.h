@@ -14,53 +14,60 @@ namespace Database::QueryPlanning {
 
 class Table {
 private:
-    std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> data; // données immuables
-    std::map<std::string, size_t> map; // permet de trouver la position d'une colonne à partir de son nom
+    std::map<std::string, std::shared_ptr<Colonne>> map; // permet de trouver la position d'une colonne à partir de son nom
     std::vector<std::string> Colonnes_names; // contient les noms de toute les colonnes présente dans la table (ces noms sont de la forme Table@colonnes) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
     std::string Name;
 
 public:
-    Table(std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> data_, const std::vector<std::string>& nom_colonne, std::string Name_) // noms et colonnes dans le bon ordre
-        : data(std::move(data_))
-        ,Name(Name_)
-        ,Colonnes_names(nom_colonne)
+    Table(std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> data_, std::string Name_) // noms et colonnes dans le bon ordre
+        : Name(Name_)
     {
-        for (size_t i = 0; i < nom_colonne.size(); ++i) {
-            map[nom_colonne[i]] = i;
+        for (auto e : *data_) {
+            map[e->get_name()] = e;
+            Colonnes_names.push_back(e->get_name());
         }
     }
 
-    void Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<std::string>> nom_colonnes,std::string TablePrincipale);
+    void Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<std::string>> nom_colonnes, std::string TablePrincipale);
     void Projection(std::unique_ptr<std::vector<std::string>> ColumnToSave);
 
     int size()
     {
-        return data->size();
+        return map.size();
     }
-    int get_column_pos(std::string column_name)
+    int Columnsize()
     {
-        return map[column_name];
+        return map[Colonnes_names[0]]->size();
     }
 
     ColumnData get_value(std::string column_name, int pos_ind)
     {
-        int pos = map[column_name];
-        return (*data)[pos]->getValue(pos_ind);
-    }
-    std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> get_data_ptr()
-    {
-        return data;
+        ;
+        return map[column_name]->getValue(pos_ind);
     }
 
     bool colonne_exist(std::string clef_testé)
     {
         return !(map.end() == map.find(clef_testé)); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
     }
-    std::string Get_name(){return Name;};
+    std::string Get_name() { return Name; };
 
-    std::map<std::string, size_t> GetMap(){
+    std::map<std::string, std::shared_ptr<Colonne>> GetMap()
+    {
         return map;
-    }; 
+    };
+
+    std::vector<std::shared_ptr<Colonne>>* get_data_ptr()
+    {
+        auto res = new std::vector<std::shared_ptr<Colonne>>();
+
+        res->reserve(map.size());
+        for (auto e : map) {
+            res->emplace_back(e.second);
+        }
+
+        return res;
+    }
 };
 
 } // Database::QueryPlanning

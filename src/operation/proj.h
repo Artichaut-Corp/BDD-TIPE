@@ -1,7 +1,6 @@
 #include "../algebrizer_types.h"
 #include "../data_process_system/table.h"
 
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -16,22 +15,25 @@ class Proj {
 private:
     std::vector<std::string> m_Cols; // all the column who stays once they got there
     std::string TableNameToExec;
+
 public:
     Proj(std::vector<std::string> cols)
         : m_Cols(cols)
 
     {
-        TableNameToExec = "city";
     }
 
     Table* Exec(Table* table)
     {
-        table->Projection(std::make_unique<std::vector<std::string>> (m_Cols));
+        table->Projection(std::make_unique<std::vector<std::string>>(m_Cols));
 
         return table;
     }
-    std::string GetTableName(){return TableNameToExec;}
+    std::string GetTableName() { return TableNameToExec; }
 
+    void SetRootInfo(std::string TableName){
+        TableNameToExec = TableName;
+    }
 };
 
 } // Database::QueryPlanning

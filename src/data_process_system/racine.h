@@ -55,7 +55,7 @@ public:
             other.data);
     }
 
-    ColumnData getValue(std::size_t i) const
+    ColumnData getValue(int i) const
     {
         return std::visit([i](auto const& vecPtr) -> ColumnData {
             if (!vecPtr || i >= vecPtr->size()) {
@@ -66,9 +66,9 @@ public:
             data);
     }
 
-    std::size_t size() const
+    int size() const
     {
-        return std::visit([](auto const& vecPtr) -> std::size_t {
+        return std::visit([](auto const& vecPtr) -> int {
             return vecPtr ? vecPtr->size() : 0;
         },
             data);

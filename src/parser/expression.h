@@ -34,7 +34,10 @@ enum class AggrFuncType {
     COUNT_F,
     MAX_F,
     MIN_F,
-    SUM_F
+    SUM_F,
+
+
+    NOTHING_F //utile que pour le type Final pour simplifier le code 
 };
 
 enum class ColumnType { NULL_C,

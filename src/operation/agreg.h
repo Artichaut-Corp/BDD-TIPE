@@ -2,7 +2,7 @@
 #include <optional>
 #include <string>
 #include <vector>
-
+#include "../parser/expression.h"
 #include "../data_process_system/table.h"
 #ifndef agreg_H
 
@@ -15,27 +15,19 @@ static std::vector<int>& Count();
 static std::vector<int>& Min();
 static std::vector<int>& Max();
 
-enum class AggrType {
-    NOTHING_F,
-    AVG_F,
-    COUNT_F,
-    MAX_F,
-    MIN_F,
-    SUM_F
-};
 
 class ReturnType {
 private:
     std::string colonne;
-    AggrType opération;
+    Parsing::AggrFuncType opération;
 
 public:
-    ReturnType(std::string colonne_, AggrType type_)
+    ReturnType(std::string colonne_, Parsing::AggrFuncType type_)
         : colonne(colonne_)
         , opération(type_)
     {
     }
-    AggrType GetType() { return opération; };
+    Parsing::AggrFuncType GetType() { return opération; };
 
     std::string GetColonne() { return colonne; };
 };
@@ -60,7 +52,6 @@ public:
 
     Table* AppliqueAgregate(Table* table);
 
-    void AfficheResultat(Table* table);
 };
 
 } // Database::QueryPlanning

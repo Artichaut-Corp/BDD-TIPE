@@ -91,7 +91,7 @@ public:
 
 static std::string DbStringToString(const DbString& s)
 {
-    size_t i = 0;
+    int i = 0;
     std::string r;
     while (i < s.size() && s[i] != 0) {
         r.push_back(static_cast<char>(s[i]));
@@ -104,9 +104,9 @@ static std::string DbStringToString(const DbString& s)
     static DbString StringToDbString(const std::string& s)
     {
         DbString r {}; // value-initialize => tous les octets à 0
-        size_t max_copy = std::min(s.size(), r.size() - 1); // garder place pour '\0' si nécessaire
+        int max_copy = std::min(s.size(), r.size() - 1); // garder place pour '\0' si nécessaire
 
-        for (size_t i = 0; i < max_copy; ++i) {
+        for (int i = 0; i < max_copy; ++i) {
             r[i] = static_cast<uint8_t>(s[i]);
         }
         // s'il reste de l'espace, r[max_copy] est déjà 0 grâce à l'initialisation
