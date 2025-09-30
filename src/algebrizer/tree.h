@@ -49,7 +49,6 @@ public:
                 if (tFg && tFd) {
                     return op->Exec(tFg, tFd); // doit retourner Table*
                 } else {
-                    std::cout << op->GetLTable() << " et " << op->GetRTable() << std::endl;
                     return op->Exec(Tables->GetTableByName(op->GetLTable()), Tables->GetTableByName(op->GetRTable()));
                 }
             } else if constexpr (std::is_same_v<T, Proj>) {

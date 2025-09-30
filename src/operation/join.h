@@ -3,13 +3,9 @@
 #include "../data_process_system/racine.h"
 #include "../data_process_system/table.h"
 #include "pred.h"
-
-#include <cstddef>
-#include <iostream>
-#include <map>
+#include "../utils/table_utils.h"
 #include <memory>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -50,7 +46,7 @@ public:
         }
 
         // Vecteurs pour stocker les infos des colonnes et indices valides
-        int nb_colonnes = table1->get_data_ptr()->size() + table2->get_data_ptr()->size() - 1;
+        int nb_colonnes = table1->get_data_ptr()->size() + table2->get_data_ptr()->size() ;
         auto pos_valid_in_colonne = new std::vector<std::vector<int>*>(nb_colonnes); // dans ce vecteur, l'élement en position i correspondras à la liste des position toujours valide qui seras ajouter dans la colonne en poisiton i de nouvelles_colonne
         for (int k = 0; k < nb_colonnes; k++) {
             (*pos_valid_in_colonne)[k] = new std::vector<int>();
@@ -68,12 +64,10 @@ public:
 
         // --- Étape 2 : Ajouter les colonnes uniques de table2 ---
         for (std::shared_ptr<Colonne> c : *table2->get_data_ptr()) {
-            if (c->get_name() != m_columnName2) {
-                std::string nom = c->get_name();
-                std::shared_ptr<Racine> racine_ptr = std::make_shared<Racine>(*c->get_racine_ptr());
-                colonnes_info.push_back({ nom, racine_ptr });
-                i++;
-            }
+            std::string nom = c->get_name();
+            std::shared_ptr<Racine> racine_ptr = std::make_shared<Racine>(*c->get_racine_ptr());
+            colonnes_info.push_back({ nom, racine_ptr });
+            i++;
         }
 
         // --- Étape 3 : Remplir pos_valid_in_colonne selon les couples valides ---
@@ -86,11 +80,9 @@ public:
                 i++;
             }
             for (std::shared_ptr<Colonne> c : *table2->get_data_ptr()) {
-                if (c->get_name() != m_columnName2) {
-                    int pos = c->get_pos_at_pos(p.second);
-                    (*pos_valid_in_colonne).at(i)->push_back(pos);
-                    i++;
-                }
+                int pos = c->get_pos_at_pos(p.second);
+                (*pos_valid_in_colonne).at(i)->push_back(pos);
+                i++;
             }
         }
 
@@ -106,7 +98,6 @@ public:
                 *pos_valid_in_colonne->at(i) // std::vector<int>
                 ));
         };
-
         return new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(nouvelles_colonne), table1->Get_name());
     }
     void SetRootInfo(std::string LeftTableName, std::string RightTableName)

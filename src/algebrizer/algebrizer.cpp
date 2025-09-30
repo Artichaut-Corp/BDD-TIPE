@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <map>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -111,7 +110,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     Table* table_principale = new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(Colonnes), TablePrincipaleNom);
     Node RacineExec = Node(new Proj(NomColonneDeRetour)); // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
     RacineExec.SetNodeRootInfo(TablePrincipaleNom, "");
-    Final filtre_fin = Final(colonnes_de_retour); // on en profite pour créer le type de fin
     std::vector<Table> Tables;
     Tables.push_back(*table_principale); // on enregiste la table principale
 
@@ -186,6 +184,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
 
     Ikea* Magasin = new Ikea(Tables);
+    RacineExec.AfficheArbreExec(std::cout);
     Table* Table_Finale = RacineExec.Pronf(Magasin);
     Utils::AfficheResultat(Table_Finale);
 }
