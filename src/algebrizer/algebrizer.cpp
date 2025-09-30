@@ -120,10 +120,8 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     if (Tables_secondaires.has_value()) { // cas avec des joins pas traité pour l'instant
 
-    } else {
-
-        // pour l'instant le seul cas "fonctionnel" est le cas où la requete ressemble à : Select Personne.nom, Personne.age From Personne
-        // on doit creer la table, pour cela on doit creer les racines et les Colonnes
+    } else { // il n'y as qu'une seule table utilisé
+        //  on doit creer la table, pour cela on doit creer les racines et les Colonnes
         std::vector<std::shared_ptr<Racine>> Racines;
         Racines.reserve(ColonneUsed.size());
         std::vector<std::shared_ptr<Colonne>> Colonnes;
@@ -136,18 +134,32 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         }
         // étant donné qu'il n'y as qu'une seul Table on n'en créer qu'une seule avec tout les paramètre
         Table* table_principale = new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(Colonnes), ColonneUsed, Table_nom);
-
-        // il faut maintenant creer la query
         Node Racine = Node(new Proj(NomColonneDeRetour)); // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
 
+        auto where = Selection->getWhere();
         Final filtre_fin = Final(colonnes_de_retour);
 
         std::vector<Table*> Tables;
         Tables.push_back(table_principale);
         Ikea Magasin = Ikea(Tables);
 
+        // il faut maintenant choper les conditions càd les where
+        std::unordered_set<std::string>* ColonneTesté;
+        if (where != nullptr) {
+            Parsing::BinaryExpression::Condition Condition = where->m_Condition;
+            if (std::holds_alternative<Parsing::Clause*>(Condition)) {
+                ColonneTesté = std::get<Parsing::Clause*>(Condition)->Column();
+            } else if (std::holds_alternative<Parsing::BinaryExpression*>(Condition)) {
+                ColonneTesté = std::get<Parsing::BinaryExpression*>(Condition)->Column();
+            } else {
+                throw Errors::Error(Errors::ErrorType::RuntimeError, "Uknown type in the BinaryExpression Tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+            }
+ 
+            Node Node_Select = Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColonneTesté),Condition,Table_nom));
+            Racine.AddChild(true, std::make_unique<Node>(std::move(Node_Select)));
+        } 
         Table* Table_Finale = Racine.Pronf(Magasin);
         filtre_fin.AfficheResultat(Table_Finale);
     }
-}
 };
+}

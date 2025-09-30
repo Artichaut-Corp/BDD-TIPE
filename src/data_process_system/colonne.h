@@ -73,7 +73,7 @@ public:
         return indices[i];
     }
     void garder_indice_valide(std::shared_ptr<std::vector<size_t>> indices_valide)
-    {
+    {   
         std::vector<size_t> filtré;
         filtré.reserve(indices_valide->size()); // optimisation (merci chat gpt)
 

@@ -21,7 +21,7 @@ public:
         : m_Cols(cols)
 
     {
-        TableNameToExec = "country";
+        TableNameToExec = "city";
     }
 
     Table* Exec(Table* table)

@@ -1,8 +1,9 @@
 #include "table.h"
+#include "../parser/expression.h"
 #include "colonne.h"
-
 #include <algorithm>
 #include <cstddef>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -36,42 +37,47 @@ std::vector<size_t> merge_sorted_unique(const std::vector<size_t>& a,
 
     return result;
 }
-void Table::Selection(const std::shared_ptr<std::vector<std::shared_ptr<Predicat_list>>> preds, const std::shared_ptr<std::vector<std::string>> nom_colonnes) // colonnes qui vont être modifié
+void Table::Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<std::string>> nom_colonnes, std::string TablePrincipale) // colonnes qui vont être modifié
 // les éléments de la colonne en position i doivent vérifier le prédicat en positions i
 {
     // Pour faire une projection, d'abord, il faut garder que les indices qui vérifient toute les conditions, ensuite, il faut modifier chaque colonne en ne gardant que ces indices, on rapelle que toute les colonne ont le même nombre d'indices mais ceux-ci diffère en valeur (voire explication.txt)
     size_t taille = (*data)[0]->size();
     std::vector<size_t> indices_valides;
-    for (int i = 0; i < taille; i++) {
-        indices_valides.push_back(i);
-    }
-    for (int i = 0; nom_colonnes->size(); i++) {
-        std::string nom_colonne_testé = (*nom_colonnes)[i];
-        size_t colonne_pos = map[nom_colonne_testé];
-        std::shared_ptr<Colonne> colonne_testé = (*data)[colonne_pos];
-        std::shared_ptr<Predicat_list> PredicatAVérifié = (*preds)[i];
-        indices_valides.erase(std::remove_if(indices_valides.begin(), indices_valides.end(), [indices_valides, colonne_testé, PredicatAVérifié](size_t j) { return !PredicatAVérifié->Eval(colonne_testé->getValue(indices_valides[j])); }));
-        // supprime tout les élément ne vérifiant pas le PredicatAVérifié
+    std::map<std::string, ColumnData> CoupleTesté;
+
+    for (int i = 0; i<taille; i++) {
+        for (auto e : *nom_colonnes) {
+            
+            CoupleTesté[e] = (*data)[map[e]]->getValue(i);
+        }
+        bool eval = false;
+        if (std::holds_alternative<Parsing::Clause*>(pred)) {
+            eval = std::get<Parsing::Clause*>(pred)->Eval(CoupleTesté, TablePrincipale);
+        } else if (std::holds_alternative<Parsing::BinaryExpression*>(pred)) {
+            eval = std::get<Parsing::BinaryExpression*>(pred)->Eval(CoupleTesté, TablePrincipale);
+        } else {
+            throw Errors::Error(Errors::ErrorType::RuntimeError, "Uknown type in the BinaryExpression Tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+        }
+        if(eval){
+            indices_valides.push_back(i);// ajoute  la ligne  vérifiant  le prédicat
+        }
+        
     }
     // quand on arrive ici, les élément dans indices_valides sont les positions vérifiant tout les prédicat dans les liste des colonnes, il faut alors les modifié ne gardé que les bons
     std::shared_ptr<std::vector<size_t>> indices_valides_ptr = std::make_shared<std::vector<size_t>>(indices_valides);
-    for (int i = 0; nom_colonnes->size(); i++) {
-        std::string nom_colonne_testé = (*nom_colonnes)[i];
-        size_t colonne_pos = map[nom_colonne_testé];
-        std::shared_ptr<Colonne> colonne_testé = (*data)[colonne_pos];
+    for (auto e : Colonnes_names){ 
+        std::shared_ptr<Colonne> colonne_testé = (*data)[map[e]];
         colonne_testé->garder_indice_valide(indices_valides_ptr);
     }
+
 };
 
 void Table::Projection(std::unique_ptr<std::vector<std::string>> ColumnToSave)
 {
-    
 
     std::vector<std::string> intersection;
     std::sort(ColumnToSave->begin(), ColumnToSave->end());
     std::sort(Colonnes_names.begin(), Colonnes_names.end());
-
-
 
     std::set_difference(
         Colonnes_names.begin(), Colonnes_names.end(),
@@ -83,7 +89,4 @@ void Table::Projection(std::unique_ptr<std::vector<std::string>> ColumnToSave)
         data->erase(data->begin() + pos - i); // prendre en compte le nombre d'indices supprimé
     }
 }
-
 }
-
-

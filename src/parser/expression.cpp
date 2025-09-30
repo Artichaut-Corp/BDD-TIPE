@@ -1,12 +1,10 @@
 #include "expression.h"
 #include "../algebrizer/algebrizer.h"
+#include "../storage/types.h"
 #include "../utils.h"
+#include "../utils/unordered_set_utils.h"
 
-#include <bits/types/stack_t.h>
-#include <cstddef>
-#include <memory>
 #include <ostream>
-#include <type_traits>
 #include <unordered_set>
 #include <variant>
 
@@ -331,13 +329,13 @@ Clause::ParseClauseMember(Lexing::Tokenizer* t)
 
     switch (next.m_Token) {
     case Lexing::STRING_LITT_T: {
-        member = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
+        member = Convert::StringToDbString(LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value).getData());
 
         t->next();
 
     } break;
     case Lexing::NUM_LITT_T: {
-        member = LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value));
+        member = Convert::intToColumnData(LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value)).getData());
 
         // Passer au suivant ici car Parse un nom de colonne le fait
         t->next();
@@ -346,7 +344,7 @@ Clause::ParseClauseMember(Lexing::Tokenizer* t)
         auto parsed_col = *ColumnName::ParseColumnName(t);
 
         column_used = parsed_col.getColumnName();
-        std::cout << column_used;
+
         member = parsed_col;
 
     } break;
@@ -361,11 +359,8 @@ std::ostream& operator<<(std::ostream& out, const ClauseMember& member)
 {
     if (std::holds_alternative<ColumnName>(member)) {
         out << std::get<ColumnName>(member).getColumnName();
-    } else if (std::holds_alternative<LitteralValue<std::string>>(member)) {
-
-        out << std::get<LitteralValue<std::string>>(member).getData();
     } else {
-        out << std::get<LitteralValue<int>>(member).getData();
+        out << member;
     }
 
     return out;
@@ -440,7 +435,7 @@ std::unordered_set<std::string> BinaryExpression::MergeColumns(Condition lhs, Co
 
         left = b->m_ColumnUsedBelow;
     } else {
-        left = std::get<Clause*>(lhs)->m_ColumnUsed;
+        left = *std::get<Clause*>(lhs)->Column();
     }
 
     if (std::holds_alternative<BinaryExpression*>(rhs)) {
@@ -450,7 +445,7 @@ std::unordered_set<std::string> BinaryExpression::MergeColumns(Condition lhs, Co
         right = b->m_ColumnUsedBelow;
 
     } else {
-        left = std::get<Clause*>(lhs)->m_ColumnUsed;
+        left = *std::get<Clause*>(lhs)->Column();
     }
 
     size_t tot_size = left.size() + right.size();
@@ -562,33 +557,166 @@ void BinaryExpression::PrintCondition(std::ostream& out)
     out << std::endl;
     ;
 }
-std::unordered_set<std::string> BinaryExpression::ColumnUsedUnderCalcul(std::string TablePrincipale)
+
+BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<std::string> ColonnesAExtraire)
 {
-    std::unordered_set<std::string> left_res = std::visit([&](auto& child) {
-        using T = std::decay_t<decltype(child)>;
-        if constexpr (std::is_same_v<T, BinaryExpression*>) {
-            return child->m_ColumnUsedBelow;
-        } else if constexpr (std::is_same_v<T, Clause*>) {
-            return child->m_ColumnUsed;
+    // on suppose en entrant que la BinaryExpr ne peut pas se faire extraire en entière
+    if (BinaryExpression::Op() == LogicalOperator::AND || !Utils::is_subset(&ColonnesAExtraire, Column())) { // on ne peut pas couper un OR ou alors si Les colonne à extraire ne sont carrément pas dans la BinaryExpr
+        auto LeftColumn = std::visit([](auto* obj) {
+            return obj->Column();
+        },
+            Lhs());
+        if (Utils::is_subset(LeftColumn, &ColonnesAExtraire)) { // je peut prendre tout gauche
+            // il faut tester si on ne peut pas avoir des truc à droite
+            auto RecupADroite = std::visit([&](auto* obj) -> BinaryExpression::Condition {
+                        using T = std::decay_t<decltype(*obj)>;
+                        if constexpr (std::is_same_v<T, BinaryExpression>) {
+                            return obj->ExtraireCond(ColonnesAExtraire);
+                        }else if constexpr (std::is_same_v<T, Clause>) {
+                            return BinaryExpression::Condition{}; //on ne peut pas découper une clause, donc on renvoie rien
+                        }else{
+                            throw Errors::Error(Errors::ErrorType::RuntimeError, "Unknow type in BinaryExpression tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+                        } },
+                Rhs());
+
+            bool RecupADroiteEstVide = std::visit([](auto* ptr) {
+                return ptr == nullptr;
+            },
+                RecupADroite);
+            auto temp = Lhs();
+            NullifyLhs();
+            if (RecupADroiteEstVide) {
+                return temp; // on a rien trouvé à droite, donc on renvoie juste tout gauche
+            } else { // y'as des truc à droite donc on les regroupe et on renvoie ça
+                return new BinaryExpression(LogicalOperator::AND, RecupADroite, temp, MergeColumns(RecupADroite, temp));
+            }
+        } else { // on ne peut pas tout prendre à gauche, donc on teste à droite et on prend un max à gauche
+            auto RightColumn = std::visit([](auto* obj) {
+                return obj->Column();
+            },
+                Rhs());
+            auto RecupAGauche = std::visit([&](auto* obj) -> BinaryExpression::Condition {
+                        using T = std::decay_t<decltype(*obj)>;
+                        if constexpr (std::is_same_v<T, BinaryExpression>) {
+                            return obj->ExtraireCond(ColonnesAExtraire);
+                        }else if constexpr (std::is_same_v<T, Clause>) {
+                            return BinaryExpression::Condition{}; //on ne peut pas découper une clause, donc on renvoie rien
+                        }else{
+                            throw Errors::Error(Errors::ErrorType::RuntimeError, "Unknow type in BinaryExpression tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+                        } },
+                Lhs());
+
+            bool RecupAGaucheEstVide = std::visit([](auto* ptr) {
+                return ptr == nullptr;
+            },
+                RecupAGauche);
+            if (Utils::is_subset(RightColumn, &ColonnesAExtraire)) { // je peut tout prendre à droite
+                // il faut tester si on ne peut pas avoir des truc à gauche
+                auto temp = Rhs();
+                NullifyRhs();
+                if (RecupAGaucheEstVide) {
+                    return temp; // on a rien trouvé à gauche, donc on renvoie juste tout droite
+                } else { // y'as des truc à gauche donc on les regroupe et on renvoie ça
+                    return new BinaryExpression(LogicalOperator::AND, RecupAGauche, temp, MergeColumns(RecupAGauche, temp));
+                }
+            } else { // On ne peut pas tout prendre à droite ni tout prendre à gauche
+                auto RecupADroite = std::visit([&](auto* obj) -> BinaryExpression::Condition {
+                        using T = std::decay_t<decltype(*obj)>;
+                        if constexpr (std::is_same_v<T, BinaryExpression>) {
+                            return obj->ExtraireCond(ColonnesAExtraire);
+                        }else if constexpr (std::is_same_v<T, Clause>) {
+                            return BinaryExpression::Condition{}; //on ne peut pas découper une clause, donc on renvoie rien
+                        }else{
+                            throw Errors::Error(Errors::ErrorType::RuntimeError, "Unknow type in BinaryExpression tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+                        } },
+                    Rhs());
+
+                bool RecupADroiteEstVide = std::visit([](auto* ptr) {
+                    return ptr == nullptr;
+                },
+                    RecupADroite);
+                if (RecupADroiteEstVide) {
+                    if (RecupAGaucheEstVide) {
+                        return BinaryExpression::Condition {};
+                    } else {
+                        return RecupAGauche;
+                    }
+                } else {
+                    if (RecupAGaucheEstVide) {
+                        return RecupADroite;
+                    } else {
+                        return new BinaryExpression(LogicalOperator::AND, RecupADroite, RecupAGauche, MergeColumns(RecupADroite, RecupAGauche));
+                        ;
+                    }
+                }
+            }
         }
-    },
-        m_Lhs);
+    } else {
+        return BinaryExpression::Condition {};
+    }
+}
 
-    std::unordered_set<std::string> right_res = std::visit([&](auto& child) {
-        using T = std::decay_t<decltype(child)>;
-        if constexpr (std::is_same_v<T, BinaryExpression*>) {
-            return child->m_ColumnUsedBelow;
-        } else if constexpr (std::is_same_v<T, Clause*>) {
-            return child->m_ColumnUsed;
+bool Clause::Eval(std::map<std::string, ColumnData> CombinaisonATester, std::string tablePrincipale)
+{
+    auto resolveOperand = [&](auto&& operand) -> ColumnData {
+        using T = std::decay_t<decltype(operand)>;
+        if constexpr (std::is_same_v<T, ColumnName>) {
+            return CombinaisonATester.at(Database::QueryPlanning::GetColumnFullName(tablePrincipale, &operand));
+        } else if constexpr (std::is_same_v<T, ColumnData>) {
+            return operand;
+        } else {
+            throw Errors::Error(Errors::ErrorType::RuntimeError,
+                                "Unknown type in the BinaryExpression Tree", 
+                                0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
         }
-    },
-        m_Rhs);
-    std::unordered_set<std::string> m_ColumnUsedBelow;
+    };
 
-    m_ColumnUsedBelow.insert(left_res.begin(), left_res.end());
-    m_ColumnUsedBelow.insert(right_res.begin(), right_res.end());
 
-    return m_ColumnUsedBelow;
+    ColumnData LeftVal  = std::visit(resolveOperand, Lhs());
+    ColumnData RightVal = std::visit(resolveOperand, Rhs());
+    switch (Op()) {
+    case Parsing::LogicalOperator::EQ:  return LeftVal == RightVal;
+    case Parsing::LogicalOperator::GT:  return LeftVal > RightVal;
+    case Parsing::LogicalOperator::LT:  return LeftVal < RightVal;
+    case Parsing::LogicalOperator::GTE: return LeftVal >= RightVal;
+    case Parsing::LogicalOperator::LTE: return LeftVal <= RightVal;
+    case Parsing::LogicalOperator::NE:  return LeftVal != RightVal;
+    default:
+        throw Errors::Error(Errors::ErrorType::RuntimeError,
+                            "Unknown Logical Operator",
+                            0, 0, Errors::ERROR_UNKNOW_LOGICAL_OPERATOR);
+    }
+}
+
+bool BinaryExpression::Eval(std::map<std::string, ColumnData> CombinaisonATester, std::string TablePrincipale)
+{
+    bool ResultAGauche;
+    auto left = Lhs();
+    if (std::holds_alternative<BinaryExpression*>(left)) {
+        ResultAGauche = std::get<BinaryExpression*>(left)->Eval(CombinaisonATester, TablePrincipale);
+    } else if (std::holds_alternative<Clause*>(left)) {
+        ResultAGauche = std::get<Clause*>(left)->Eval(CombinaisonATester, TablePrincipale);
+    } else {
+        throw Errors::Error(Errors::ErrorType::RuntimeError, "Uknown type in the BinaryExpression Tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+    }
+    if (Op() == LogicalOperator::OR || ResultAGauche) {
+        return true; // on rend paraisseuse l'évaluation
+    } else {
+        bool ResultADroite;
+        auto droite = Rhs();
+        if (std::holds_alternative<BinaryExpression*>(droite)) {
+            ResultADroite = std::get<BinaryExpression*>(droite)->Eval(CombinaisonATester, TablePrincipale);
+        } else if (std::holds_alternative<Clause*>(droite)) {
+            ResultADroite = std::get<Clause*>(droite)->Eval(CombinaisonATester, TablePrincipale);
+        } else {
+            throw Errors::Error(Errors::ErrorType::RuntimeError, "Uknown type in the BinaryExpression Tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+        }
+        if (Op() == LogicalOperator::OR) {
+            return ResultADroite;
+        } else {
+            return ResultADroite && ResultAGauche;
+        }
+    }
 }
 
 } // namespace parsing

@@ -1,5 +1,6 @@
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -88,29 +89,37 @@ public:
         return *r;
     }
 
-    static std::string DbStringToString(DbString s)
-    {
-        int i = 0;
-
-        std::string r;
-
-        while (s[i] != '\0') {
-            r.push_back(s[i]);
-            i++;
-        }
-
-        return r;
+static std::string DbStringToString(const DbString& s)
+{
+    size_t i = 0;
+    std::string r;
+    while (i < s.size() && s[i] != 0) {
+        r.push_back(static_cast<char>(s[i]));
+        ++i;
     }
+    return r;
+}
+
 
     static DbString StringToDbString(const std::string& s)
     {
-        DbString r = std::array<DbChar, 255>();
+        DbString r {}; // value-initialize => tous les octets à 0
+        size_t max_copy = std::min(s.size(), r.size() - 1); // garder place pour '\0' si nécessaire
 
-        for (int i = 0; i < s.length(); i++) {
-            r[i] = s[i];
+        for (size_t i = 0; i < max_copy; ++i) {
+            r[i] = static_cast<uint8_t>(s[i]);
         }
-
+        // s'il reste de l'espace, r[max_copy] est déjà 0 grâce à l'initialisation
         return r;
+    }
+
+    static ColumnData intToColumnData(int value)
+    {
+        if (value <= std::numeric_limits<DbInt8>::max())
+            return static_cast<DbInt8>(value);
+        if (value <= std::numeric_limits<DbInt16>::max())
+            return static_cast<DbInt16>(value);
+        return static_cast<DbInt>(value);
     }
 };
 

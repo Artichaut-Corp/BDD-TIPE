@@ -1,4 +1,5 @@
 #include <string>
+#include <unordered_set>
 #include <variant>
 
 #include "../errors.h"
@@ -11,6 +12,7 @@ namespace Database::Utils {
 
 std::variant<std::string, Errors::Error> readFileFromPath(const std::string& filePath);
 
+
 }
 
-#endif
+#endif //!FILE_UTILS_H
