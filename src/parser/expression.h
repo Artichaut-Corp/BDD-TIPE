@@ -257,11 +257,12 @@ public:
     {
     }
 
-    auto Lhs() -> ClauseMember { return m_Lhs; }
-    auto Rhs() -> ClauseMember { return m_Rhs; }
-    auto Op() -> LogicalOperator { return m_Op; }
-    auto Column() -> std::unordered_set<std::string>* { return &m_ColumnUsed; }
-
+    auto Lhs() const -> ClauseMember { return m_Lhs; }
+    auto Rhs() const -> ClauseMember { return m_Rhs; }
+    auto Op() const -> LogicalOperator { return m_Op; }
+    auto Column()  -> std::unordered_set<std::string>* { return &m_ColumnUsed; }
+    auto EditLhs(ClauseMember NewClause)  { m_Lhs = NewClause; }
+    auto EditRhs(ClauseMember NewClause)  { m_Rhs = NewClause; }
     void Print(std::ostream& out);
 
     static std::pair<ClauseMember, std::string> ParseClauseMember(Lexing::Tokenizer* t);
@@ -272,6 +273,9 @@ public:
 
     bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
 };
+
+std::ostream& operator<<(std::ostream& out, const Clause& member);
+
 
 class BinaryExpression {
 

@@ -82,7 +82,7 @@ public:
         if (node != nullptr) {
             out << prefix;
 
-            out << (isLeft  ? "├──" : "└──");
+            out << (isLeft ? "├──" : "└──");
 
             auto type = node->m_Type;
 
@@ -98,29 +98,19 @@ public:
                 Select* op = std::get<Select*>(type);
                 out << "Selection sur " << op->GetTableName() << " avec : ";
 
-                // auto cond = op->GetCond();
-                // if (std::holds_alternative<Parsing::BinaryExpression*>(cond)) {
-                //     Parsing::BinaryExpression* be = std::get<Parsing::BinaryExpression*>(cond);
-                //     if (be) {
-                //         be->PrintCondition(out);
-                //     } else {
-                //         out << "[BinaryExpression* null]";
-                //     }
-
-                // } else if (std::holds_alternative<Parsing::Clause*>(cond)) {
-                //     Parsing::Clause* c = std::get<Parsing::Clause*>(cond);
-
-                //     if (c) {
-
-                //         c->Print(out);
-
-                //     } else {
-                //         out << "[Clause* null]";
-                //     }
-
-                // } else {
-                //     out << "Tautologie";
-                // }
+                auto cond = op->GetCond();
+                if (std::holds_alternative<Parsing::BinaryExpression*>(cond)) {
+                    Parsing::BinaryExpression* be = std::get<Parsing::BinaryExpression*>(cond);
+                    if (be) {
+                        be->PrintCondition(out);
+                    } else {
+                        out << "[BinaryExpression* null]";
+                    }
+                } else if (std::holds_alternative<Parsing::Clause*>(cond)) {
+                    std::get<Parsing::Clause*>(cond)->Print(out);
+                } else {
+                    out << "Tautologie";
+                }
 
                 out << "\n";
 
@@ -137,7 +127,6 @@ public:
             }
         }
     }
-
     void printBT(std::ostream& out)
     {
         printBT("", this, false, out);
@@ -295,7 +284,7 @@ public:
         } else {
             return nullptr; // on remonte l'arbre
         }
-    };
+    }
 };
 }
 #endif // ! TREE_H

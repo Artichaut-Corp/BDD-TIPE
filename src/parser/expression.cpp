@@ -357,9 +357,20 @@ Clause::ParseClauseMember(Lexing::Tokenizer* t)
 std::ostream& operator<<(std::ostream& out, const ClauseMember& member)
 {
     if (std::holds_alternative<ColumnName>(member)) {
+
         out << std::get<ColumnName>(member).getColumnName();
     } else if (std::holds_alternative<ColumnData>(member)) {
-        out << std::get<ColumnData>(member);
+        auto c = std::get<ColumnData>(member);
+        std::visit([&](auto&& elem) {
+            using T = std::decay_t<decltype(elem)>;
+            if constexpr (std::is_same_v<T, DbString>) {
+                out << Convert::DbStringToString(elem);
+            } else {
+                out << std::to_string(elem);
+            }
+        },
+            c);
+        return out;
     }
 
     return out;
@@ -420,6 +431,12 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
  * else ret c
  *
  * */
+
+std::ostream& operator<<(std::ostream& out, const Clause& member)
+{
+    out << "(" << member.Lhs() << " " << member.Op() << " " << member.Rhs() << ") ";
+    return out;
+}
 
 std::unordered_set<std::string> BinaryExpression::MergeColumns(Condition lhs, Condition rhs)
 {
@@ -752,20 +769,22 @@ void Clause::FormatColumnName(std::string NomTablePrincipale)
     m_ColumnUsed = {};
     auto left = Lhs();
     if (std::holds_alternative<ColumnName>(left)) {
-        auto LeftColumn = std::get<ColumnName>(left);
-        if (!LeftColumn.HaveTable()) {
-            LeftColumn.SetTable(NomTablePrincipale);
+        auto LeftColumn = &std::get<ColumnName>(left);
+        if (!LeftColumn->HaveTable()) {
+            LeftColumn->SetTable(NomTablePrincipale);
         }
-        m_ColumnUsed.insert(LeftColumn.getColumnName());
+        this->EditLhs(left);
+        m_ColumnUsed.insert(LeftColumn->getColumnName());
     }
 
     auto right = Rhs();
     if (std::holds_alternative<ColumnName>(right)) {
-        auto RightColumn = std::get<ColumnName>(right);
-        if (!RightColumn.HaveTable()) {
-            RightColumn.SetTable(NomTablePrincipale);
+        auto RightColumn = &std::get<ColumnName>(right);
+        if (!RightColumn->HaveTable()) {
+            RightColumn->SetTable(NomTablePrincipale);
         }
-        m_ColumnUsed.insert(RightColumn.getColumnName());
+        this->EditRhs(right);
+        m_ColumnUsed.insert(RightColumn->getColumnName());
     }
 }
 

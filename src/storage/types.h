@@ -123,19 +123,12 @@ public:
 };
 inline std::ostream& operator<<(std::ostream& out, const ColumnData& cd)
 {
-    std::visit([&out](auto&& val) {
-        using T = std::decay_t<decltype(val)>;
+    std::visit([&](auto&& elem) {
+        using T = std::decay_t<decltype(elem)>;
         if constexpr (std::is_same_v<T, DbString>) {
-            // Convertir DbString (array<uint8_t, MAX_STRING_LENGTH>) en string
-            std::string s;
-            for (auto c : val) {
-                if (c == 0)
-                    break; // stop à la fin de la chaîne
-                s += static_cast<char>(c);
-            }
-            out << s;
+            out<<Convert::DbStringToString(elem);
         } else {
-            out << +val; // le + pour afficher les uint8_t en nombre
+            out<< std::to_string(elem);
         }
     },
         cd);

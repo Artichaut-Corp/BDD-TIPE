@@ -33,4 +33,7 @@ Select city.country, city.name, city.pop from city where city.country = "France"
 Select country.name, country.pop, city.country, city.name, city.pop from city Join country on country.name = city.country;
 
 Select country.name, country.pop, city.country, city.name, city.pop from city Join country on country.name = city.country where country.name = "France";
+
+Select country, name,pop from city where country = "France";
+
 ```

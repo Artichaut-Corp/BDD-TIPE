@@ -131,6 +131,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             std::get<Parsing::Clause*>(Condition)->FormatColumnName(TablePrincipaleNom);
             ConditionColumn = std::get<Parsing::Clause*>(Condition)->Column();
         }
+
         MainSelect = new Select(std::make_unique<std::unordered_set<std::string>>(*ConditionColumn), Condition, TablePrincipaleNom);
         Node* Node_Select = new Node(MainSelect);
         RacineExec.AddChild(true, Node_Select);
