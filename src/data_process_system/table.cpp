@@ -2,7 +2,6 @@
 #include "../parser/expression.h"
 #include "colonne.h"
 #include <algorithm>
-#include <cstddef>
 #include <map>
 #include <memory>
 #include <string>
@@ -10,34 +9,7 @@
 
 namespace Database::QueryPlanning {
 
-std::vector<int> merge_sorted_unique(const std::vector<int>& a,
-    const std::vector<int>& b)
-{
-    std::vector<int> result;
-    result.reserve(a.size() + b.size());
-
-    int i = 0, j = 0;
-    while (i < a.size() && j < b.size()) {
-        if (a[i] < b[j]) {
-            result.push_back(a[i++]);
-        } else if (b[j] < a[i]) {
-            result.push_back(b[j++]);
-        } else { // equal elements
-            result.push_back(a[i]);
-            ++i;
-            ++j;
-        }
-    }
-
-    // append remaining elements
-    while (i < a.size())
-        result.push_back(a[i++]);
-    while (j < b.size())
-        result.push_back(b[j++]);
-
-    return result;
-}
-void Table::Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<std::string>> nom_colonnes, std::string TablePrincipale) // colonnes qui vont être modifié
+void Table::Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<std::string>> nom_colonnes) // colonnes qui vont être modifié
 // les éléments de la colonne en position i doivent vérifier le prédicat en positions i
 {
     // Pour faire une projection, d'abord, il faut garder que les indices qui vérifient toute les conditions, ensuite, il faut modifier chaque colonne en ne gardant que ces indices, on rapelle que toute les colonne ont le même nombre d'indices mais ceux-ci diffère en valeur (voire explication.txt)
@@ -51,11 +23,11 @@ void Table::Selection(const Parsing::BinaryExpression::Condition pred, const std
         }
         bool eval = false;
         if (std::holds_alternative<Parsing::Clause*>(pred)) {
-            eval = std::get<Parsing::Clause*>(pred)->Eval(CoupleTesté, TablePrincipale);
+            eval = std::get<Parsing::Clause*>(pred)->Eval(CoupleTesté);
         } else if (std::holds_alternative<Parsing::BinaryExpression*>(pred)) {
-            eval = std::get<Parsing::BinaryExpression*>(pred)->Eval(CoupleTesté, TablePrincipale);
+            eval = std::get<Parsing::BinaryExpression*>(pred)->Eval(CoupleTesté);
         } else {
-            throw Errors::Error(Errors::ErrorType::RuntimeError, "Uknown type in the BinaryExpression Tree", 0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+            eval = true;
         }
 
         if (eval) {

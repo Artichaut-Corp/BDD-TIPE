@@ -1,7 +1,6 @@
 #include "../operation/pred.h"
 #include "racine.h"
 
-#include <cstddef>
 #include <iostream>
 #include <memory>
 #include <string>

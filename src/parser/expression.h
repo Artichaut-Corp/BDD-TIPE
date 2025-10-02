@@ -4,6 +4,7 @@
 #include <ostream>
 #include <string>
 #include <unordered_set>
+#include <variant>
 
 #include "../algebrizer_types.h"
 #include "../lexer/tokenizer.h"
@@ -36,8 +37,7 @@ enum class AggrFuncType {
     MIN_F,
     SUM_F,
 
-
-    NOTHING_F //utile que pour le type Final pour simplifier le code 
+    NOTHING_F // utile que pour le type Final pour simplifier le code
 };
 
 enum class ColumnType { NULL_C,
@@ -183,6 +183,8 @@ public:
         return res;
     }
 
+    void SetTable(std::string NouvelleTable) { m_TableName = NouvelleTable; }
+
     bool HaveSchema() { return m_SchemaName.has_value(); };
 
     bool HaveTable() { return m_TableName.has_value(); };
@@ -246,9 +248,7 @@ class Clause {
     ClauseMember m_Rhs;
     std::unordered_set<std::string> m_ColumnUsed;
 
-
 public:
-
     Clause(LogicalOperator op, ClauseMember lhs, ClauseMember rhs, std::unordered_set<std::string> col_used)
         : m_Op(op)
         , m_Lhs(lhs)
@@ -257,12 +257,10 @@ public:
     {
     }
 
-
     auto Lhs() -> ClauseMember { return m_Lhs; }
     auto Rhs() -> ClauseMember { return m_Rhs; }
     auto Op() -> LogicalOperator { return m_Op; }
     auto Column() -> std::unordered_set<std::string>* { return &m_ColumnUsed; }
-
 
     void Print(std::ostream& out);
 
@@ -270,14 +268,15 @@ public:
 
     static Clause* ParseClause(Lexing::Tokenizer* t);
 
-    bool Eval(std::map<std::string, ColumnData> CombinaisonATester,std::string tablePrincipale);
+    void FormatColumnName(std::string NomTablePrincipale);
+
+    bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
 };
 
 class BinaryExpression {
 
 public:
-    using Condition = std::variant<BinaryExpression*, Clause*>;
-
+    using Condition = std::variant<BinaryExpression*, Clause*,std::monostate>; //monostate représente le noeud vide
 
     BinaryExpression() = default;
 
@@ -285,7 +284,7 @@ public:
         : m_Op(op)
         , m_Lhs(lhs)
         , m_Rhs(rhs)
-        , m_ColumnUsedBelow(col_used) {};
+        , m_ColumnUsedBelow(col_used) { };
 
     // Parsing utilities
     static std::unordered_set<std::string> MergeColumns(Condition lhs, Condition rhs);
@@ -300,28 +299,43 @@ public:
     auto Rhs() -> Condition { return m_Rhs; }
     auto Op() -> LogicalOperator { return m_Op; }
 
-    auto NullifyLhs() ->void {
-        m_Lhs = BinaryExpression::Condition{};//if we extract the left, we nullify the left part to make future comparaison faster
-        m_ColumnUsedBelow = *std::visit([](auto* obj) { //new set of column used is the Right part 
-            return obj->Column();
-        },
-            Rhs());
-    } 
-    auto NullifyRhs() ->void {
-        m_Rhs = BinaryExpression::Condition{};
-        m_ColumnUsedBelow = *std::visit([](auto* obj) { //new set of column used is the Right part 
-            return obj->Column();
-        },
-            Lhs());}
+    bool IsEmpty(const Condition& cond) {
+        return std::holds_alternative<std::monostate>(cond);
+    }
+    auto NullifyLhs() -> void
+    {
+        m_Lhs =  std::monostate{};
+        auto right = Rhs();
+        if(std::holds_alternative<std::monostate>(right)){
+            m_ColumnUsedBelow = {};
+        }else if (std::holds_alternative<Clause*>(right)){
+            m_ColumnUsedBelow = *std::get<Clause*>(right)->Column();
+        }else{
+            m_ColumnUsedBelow = *std::get<BinaryExpression*>(right)->Column();
+        }
+    }
+    auto NullifyRhs() -> void
+    {
+        m_Rhs =  std::monostate{};
+        auto left = Lhs();
+        if(std::holds_alternative<std::monostate>(left)){
+            m_ColumnUsedBelow = {};
+        }else if (std::holds_alternative<Clause*>(left)){
+            m_ColumnUsedBelow = *std::get<Clause*>(left)->Column();
+        }else{
+            m_ColumnUsedBelow = *std::get<BinaryExpression*>(left)->Column();
+        }
+    }
 
     auto Column() -> std::unordered_set<std::string>* { return &m_ColumnUsedBelow; }
 
     // Evaluation methods
 
-    Condition ExtraireCond(std::unordered_set<std::string> ColonnesAExtraire);
+    Condition ExtraireCond(std::unordered_set<std::string>* ColonnesAExtraire);
 
-    bool Eval(std::map<std::string, ColumnData> CombinaisonATester,std::string tablePrincipale);
+    bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
 
+    void FormatColumnName(std::string NomTablePrincipale);
 
 private:
     // Opérateur, ne peut être que AND / OR
@@ -330,7 +344,6 @@ private:
     Condition m_Lhs;
     Condition m_Rhs;
     std::unordered_set<std::string> m_ColumnUsedBelow;
-
 };
 
 } // namespace parsing

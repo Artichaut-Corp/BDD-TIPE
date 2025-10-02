@@ -19,7 +19,7 @@ private:
     std::string Name;
 
 public:
-    Table(std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> data_, std::string Name_) // noms et colonnes dans le bon ordre
+    Table(std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> data_, std::string Name_)
         : Name(Name_)
     {
         for (auto e : *data_) {
@@ -28,7 +28,7 @@ public:
         }
     }
 
-    void Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<std::string>> nom_colonnes, std::string TablePrincipale);
+    void Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<std::string>> nom_colonnes);
     void Projection(std::unique_ptr<std::vector<std::string>> ColumnToSave);
 
     int size()
@@ -68,6 +68,7 @@ public:
 
         return res;
     }
+    std::vector<std::string>* GetColumnNames() { return &Colonnes_names; }
 };
 
 } // Database::QueryPlanning

@@ -1,6 +1,11 @@
 // le nom vien du faite que la classe contient plussieur Table, comme ikea "drumroll.mp3"
 #include "../data_process_system/table.h"
 #include <vector>
+#ifndef IKEA_H
+
+#define IKEA_H
+
+
 namespace Database::QueryPlanning {
 
 class Ikea {
@@ -20,3 +25,5 @@ public:
     Table* GetTableByName(std::string nom) { return catalogue.at(nom); }
 };
 };
+
+#endif // ! IKEA_H

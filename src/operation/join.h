@@ -107,6 +107,11 @@ public:
     }
     std::string GetLTable() { return LTable; }
     std::string GetRTable() { return RTable; }
+
+    std::string GetLCol() { return m_ColumnName1; }
+    std::string GetRCol() { return m_columnName2; }
+
+    Comparateur GetComp(){return m_Comps;}
 };
 
 } // Database::QueryPlanning

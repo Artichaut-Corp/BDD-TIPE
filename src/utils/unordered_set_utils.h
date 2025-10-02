@@ -6,7 +6,7 @@
 namespace Database::Utils {
 
 template <typename T>
-bool is_subset(const std::unordered_set<T>* A, const std::unordered_set<T>* B) {
+inline bool is_subset(const std::unordered_set<T>* A, const std::unordered_set<T>* B) {
     for (const auto& elem : *A) {
         if (B->find(elem) == B->end()) {
             return false;
