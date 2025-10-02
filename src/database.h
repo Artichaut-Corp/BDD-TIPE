@@ -52,6 +52,8 @@ private:
 
     auto CreateCityTable(int fd) -> void;
 
+    auto CreatePresidentTable(int fd) -> void;
+
     // Prépare et charge l'index des tables déjà présentes en mémoire
     auto FillIndex() -> void;
 
@@ -137,6 +139,8 @@ public:
                 CreateCountryTable(fd);
 
                 CreateCityTable(fd);
+
+                CreatePresidentTable(fd);
 
                 // Clean up and close
                 close(fd);

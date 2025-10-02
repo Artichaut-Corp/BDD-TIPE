@@ -99,7 +99,7 @@ public:
         m_Right = std::unique_ptr<ColumnName>(other.m_Right.get());
     }
 
-    ~Join() = default;
+    //~Join() = default;
 
     ColumnName* getLeftColumn() const
     {

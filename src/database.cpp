@@ -1,7 +1,7 @@
 #include "database.h"
+#include "algebrizer/algebrizer.h"
 #include "data_process_system/racine.h"
 #include "storage/record.h"
-#include "algebrizer/algebrizer.h"
 #include <numeric>
 #include <ostream>
 
@@ -276,6 +276,53 @@ auto DatabaseEngine::CreateCityTable(int fd) -> void
     File::IncrTableCount(fd);
 }
 
+auto DatabaseEngine::CreatePresidentTable(int fd) -> void
+{
+    using namespace Database::Storing;
+
+    // -- President Table --
+    // Text first_name
+    // Text last_name
+    // Text country
+    // Int mandate_beginning
+
+    DbInt first_offset = Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE);
+
+    // Passer comme offset la première localisation encore disponible
+    ColumnInfo* c_first_name = new ColumnInfo(first_offset, DB_STRING_SIZE, false);
+
+    Record::Write(fd, &Index->at("schema_column"), c_first_name, "first_name");
+
+    ColumnInfo* c_last_name = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+
+    Record::Write(fd, &Index->at("schema_column"), c_last_name, "last_name");
+
+    ColumnInfo* c_country = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+
+    Record::Write(fd, &Index->at("schema_column"), c_country, "country");
+
+    ColumnInfo* c_mandate_beg = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
+        DB_INT_SIZE, false);
+
+    Record::Write(fd, &Index->at("schema_column"), c_mandate_beg, "mandate_beginning");
+
+    auto c_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+        { "first_name", *c_first_name }, { "last_name", *c_last_name }, { "country", *c_country }, { "mandate_beginning", *c_mandate_beg }
+    };
+
+    // 3. Write it on disk in the dedicated system table
+
+    auto president = new TableInfo(false, 3, first_offset, c_columns);
+
+    Index->insert({ "president", *president });
+
+    Record::Write(fd, &Index->at("schema_table"), president, "president");
+
+    TableOrder.push_back("president");
+
+    File::IncrTableCount(fd);
+}
+
 auto DatabaseEngine::FillIndex() -> void
 {
     using namespace Database::Storing;
@@ -361,14 +408,13 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
         throw e;
     }
 
-
     auto stmt = std::get<Parsing::Statement>(n);
 
     // Traiter chaque Statement
     if (std::holds_alternative<Parsing::SelectStmt*>(stmt)) {
         auto select = std::get<Parsing::SelectStmt*>(stmt);
 
-        QueryPlanning::ConversionEnArbre_ET_excution(select,File,Index.get());
+        QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get());
 
         // auto fields = select->getFields()->getField();
 
@@ -385,8 +431,8 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
         //     throw e;
         // }
-        
-        //auto column_data = std::get<Column>(std::move(read_result));
+
+        // auto column_data = std::get<Column>(std::move(read_result));
 
         // // Probablement une fonction qui affichera un joli tableau du résultat
         // std::ostringstream oss;
@@ -437,7 +483,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
         // output = oss.str();
 
-        delete select;
+        // delete select;
     } else if (std::holds_alternative<Parsing::UpdateStmt*>(stmt)) {
         auto update = std::get<Parsing::UpdateStmt*>(stmt);
 
