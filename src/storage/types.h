@@ -89,17 +89,16 @@ public:
         return *r;
     }
 
-static std::string DbStringToString(const DbString& s)
-{
-    int i = 0;
-    std::string r;
-    while (i < s.size() && s[i] != 0) {
-        r.push_back(static_cast<char>(s[i]));
-        ++i;
+    static std::string DbStringToString(const DbString& s)
+    {
+        int i = 0;
+        std::string r;
+        while (i < s.size() && s[i] != 0) {
+            r.push_back(static_cast<char>(s[i]));
+            ++i;
+        }
+        return r;
     }
-    return r;
-}
-
 
     static DbString StringToDbString(const std::string& s)
     {
@@ -122,7 +121,25 @@ static std::string DbStringToString(const DbString& s)
         return static_cast<DbInt>(value);
     }
 };
-
+inline std::ostream& operator<<(std::ostream& out, const ColumnData& cd)
+{
+    std::visit([&out](auto&& val) {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, DbString>) {
+            // Convertir DbString (array<uint8_t, MAX_STRING_LENGTH>) en string
+            std::string s;
+            for (auto c : val) {
+                if (c == 0)
+                    break; // stop à la fin de la chaîne
+                s += static_cast<char>(c);
+            }
+            out << s;
+        } else {
+            out << +val; // le + pour afficher les uint8_t en nombre
+        }
+    },
+        cd);
+    return out;
 }
-
+}
 #endif // !TYPES_H

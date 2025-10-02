@@ -17,8 +17,9 @@ private:
     std::string TableNameToExec;
 
 public:
-    Proj(std::vector<std::string> cols)
-        : m_Cols(cols)
+    Proj(std::vector<std::string> cols, std::string Table)
+        : TableNameToExec(Table)
+        , m_Cols(cols)
 
     {
     }
@@ -30,10 +31,6 @@ public:
         return table;
     }
     std::string GetTableName() { return TableNameToExec; }
-
-    void SetRootInfo(std::string TableName){
-        TableNameToExec = TableName;
-    }
 };
 
 } // Database::QueryPlanning

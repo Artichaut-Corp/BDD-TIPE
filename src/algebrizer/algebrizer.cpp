@@ -108,8 +108,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
     // Maintenant que l'on as tout pour la table Principale on la créer
     Table* table_principale = new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(Colonnes), TablePrincipaleNom);
-    Node RacineExec = Node(new Proj(NomColonneDeRetour)); // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
-    RacineExec.SetNodeRootInfo(TablePrincipaleNom, "");
+    Node RacineExec = Node(new Proj(NomColonneDeRetour, TablePrincipaleNom)); // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
     std::vector<Table> Tables;
     Tables.push_back(*table_principale); // on enregiste la table principale
 
@@ -117,31 +116,23 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     TableToRootOfTableMap[TablePrincipaleNom] = std::pair<Node*, bool>((&RacineExec), true);
 
     Parsing::WhereClause* where = Selection->getWhere();
-
+    Select* MainSelect;
     // il faut maintenant récupérer les conditions càd les where
     if (where != NULL) {
         std::unordered_set<std::string>* ColonneTesté;
 
         Parsing::BinaryExpression::Condition Condition = where->m_Condition;
+        std::unordered_set<std::string>* ConditionColumn;
 
-        if (std::holds_alternative<Parsing::Clause*>(Condition)) {
-            ColonneTesté = std::get<Parsing::Clause*>(Condition)->Column();
+        if (std::holds_alternative<Parsing::BinaryExpression*>(Condition)) {
+            std::get<Parsing::BinaryExpression*>(Condition)->FormatColumnName(TablePrincipaleNom);
+            ConditionColumn = std::get<Parsing::BinaryExpression*>(Condition)->Column();
         } else {
-            ColonneTesté = std::get<Parsing::BinaryExpression*>(Condition)->Column();
+            std::get<Parsing::Clause*>(Condition)->FormatColumnName(TablePrincipaleNom);
+            ConditionColumn = std::get<Parsing::Clause*>(Condition)->Column();
         }
-
-        std::unordered_set<std::string> ColonneTestéCorrigé;
-
-        for (auto e : *ColonneTesté) {
-            if (e.find(".") == std::string::npos) {
-                ColonneTestéCorrigé.emplace(std::format("{}.{}", TablePrincipaleNom, e)); // permet d'éviter les crash si le nom de la table n'est pas préciser (qui est donc la table principale)
-            } else {
-                ColonneTestéCorrigé.emplace(e);
-            }
-        }
-
-        Node* Node_Select = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(ColonneTestéCorrigé), Condition, TablePrincipaleNom));
-        Node_Select->SetNodeRootInfo(TablePrincipaleNom, "");
+        MainSelect = new Select(std::make_unique<std::unordered_set<std::string>>(*ConditionColumn), Condition, TablePrincipaleNom);
+        Node* Node_Select = new Node(MainSelect);
         RacineExec.AddChild(true, Node_Select);
         TableToRootOfTableMap[TablePrincipaleNom] = std::pair<Node*, bool>(Node_Select, true);
     }
@@ -184,7 +175,12 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
 
     Ikea* Magasin = new Ikea(Tables);
-    RacineExec.AfficheArbreExec(std::cout);
+    RacineExec.printBT(std::cout);
+    if (where != NULL) {
+        std::cout<< "\n et maintenant en descendant les if on as : \n  ";
+        RacineExec.SelectionDescent(Magasin, MainSelect);
+        RacineExec.printBT(std::cout);
+    }
     Table* Table_Finale = RacineExec.Pronf(Magasin);
     Utils::AfficheResultat(Table_Finale);
 }
