@@ -238,7 +238,6 @@ public:
                         auto MainCond = MainSelect->GetCond();
                         if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                             ColumnInCond = std::get<Parsing::Clause*>(MainCond)->Column();
-                            std::get<Parsing::Clause*>(MainCond)->Print(std::cout);
                         } else { // non std::monostate par condition d'entrée
                             ColumnInCond = std::get<Parsing::BinaryExpression*>(MainCond)->Column();
                         }

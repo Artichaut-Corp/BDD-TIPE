@@ -635,10 +635,8 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<st
                 auto temp = left;
                 NullifyLhs();
                 if (RecupADroiteEstVide) {
-                    std::cout << " je suis censé être là";
                     return temp; // on a rien trouvé à droite, donc on renvoie juste tout gauche
                 } else { // y'as des truc à droite donc on les regroupe et on renvoie ça
-                    std::cout << " je suis là";
 
                     return new BinaryExpression(LogicalOperator::AND, RecupADroite, temp, MergeColumns(RecupADroite, temp));
                 }
@@ -697,7 +695,6 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<st
                         return RecupADroite;
                     } else {
                         auto temp = new BinaryExpression(LogicalOperator::AND, RecupADroite, RecupAGauche, MergeColumns(RecupADroite, RecupAGauche));
-                        temp->PrintCondition(std::cout);
                         return temp;
                         ;
                     }
