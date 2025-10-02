@@ -95,6 +95,29 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         }
     }
 
+    Parsing::WhereClause* where = Selection->getWhere();
+    Select* MainSelect;
+    std::unordered_set<std::string>* ConditionColumn;
+    Parsing::BinaryExpression::Condition Condition; //those variable are used two times,
+
+
+    if (where != nullptr) { // il faut ajouter les colonnes utilisé dans la conditions avant de créer la table principale
+        std::unordered_set<std::string>* ColonneTesté;
+
+        Condition = where->m_Condition;
+
+        if (std::holds_alternative<Parsing::BinaryExpression*>(Condition)) {
+            std::get<Parsing::BinaryExpression*>(Condition)->FormatColumnName(TablePrincipaleNom);
+            ConditionColumn = std::get<Parsing::BinaryExpression*>(Condition)->Column();
+        } else {
+            std::get<Parsing::Clause*>(Condition)->FormatColumnName(TablePrincipaleNom);
+            ConditionColumn = std::get<Parsing::Clause*>(Condition)->Column();
+        }
+        for (auto e : *ConditionColumn) {
+            TableNameToColumnList[e.substr(0, e.find("."))].insert(e);
+        }
+    }
+
     //  on doit creer la table principale, pour cela on doit creer les racines et les Colonnes
     std::vector<std::shared_ptr<Racine>> Racines;
     Racines.reserve(TableNameToColumnList[TablePrincipaleNom].size());
@@ -115,23 +138,8 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     std::map<std::string, std::pair<Node*, bool>> TableToRootOfTableMap; // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
     TableToRootOfTableMap[TablePrincipaleNom] = std::pair<Node*, bool>((&RacineExec), true);
 
-    Parsing::WhereClause* where = Selection->getWhere();
-    Select* MainSelect;
     // il faut maintenant récupérer les conditions càd les where
-    if (where != NULL) {
-        std::unordered_set<std::string>* ColonneTesté;
-
-        Parsing::BinaryExpression::Condition Condition = where->m_Condition;
-        std::unordered_set<std::string>* ConditionColumn;
-
-        if (std::holds_alternative<Parsing::BinaryExpression*>(Condition)) {
-            std::get<Parsing::BinaryExpression*>(Condition)->FormatColumnName(TablePrincipaleNom);
-            ConditionColumn = std::get<Parsing::BinaryExpression*>(Condition)->Column();
-        } else {
-            std::get<Parsing::Clause*>(Condition)->FormatColumnName(TablePrincipaleNom);
-            ConditionColumn = std::get<Parsing::Clause*>(Condition)->Column();
-        }
-
+    if (where != NULL) {// une foit la racine de l'arbre d'éxécution définie, on peut lui ajouter une selection si nécessaire
         MainSelect = new Select(std::make_unique<std::unordered_set<std::string>>(*ConditionColumn), Condition, TablePrincipaleNom);
         Node* Node_Select = new Node(MainSelect);
         RacineExec.AddChild(true, Node_Select);
@@ -178,7 +186,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     Ikea* Magasin = new Ikea(Tables);
     RacineExec.printBT(std::cout);
     if (where != NULL) {
-        std::cout<< "\n et maintenant en descendant les if on as : \n  ";
+        std::cout << "\n et maintenant en descendant les sélections on a : \n  ";
         RacineExec.SelectionDescent(Magasin, MainSelect);
         RacineExec.printBT(std::cout);
     }

@@ -36,4 +36,6 @@ Select country.name, country.pop, city.country, city.name, city.pop from city Jo
 
 Select country, name,pop from city where country = "France";
 
+select name, country.pop, pop from city join country on country.name = city.country where (( country.pop > 42558227 ) AND (pop >9500000));
+
 ```

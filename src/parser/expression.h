@@ -260,9 +260,9 @@ public:
     auto Lhs() const -> ClauseMember { return m_Lhs; }
     auto Rhs() const -> ClauseMember { return m_Rhs; }
     auto Op() const -> LogicalOperator { return m_Op; }
-    auto Column()  -> std::unordered_set<std::string>* { return &m_ColumnUsed; }
-    auto EditLhs(ClauseMember NewClause)  { m_Lhs = NewClause; }
-    auto EditRhs(ClauseMember NewClause)  { m_Rhs = NewClause; }
+    auto Column() -> std::unordered_set<std::string>* { return &m_ColumnUsed; }
+    auto EditLhs(ClauseMember NewClause) { m_Lhs = NewClause; }
+    auto EditRhs(ClauseMember NewClause) { m_Rhs = NewClause; }
     void Print(std::ostream& out);
 
     static std::pair<ClauseMember, std::string> ParseClauseMember(Lexing::Tokenizer* t);
@@ -276,11 +276,10 @@ public:
 
 std::ostream& operator<<(std::ostream& out, const Clause& member);
 
-
 class BinaryExpression {
 
 public:
-    using Condition = std::variant<BinaryExpression*, Clause*,std::monostate>; //monostate représente le noeud vide
+    using Condition = std::variant<BinaryExpression*, Clause*, std::monostate>; // monostate représente le noeud vide
 
     BinaryExpression() = default;
 
@@ -298,35 +297,40 @@ public:
     // Data accesing methods
 
     void PrintCondition(std::ostream& out);
+    void PrintConditionalt(std::ostream& out);
 
-    auto Lhs() -> Condition { return m_Lhs; }
+    auto Lhs() -> Condition
+    {
+        return m_Lhs;
+    }
     auto Rhs() -> Condition { return m_Rhs; }
     auto Op() -> LogicalOperator { return m_Op; }
 
-    bool IsEmpty(const Condition& cond) {
+    bool IsEmpty(const Condition& cond)
+    {
         return std::holds_alternative<std::monostate>(cond);
     }
     auto NullifyLhs() -> void
     {
-        m_Lhs =  std::monostate{};
+        m_Lhs = std::monostate {};
         auto right = Rhs();
-        if(std::holds_alternative<std::monostate>(right)){
+        if (std::holds_alternative<std::monostate>(right)) {
             m_ColumnUsedBelow = {};
-        }else if (std::holds_alternative<Clause*>(right)){
+        } else if (std::holds_alternative<Clause*>(right)) {
             m_ColumnUsedBelow = *std::get<Clause*>(right)->Column();
-        }else{
+        } else {
             m_ColumnUsedBelow = *std::get<BinaryExpression*>(right)->Column();
         }
     }
     auto NullifyRhs() -> void
     {
-        m_Rhs =  std::monostate{};
+        m_Rhs = std::monostate {};
         auto left = Lhs();
-        if(std::holds_alternative<std::monostate>(left)){
+        if (std::holds_alternative<std::monostate>(left)) {
             m_ColumnUsedBelow = {};
-        }else if (std::holds_alternative<Clause*>(left)){
+        } else if (std::holds_alternative<Clause*>(left)) {
             m_ColumnUsedBelow = *std::get<Clause*>(left)->Column();
-        }else{
+        } else {
             m_ColumnUsedBelow = *std::get<BinaryExpression*>(left)->Column();
         }
     }

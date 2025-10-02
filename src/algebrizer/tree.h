@@ -82,7 +82,7 @@ public:
         if (node != nullptr) {
             out << prefix;
 
-            out << (isLeft ? "├──" : "└──");
+            out << (isLeft &&node->m_Fd && std::holds_alternative<Join*>(node->m_Fd->m_Type) ? "├──" : "└──");
 
             auto type = node->m_Type;
 
@@ -104,15 +104,14 @@ public:
                     if (be) {
                         be->PrintCondition(out);
                     } else {
-                        out << "[BinaryExpression* null]";
+                        out << "[BinaryExpression* null] \n";
                     }
                 } else if (std::holds_alternative<Parsing::Clause*>(cond)) {
                     std::get<Parsing::Clause*>(cond)->Print(out);
+                    out << "\n";
                 } else {
-                    out << "Tautologie";
+                    out << "Tautologie" << "\n";
                 }
-
-                out << "\n";
 
             } else {
                 out << "Type inconnu\n";
@@ -120,10 +119,10 @@ public:
 
             // enter the next tree level - left and right branch
             if (node->m_Fg) {
-                printBT(prefix + (isLeft ? "│   " : "    "), node->m_Fg, true, out);
+                printBT(prefix + (isLeft &&node->m_Fd && std::holds_alternative<Join*>(node->m_Fd->m_Type) ? "│   " : "    "), node->m_Fg, true, out);
             }
             if (node->m_Fd) {
-                printBT(prefix + (isLeft ? "│   " : "    "), node->m_Fd, false, out);
+                printBT(prefix + (isLeft&&node->m_Fd && std::holds_alternative<Join*>(node->m_Fd->m_Type) ? "│   " : "    "), node->m_Fd, false, out);
             }
         }
     }
@@ -160,15 +159,24 @@ public:
                         return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                     } else { // on découpe MainCond
                         Parsing::BinaryExpression::Condition RecupGauche;
+                        std::unordered_set<std::string>* ColumnUsedInCondGauche;
                         if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                             RecupGauche = std::monostate {}; // on ne peut pas couper une clause
+                            ColumnUsedInCondGauche = {};
                         } else {
                             RecupGauche = std::get<Parsing::BinaryExpression*>(MainCond)->ExtraireCond(SFg);
+                            if (std::holds_alternative<std::monostate>(RecupGauche)) {
+                                ColumnUsedInCondGauche = {};
+                            } else if (std::holds_alternative<Parsing::Clause*>(RecupGauche)) {
+                                ColumnUsedInCondGauche = std::get<Parsing::Clause*>(RecupGauche)->Column();
+                            } else {
+                                ColumnUsedInCondGauche = std::get<Parsing::BinaryExpression*>(RecupGauche)->Column();
+                            }
                         }
 
-                        if (!std::holds_alternative<std::monostate>(MainCond)) { // ce qu'on as extrait n'est pas vide
+                        if (!std::holds_alternative<std::monostate>(RecupGauche)) { // ce qu'on as extrait n'est pas vide
                             auto temp = m_Fg;
-                            m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetLTable()));
+                            m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
                             m_Fg->AddChild(true, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
                         }
                     }
@@ -194,17 +202,26 @@ public:
                         m_Fd->AddChild(false, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
                         return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                     } else { // on découpe MainCond
-                        Parsing::BinaryExpression::Condition RecupDroite;
+                        Parsing::BinaryExpression::Condition RecupDroit;
+                        std::unordered_set<std::string>* ColumnUsedInCondDroit;
                         if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
-                            RecupDroite = std::monostate {}; // on ne peut pas couper une clause
+                            RecupDroit = std::monostate {}; // on ne peut pas couper une clause
+                            ColumnUsedInCondDroit = {};
                         } else {
-                            RecupDroite = std::get<Parsing::BinaryExpression*>(MainCond)->ExtraireCond(SFd);
+                            RecupDroit = std::get<Parsing::BinaryExpression*>(MainCond)->ExtraireCond(SFg);
+                            if (std::holds_alternative<std::monostate>(RecupDroit)) {
+                                ColumnUsedInCondDroit = {};
+                            } else if (std::holds_alternative<Parsing::Clause*>(RecupDroit)) {
+                                ColumnUsedInCondDroit = std::get<Parsing::Clause*>(RecupDroit)->Column();
+                            } else {
+                                ColumnUsedInCondDroit = std::get<Parsing::BinaryExpression*>(RecupDroit)->Column();
+                            }
                         }
 
-                        if (!std::holds_alternative<std::monostate>(MainCond)) { // ce qu'on as extrait n'est pas vide
-                            auto temp = m_Fd;
-                            m_Fd = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetRTable()));
-                            m_Fd->AddChild(false, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
+                        if (!std::holds_alternative<std::monostate>(RecupDroit)) { // ce qu'on as extrait n'est pas vide
+                            auto temp = m_Fg;
+                            m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
+                            m_Fg->AddChild(true, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
                         }
                     }
                 } // D'après l'endroit (dans le code) où on appelle SelectionDescent, l'arbre d'apelle est de la forme P->S->J->*, ainsi si l'on n'est pas sur un join tout tentative de descente de selection est vide de sens
@@ -221,24 +238,33 @@ public:
                         auto MainCond = MainSelect->GetCond();
                         if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                             ColumnInCond = std::get<Parsing::Clause*>(MainCond)->Column();
-                        } else {
+                            std::get<Parsing::Clause*>(MainCond)->Print(std::cout);
+                        } else { // non std::monostate par condition d'entrée
                             ColumnInCond = std::get<Parsing::BinaryExpression*>(MainCond)->Column();
                         }
-
                         if (Utils::is_subset(ColumnInCond, SFg)) { // on peut tout mettre en bas à gauche
                             MainSelect->NullifyCond();
                             m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetLTable()));
                             return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                         } else { // on découpe MainCond
                             Parsing::BinaryExpression::Condition RecupGauche;
+                            std::unordered_set<std::string>* ColumnUsedInCondGauche;
                             if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                                 RecupGauche = std::monostate {}; // on ne peut pas couper une clause
+                                ColumnUsedInCondGauche = {};
                             } else {
                                 RecupGauche = std::get<Parsing::BinaryExpression*>(MainCond)->ExtraireCond(SFg);
+                                if (std::holds_alternative<std::monostate>(RecupGauche)) {
+                                    ColumnUsedInCondGauche = {};
+                                } else if (std::holds_alternative<Parsing::Clause*>(RecupGauche)) {
+                                    ColumnUsedInCondGauche = std::get<Parsing::Clause*>(RecupGauche)->Column();
+                                } else {
+                                    ColumnUsedInCondGauche = std::get<Parsing::BinaryExpression*>(RecupGauche)->Column();
+                                }
                             }
 
-                            if (!std::holds_alternative<std::monostate>(MainCond)) { // ce qu'on as extrait n'est pas vide
-                                m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetLTable()));
+                            if (!std::holds_alternative<std::monostate>(RecupGauche)) { // ce qu'on as extrait n'est pas vide
+                                m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
                             }
                         }
                     }
@@ -261,15 +287,24 @@ public:
                             m_Fd = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetRTable()));
                             return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                         } else { // on découpe MainCond
-                            Parsing::BinaryExpression::Condition RecupGauche;
+                            Parsing::BinaryExpression::Condition RecupDroit;
+                            std::unordered_set<std::string>* ColumnUsedInCondDroit;
                             if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
-                                RecupGauche = std::monostate {}; // on ne peut pas couper une clause
+                                RecupDroit = std::monostate {}; // on ne peut pas couper une clause
+                                ColumnUsedInCondDroit = {};
                             } else {
-                                RecupGauche = std::get<Parsing::BinaryExpression*>(MainCond)->ExtraireCond(SFd);
+                                RecupDroit = std::get<Parsing::BinaryExpression*>(MainCond)->ExtraireCond(SFg);
+                                if (std::holds_alternative<std::monostate>(RecupDroit)) {
+                                    ColumnUsedInCondDroit = {};
+                                } else if (std::holds_alternative<Parsing::Clause*>(RecupDroit)) {
+                                    ColumnUsedInCondDroit = std::get<Parsing::Clause*>(RecupDroit)->Column();
+                                } else {
+                                    ColumnUsedInCondDroit = std::get<Parsing::BinaryExpression*>(RecupDroit)->Column();
+                                }
                             }
 
-                            if (!std::holds_alternative<std::monostate>(MainCond)) { // ce qu'on as extrait n'est pas vide
-                                m_Fd = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetRTable()));
+                            if (!std::holds_alternative<std::monostate>(RecupDroit)) { // ce qu'on as extrait n'est pas vide
+                                m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
                             }
                         }
                     }

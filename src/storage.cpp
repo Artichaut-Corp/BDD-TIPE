@@ -22,7 +22,7 @@ std::variant<Column, Errors::Error> Store::GetDBColumn(int fd, DBTableIndex* Ind
     try {
         c = t->GetColumnInfo(column_name);
     } catch (std::out_of_range) {
-        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Column '{}' does not exist", column_name), 0, 0, Errors::ERROR_COLUMN_DOES_NOT_EXIST);
+        return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Column '{}' does not exist in table '{}'", column_name, table_name), 0, 0, Errors::ERROR_COLUMN_DOES_NOT_EXIST);
     }
 
     switch (c.GetElementSize()) {

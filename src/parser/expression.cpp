@@ -434,7 +434,7 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
 
 std::ostream& operator<<(std::ostream& out, const Clause& member)
 {
-    out << "(" << member.Lhs() << " " << member.Op() << " " << member.Rhs() << ") ";
+    out << "(" << member.Lhs() << " " << member.Op() << " " << member.Rhs() << ")";
     return out;
 }
 
@@ -547,35 +547,45 @@ BinaryExpression::Condition BinaryExpression::ParseCondition(Lexing::Tokenizer* 
     return arg_pile.pop();
 }
 
+void BinaryExpression::PrintConditionalt(std::ostream& out)
+{
+    auto n = this;
+    auto g = n->m_Lhs;
+    auto d = n->m_Rhs;
+    out << "(";
+    if (std::holds_alternative<Clause*>(g)) {
+        auto cl = std::get<Clause*>(g);
+
+        cl->Print(out);
+    } else if (std::holds_alternative<BinaryExpression*>(g)) {
+        auto bexpr = std::get<BinaryExpression*>(g);
+        bexpr->PrintCondition(out);
+    } else {
+        out << "Condition vide";
+    }
+    out << ") ";
+
+    out << (n->m_Op == LogicalOperator::AND ? "AND " : "OR ");
+    out << "(";
+
+    if (std::holds_alternative<Clause*>(d)) {
+        auto cl = std::get<Clause*>(d);
+
+        cl->Print(out);
+    } else if (std::holds_alternative<BinaryExpression*>(d)) {
+        auto bexpr = std::get<BinaryExpression*>(d);
+        bexpr->PrintCondition(out);
+
+    } else {
+        out << "Condition vide";
+    }
+    out << ")";
+}
 void BinaryExpression::PrintCondition(std::ostream& out)
 {
-    auto s = Utils::Stack<Condition>();
-
-    s.push(this);
-
-    while (!s.empty()) {
-        auto n = s.pop();
-
-        if (std::holds_alternative<Clause*>(n)) {
-            auto cl = std::get<Clause*>(n);
-
-            cl->Print(out);
-        } else if (std::holds_alternative<BinaryExpression*>(n)) {
-            auto bexpr = std::get<BinaryExpression*>(n);
-
-            out << (bexpr->m_Op == LogicalOperator::AND ? "AND " : "OR ");
-
-            s.push(bexpr->m_Lhs);
-            s.push(bexpr->m_Rhs);
-        } else {
-            out << "Noeud Vide";
-        }
-    }
-
+    this->PrintConditionalt(out);
     out << std::endl;
-    ;
 }
-
 BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<std::string>* ColonnesAExtraire)
 {
     if (BinaryExpression::Op() == LogicalOperator::AND) { // on ne peut pas couper un OR
@@ -598,6 +608,7 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<st
         } else {
             RightColumn = std::get<BinaryExpression*>(right)->Column();
         }
+
         if (Utils::is_subset(LeftColumn, ColonnesAExtraire)) { // je peut prendre tout gauche
             // il faut tester si on ne peut pas avoir des truc à droite
             if (Utils::is_subset(RightColumn, ColonnesAExtraire)) { // on peut tout prendre à droite et à gauche
@@ -624,8 +635,11 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<st
                 auto temp = left;
                 NullifyLhs();
                 if (RecupADroiteEstVide) {
+                    std::cout << " je suis censé être là";
                     return temp; // on a rien trouvé à droite, donc on renvoie juste tout gauche
                 } else { // y'as des truc à droite donc on les regroupe et on renvoie ça
+                    std::cout << " je suis là";
+
                     return new BinaryExpression(LogicalOperator::AND, RecupADroite, temp, MergeColumns(RecupADroite, temp));
                 }
             }
@@ -674,7 +688,7 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<st
 
                 if (RecupADroiteEstVide) {
                     if (RecupAGaucheEstVide) {
-                        return BinaryExpression::Condition {};
+                        return std::monostate {};
                     } else {
                         return RecupAGauche;
                     }
@@ -682,14 +696,16 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<st
                     if (RecupAGaucheEstVide) {
                         return RecupADroite;
                     } else {
-                        return new BinaryExpression(LogicalOperator::AND, RecupADroite, RecupAGauche, MergeColumns(RecupADroite, RecupAGauche));
+                        auto temp = new BinaryExpression(LogicalOperator::AND, RecupADroite, RecupAGauche, MergeColumns(RecupADroite, RecupAGauche));
+                        temp->PrintCondition(std::cout);
+                        return temp;
                         ;
                     }
                 }
             }
         }
     } else {
-        return BinaryExpression::Condition {};
+        return std::monostate {};
     }
 }
 

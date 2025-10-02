@@ -1,7 +1,6 @@
 #include "../algebrizer_types.h"
 #include "../database.h"
 
-#include <cstddef>
 #include <memory>
 #include <vector>
 
