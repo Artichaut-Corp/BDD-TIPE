@@ -1,6 +1,9 @@
 #include "dml.h"
 #include <cassert>
+#include <memory>
+#include <new>
 #include <string>
+#include <sys/select.h>
 #include <variant>
 
 namespace Database::Parsing {
@@ -105,7 +108,7 @@ std::variant<JoinType, Errors::Error> ParseJoinType(Lexing::Tokenizer* t)
     }
 }
 
-Join* Join::ParseJoin(Lexing::Tokenizer* t)
+Join Join::ParseJoin(Lexing::Tokenizer* t)
 {
     auto next = t->peek();
 
@@ -163,7 +166,7 @@ Join* Join::ParseJoin(Lexing::Tokenizer* t)
 
     ColumnName* rhs = ColumnName::ParseColumnName(t);
 
-    return new Join(std::get<JoinType>(type_v), table, lhs, rhs);
+    return Join(std::get<JoinType>(type_v), table, lhs, rhs);
 }
 
 // Si cette fonction est appelée, le cas de '*' est déjà traité.
@@ -277,6 +280,53 @@ std::variant<Limit*, Errors::Error> Limit::ParseLimit(Lexing::Tokenizer* t)
     }
 
     return new Limit(stoi(tok.m_Value), stoi(next.m_Value));
+}
+
+std::variant<GroupByClause*, Errors::Error> GroupByClause::ParseGroupBy(Lexing::Tokenizer* t)
+{
+    assert(t->next().m_Token == Lexing::GROUP_T);
+
+    auto next = t->next();
+
+    if (next.m_Token != Lexing::BY_T) {
+        return Errors::Error(Errors::ErrorType::SyntaxError, "Expected 'BY' after 'ORDER'", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
+    }
+
+    auto group_by = new GroupByClause();
+
+    // Créer des items 'BY' tant qu'on trouve des virgules séparatrices
+    do {
+
+        // Column Name
+        Expr* name = ColumnName::ParseColumnName(t);
+
+        next = t->peek();
+
+        // ASC par défaut
+        bool desc = false;
+
+        // Si un keyword apparait on le consomme
+        if (next.m_Token == Lexing::DESC_T) {
+            t->next();
+            desc = true;
+        }
+        if (next.m_Token == Lexing::ASC_T) {
+            t->next();
+        }
+
+        group_by->AddItem(new ByItem(*name, desc));
+
+        next = t->peek();
+
+        if (next.m_Token != Lexing::COMMA_T) {
+            break;
+        }
+
+        // Consommer la virgule
+        t->next();
+    } while (1);
+
+    return group_by;
 }
 
 std::variant<OrderByClause*, Errors::Error> OrderByClause::ParseOrderBy(Lexing::Tokenizer* t)
@@ -618,109 +668,110 @@ SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
 
     next = t->peek();
 
-    if (next.m_Token == Lexing::SEMI_COLON_T) {
+    SelectStmt* select = new SelectStmt(distinct, std::get<FieldsList*>(field), table);
 
-        return new SelectStmt(distinct, std::get<FieldsList*>(field), table);
-    }
-
-    // JOIN
-
-    std::vector<Join>* joins = new std::vector<Join>();
-
-    joins->reserve(1);
-
-    while (isJoin(next.m_Token)) {
-
-        joins->emplace_back(*Join::ParseJoin(t));
-
-        next = t->peek();
-    }
-
-    // WHERE
-
-    if (next.m_Token == Lexing::SEMI_COLON_T) {
-
-        return new SelectStmt(distinct, std::get<FieldsList*>(field), table, joins);
-    }
+    std::unique_ptr<std::vector<Join>> joins = std::make_unique_for_overwrite<std::vector<Join>>();
 
     std::variant<WhereClause*, Errors::Error> where = nullptr;
 
-    if (next.m_Token == Lexing::WHERE_T) {
-        next = t->next();
-
-        where = WhereClause::ParseWhere(t);
-
-        if (std::holds_alternative<Errors::Error>(where)) {
-            throw std::get<Errors::Error>(where);
-        }
-
-        next = t->peek();
-    }
-
-    // ORDER BY
-
-    if (next.m_Token == Lexing::SEMI_COLON_T) {
-
-        return new SelectStmt(distinct,
-            std::get<FieldsList*>(field),
-            table,
-            joins,
-            std::get<WhereClause*>(where),
-            nullptr, nullptr);
-    }
-
     std::variant<OrderByClause*, Errors::Error> order_by = nullptr;
-
-    if (next.m_Token == Lexing::ORDER_T) {
-
-        order_by = OrderByClause::ParseOrderBy(t);
-
-        if (std::holds_alternative<Errors::Error>(order_by)) {
-            throw std::get<Errors::Error>(order_by);
-        }
-
-        next = t->peek();
-    }
-
-    // LIMIT
-
-    if (next.m_Token == Lexing::SEMI_COLON_T) {
-
-        return new SelectStmt(distinct,
-            std::get<FieldsList*>(field),
-            table,
-            joins,
-            std::get<WhereClause*>(where),
-            nullptr,
-            std::get<OrderByClause*>(order_by));
-    }
 
     std::variant<Limit*, Errors::Error> limit = nullptr;
 
-    if (next.m_Token == Lexing::LIMIT_T) {
-        limit = Limit::ParseLimit(t);
+    std::variant<GroupByClause*, Errors::Error> group_by = nullptr;
 
-        if (std::holds_alternative<Errors::Error>(limit)) {
-            throw std::get<Errors::Error>(limit);
+    do {
+        switch (next.m_Token) {
+        // The only case this happens is if there is nothing more than columns and a table
+        case Lexing::SEMI_COLON_T:
+            // Depending on what was parsed, return the right contructor
+            return select;
+        case Lexing::WHERE_T: {
+            next = t->next();
+
+            where = WhereClause::ParseWhere(t);
+
+            if (std::holds_alternative<Errors::Error>(where)) {
+                throw std::get<Errors::Error>(where);
+            }
+
+            next = t->peek();
+
+        } break;
+        case Lexing::ORDER_T: {
+            order_by = OrderByClause::ParseOrderBy(t);
+
+            if (std::holds_alternative<Errors::Error>(order_by)) {
+                throw std::get<Errors::Error>(order_by);
+            }
+
+            next = t->peek();
+        } break;
+        case Lexing::LIMIT_T: {
+            limit = Limit::ParseLimit(t);
+            if (std::holds_alternative<Errors::Error>(limit)) {
+                throw std::get<Errors::Error>(limit);
+            }
+
+            next = t->peek();
+
+        } break;
+        case Lexing::GROUP_T: {
+            group_by = GroupByClause::ParseGroupBy(t);
+
+            if (std::holds_alternative<Errors::Error>(group_by)) {
+                throw std::get<Errors::Error>(group_by);
+            }
+
+            next = t->peek();
+
+        } break;
+        default: {
+            if (isJoin(next.m_Token)) {
+
+                Join p = Join::ParseJoin(t);
+
+                joins->push_back(std::move(p));
+
+                next = t->peek();
+            } else {
+                throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected identifier in 'SELECT' statement", 0, 0, Errors::ERROR_UNEXPECTED_IDENTIFIER);
+            }
         }
 
-        next = t->peek();
+        break;
+        }
+    } while (next.m_Token != Lexing::SEMI_COLON_T);
+
+    if (!joins->empty()) {
+
+        select->setJoins(std::move(joins));
+    }
+    auto w = std::get<WhereClause*>(where);
+
+    if (w != nullptr) {
+        select->setWhere(w);
     }
 
-    // ';'
-    if (next.m_Token == Lexing::SEMI_COLON_T) {
+    auto o = std::get<OrderByClause*>(order_by);
 
-        return new SelectStmt(distinct,
-            std::get<FieldsList*>(field),
-            table,
-            joins,
-            std::get<WhereClause*>(where),
-            std::get<Limit*>(limit),
-            std::get<OrderByClause*>(order_by));
-    } else {
-
-        throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected ';' at the end", 0, 0, Errors::ERROR_ENDLINE);
+    if (o != nullptr) {
+        select->setOrderBy(o);
     }
+
+    auto l = std::get<Limit*>(limit);
+
+    if (l != nullptr) {
+        select->setLimit(l);
+    }
+
+    auto g = std::get<GroupByClause*>(group_by);
+
+    if (g != nullptr) {
+        select->setGroupBy(g);
+    }
+
+    return select;
 }
 
 Transaction* Transaction::ParseTransaction(Lexing::Tokenizer* t)

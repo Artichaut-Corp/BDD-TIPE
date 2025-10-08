@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <memory>
 #include <optional>
+#include <sys/wait.h>
 #include <vector>
 
 #include "../lexer/tokenizer.h"
@@ -54,6 +55,20 @@ public:
 
 class GroupByClause {
     std::vector<ByItem> m_Items;
+
+    void AddItem(ByItem* b)
+    {
+        m_Items.push_back(*b);
+    }
+
+public:
+    GroupByClause()
+    {
+        m_Items.reserve(1);
+    }
+
+    std::vector<ByItem> getByItems() const { return m_Items; }
+    static std::variant<GroupByClause*, Errors::Error> ParseGroupBy(Lexing::Tokenizer* t);
 };
 
 class HavingClause {
@@ -90,16 +105,15 @@ public:
     {
     }
 
-    Join(const Join& other)
-        : m_Type(other.m_Type)
-    {
-        m_Table = std::unique_ptr<TableName>(other.m_Table.get());
+    // forbid copying
+    Join(const Join&) = delete;
+    Join& operator=(const Join&) = delete;
 
-        m_Left = std::unique_ptr<ColumnName>(other.m_Left.get());
-        m_Right = std::unique_ptr<ColumnName>(other.m_Right.get());
-    }
+    // allow moves
+    Join(Join&&) noexcept = default;
+    Join& operator=(Join&&) noexcept = default;
 
-    //~Join() = default;
+    ~Join() = default;
 
     ColumnName* getLeftColumn() const
     {
@@ -121,7 +135,7 @@ public:
         return m_Type;
     }
 
-    static Join* ParseJoin(Lexing::Tokenizer* t);
+    static Join ParseJoin(Lexing::Tokenizer* t);
 };
 
 class SelectField {
@@ -403,36 +417,36 @@ class SelectStmt {
 
     std::unique_ptr<TableName> m_Table; // ce qu'il y'as après le From
 
-    std::optional<std::unique_ptr<std::vector<Join>>> m_Joins; // les join (des jointure dcp)
+    std::unique_ptr<std::vector<Join>> m_Joins; // les join (des jointure dcp)
 
     // WHERE expr
-    std::optional<std::unique_ptr<WhereClause>> m_Where; // les conditions des objets (des projections)
+    std::unique_ptr<WhereClause> m_Where; // les conditions des objets (des projections)
 
     // LIMIT
-    std::optional<std::unique_ptr<Limit>> m_Limit; // les limites (des projections)
+    std::unique_ptr<Limit> m_Limit; // les limites (des projections)
 
     // ORDER BY
-    std::optional<std::unique_ptr<OrderByClause>> m_OrderBy; // des tris (et donc des projections)
+    std::unique_ptr<OrderByClause> m_OrderBy; // des tris (et donc des projections)
 
     // Ces deux là s'utilisent avec les fonctions qu'on implémente pas pour l'instant
 
     // GROUP BY
-    std::optional<std::unique_ptr<GroupByClause>> m_GroupBy;
+    std::unique_ptr<GroupByClause> m_GroupBy;
 
     // HAVING expr
-    std::optional<std::unique_ptr<HavingClause>> m_Having; // projections
+    std::unique_ptr<HavingClause> m_Having; // projections
 
 public:
     SelectStmt(bool distinct, FieldsList* fields_list, TableName* table)
         : m_Distinct(distinct)
         , m_Fields(std::unique_ptr<FieldsList>(fields_list))
         , m_Table(std::unique_ptr<TableName>(table))
-        , m_Joins(std::nullopt)
-        , m_Where(std::nullopt)
-        , m_Limit(std::nullopt)
-        , m_OrderBy(std::nullopt)
-        , m_GroupBy(std::nullopt)
-        , m_Having(std::nullopt)
+        , m_Joins(nullptr)
+        , m_Where(nullptr)
+        , m_Limit(nullptr)
+        , m_OrderBy(nullptr)
+        , m_GroupBy(nullptr)
+        , m_Having(nullptr)
     {
     }
 
@@ -441,11 +455,11 @@ public:
         , m_Fields(std::unique_ptr<FieldsList>(fields_list))
         , m_Table(std::unique_ptr<TableName>(table))
         , m_Joins(join)
-        , m_Where(std::nullopt)
-        , m_Limit(std::nullopt)
-        , m_OrderBy(std::nullopt)
-        , m_GroupBy(std::nullopt)
-        , m_Having(std::nullopt)
+        , m_Where(nullptr)
+        , m_Limit(nullptr)
+        , m_OrderBy(nullptr)
+        , m_GroupBy(nullptr)
+        , m_Having(nullptr)
     {
     }
 
@@ -457,74 +471,46 @@ public:
         , m_Where(std::unique_ptr<WhereClause>(where))
         , m_Limit(std::unique_ptr<Limit>(limit))
         , m_OrderBy(std::unique_ptr<OrderByClause>(order_by))
-        , m_GroupBy(std::nullopt)
-        , m_Having(std::nullopt)
+        , m_GroupBy(nullptr)
+        , m_Having(nullptr)
     {
     }
 
-    bool isDistinct() const
+    // Getters
+
+    bool isDistinct() const { return m_Distinct; }
+
+    FieldsList* getFields() const { return m_Fields.get(); }
+
+    TableName* getTable() const { return m_Table.get(); }
+
+    std::vector<Join>* getJoins() const { return m_Joins.get(); }
+
+    WhereClause* getWhere() const { return m_Where.get(); }
+
+    Limit* getLimit() const { return m_Limit.get(); }
+
+    OrderByClause* getOrderBy() const { return m_OrderBy.get(); }
+
+    GroupByClause* getGroupBy() const { return m_GroupBy.get(); }
+
+    HavingClause* getHaving() const { return m_Having.get(); }
+
+    // Setters
+    void setJoins(std::unique_ptr<std::vector<Join>> joins)
     {
-        return m_Distinct;
+        m_Joins = std::move(joins);
     }
 
-    FieldsList* getFields() const
-    {
-        return m_Fields.get();
-    }
+    void setWhere(WhereClause* where) { m_Where.reset(where); }
 
-    TableName* getTable() const
-    {
-        return m_Table.get();
-    }
+    void setLimit(Limit* limit) { m_Limit.reset(limit); }
 
-    std::vector<Join>* getJoins() const
-    {
-        if (m_Joins.has_value()) {
-            return m_Joins.value().get();
-        }
+    void setOrderBy(OrderByClause* orderBy) { m_OrderBy.reset(orderBy); }
 
-        return nullptr;
-    }
+    void setGroupBy(GroupByClause* groupBy) { m_GroupBy.reset(groupBy); }
 
-    WhereClause* getWhere() const
-    {
-        if (m_Where.has_value()) {
-            return m_Where.value().get();
-        }
-        return nullptr;
-    }
-
-    Limit* getLimit() const
-    {
-        if (m_Limit.has_value()) {
-            return m_Limit.value().get();
-        }
-        return nullptr;
-    }
-
-    OrderByClause* getOrderBy() const
-    {
-        if (m_OrderBy.has_value()) {
-            return m_OrderBy.value().get();
-        }
-        return nullptr;
-    }
-
-    GroupByClause* getGroupBy() const
-    {
-        if (m_GroupBy.has_value()) {
-            return m_GroupBy.value().get();
-        }
-        return nullptr;
-    }
-
-    HavingClause* getHaving() const
-    {
-        if (m_Having.has_value()) {
-            return m_Having.value().get();
-        }
-        return nullptr;
-    }
+    void setHaving(HavingClause* having) { m_Having.reset(having); }
 
     static SelectStmt* ParseSelect(Lexing::Tokenizer* t);
 };

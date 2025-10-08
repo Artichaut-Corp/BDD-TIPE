@@ -74,11 +74,18 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     // pour les join
     std::vector<std::string> tables_secondaires;
+
     std::vector<Join*> join_list;
-    if (Selection->getJoins() != nullptr) { // si il y as des join, on suppose que ce sont tous des join classique càd des inner join
-        for (Parsing::Join j : *Selection->getJoins()) {
+
+    std::vector<Parsing::Join>* joins = Selection->getJoins();
+
+    if (joins != nullptr) { // si il y as des join, on suppose que ce sont tous des join classique càd des inner join
+        for (const Parsing::Join& j : *joins) {
+
             if (j.getJoinType() == Parsing::JoinType::INNER_J) {
+
                 tables_secondaires.push_back(j.getTable()->getTableName());
+
                 std::string colonne_gauche = GetColumnFullName(TablePrincipaleNom, j.getLeftColumn());
                 std::string colonne_droite = GetColumnFullName(TablePrincipaleNom, j.getRightColumn());
 
@@ -86,7 +93,9 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 TableNameToColumnList[colonne_droite.substr(0, colonne_droite.find("."))].emplace(colonne_droite);
 
                 Comparateur condition = Comparateur(Parsing::LogicalOperator::EQ); // dans tout les cas c'est un égal
+
                 Join* jointure = new Join(condition, colonne_gauche, colonne_droite);
+
                 join_list.push_back(jointure);
             } else {
                 // à implémenter
@@ -98,8 +107,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     Parsing::WhereClause* where = Selection->getWhere();
     Select* MainSelect;
     std::unordered_set<std::string>* ConditionColumn;
-    Parsing::BinaryExpression::Condition Condition; //those variable are used two times,
-
+    Parsing::BinaryExpression::Condition Condition; // those variable are used two times,
 
     if (where != nullptr) { // il faut ajouter les colonnes utilisé dans la conditions avant de créer la table principale
         std::unordered_set<std::string>* ColonneTesté;
@@ -139,7 +147,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     TableToRootOfTableMap[TablePrincipaleNom] = std::pair<Node*, bool>((&RacineExec), true);
 
     // il faut maintenant récupérer les conditions càd les where
-    if (where != NULL) {// une foit la racine de l'arbre d'éxécution définie, on peut lui ajouter une selection si nécessaire
+    if (where != NULL) { // une foit la racine de l'arbre d'éxécution définie, on peut lui ajouter une selection si nécessaire
         MainSelect = new Select(std::make_unique<std::unordered_set<std::string>>(*ConditionColumn), Condition, TablePrincipaleNom);
         Node* Node_Select = new Node(MainSelect);
         RacineExec.AddChild(true, Node_Select);

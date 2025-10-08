@@ -34,8 +34,8 @@ Select country.name, country.pop, city.country, city.name, city.pop from city Jo
 
 Select country.name, country.pop, city.country, city.name, city.pop from city Join country on country.name = city.country where country.name = "France";
 
-Select country, name,pop from city where country = "France";
 
-select name, country.pop, pop from city join country on country.name = city.country where (( country.pop > 42558227 ) AND (pop >9500000));
+Select country.name, city.pop, president.first_name from city Join country on country.name = city.country JOIN president ON president.country = city.country;
 
+SELECT president.first_name, president.last_name, city.pop FROM president JOIN country ON country.name = president.country JOIN city ON city.country = president.country;
 ```

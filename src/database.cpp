@@ -312,7 +312,7 @@ auto DatabaseEngine::CreatePresidentTable(int fd) -> void
 
     // 3. Write it on disk in the dedicated system table
 
-    auto president = new TableInfo(false, 3, first_offset, c_columns);
+    auto president = new TableInfo(false, 4, first_offset, c_columns);
 
     Index->insert({ "president", *president });
 
@@ -413,6 +413,8 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
     // Traiter chaque Statement
     if (std::holds_alternative<Parsing::SelectStmt*>(stmt)) {
         auto select = std::get<Parsing::SelectStmt*>(stmt);
+
+        auto joins = select->getJoins();
 
         QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get());
 
