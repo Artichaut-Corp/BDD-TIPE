@@ -37,20 +37,20 @@ class Assignment {
 
 // The item after 'order' or 'group'
 class ByItem {
-    Expr m_Expr;
+    ColumnName m_ColName;
 
     bool m_Desc;
 
 public:
-    ByItem(Expr expr, bool desc)
-        : m_Expr(expr)
+    ByItem(ColumnName ColName, bool desc)
+        : m_ColName(ColName)
         , m_Desc(desc)
     {
     }
 
     bool isDesc() const { return m_Desc; }
 
-    Expr getExpr() const { return m_Expr; }
+    ColumnName* getColName() { return &m_ColName; }
 };
 
 class GroupByClause {

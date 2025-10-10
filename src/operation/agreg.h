@@ -1,9 +1,13 @@
 
+#include "../../lib/RobinHood/robin_hood.h"
 #include <optional>
 #include <string>
-#include <vector>
-#include "../parser/expression.h"
+
 #include "../data_process_system/table.h"
+#include "../parser/expression.h"
+#include "../storage/types.h"
+#include <vector>
+
 #ifndef agreg_H
 
 #define agreg_H
@@ -14,7 +18,6 @@ static std::vector<int>& Average();
 static std::vector<int>& Count();
 static std::vector<int>& Min();
 static std::vector<int>& Max();
-
 
 class ReturnType {
 private:
@@ -27,31 +30,35 @@ public:
         , opération(type_)
     {
     }
-    Parsing::AggrFuncType GetType() { return opération; };
+    const Parsing::AggrFuncType GetType() { return opération; };
 
     std::string GetColonne() { return colonne; };
+
+    Database::ColumnData AppliqueOperation(robin_hood::unordered_set<Database::ColumnData>& Values); // in case of Groupby
+    Database::ColumnData AppliqueOperationOnCol(const std::string& ColName, Table* table);
 };
 
 class Final {
 private:
     std::vector<ReturnType> ColonneInfo;
     std::optional<std::vector<std::string>> ColumnsToGroubBy;
-    
+
 public:
     Final(std::vector<ReturnType> ColonneInfo_)
-    : ColonneInfo(ColonneInfo_)
-    , ColumnsToGroubBy(std::nullopt)
+        : ColonneInfo(ColonneInfo_)
+        , ColumnsToGroubBy(std::nullopt)
     {
     }
 
-    Final(std::vector<ReturnType> ColonneInfo_,std::vector<std::string> GroupByInfo_)
-    : ColonneInfo(ColonneInfo_)
-    , ColumnsToGroubBy(GroupByInfo_)
-    {
-    };
+    Final(std::vector<ReturnType> ColonneInfo_, std::vector<std::string> GroupByInfo_)
+        : ColonneInfo(ColonneInfo_)
+        , ColumnsToGroubBy(GroupByInfo_) {
+        };
 
-    Table* AppliqueAgregate(Table* table);
+    void AjouteGroupBy(std::vector<std::string>& GroupBy){ColumnsToGroubBy=GroupBy;}
+    int GetTailleClef() { return ColumnsToGroubBy->size(); }
 
+    void AppliqueAgregateAndPrint(Table* table);
 };
 
 } // Database::QueryPlanning

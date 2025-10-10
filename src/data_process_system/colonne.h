@@ -39,9 +39,10 @@ public:
     {
     }
 
+
     // Accès à une valeur via l'indice de la colonne
     ColumnData getValue(const int idx) const
-    {
+    {   
         return racine->getValue((indices)[idx]);
     }
 

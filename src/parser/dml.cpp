@@ -298,7 +298,7 @@ std::variant<GroupByClause*, Errors::Error> GroupByClause::ParseGroupBy(Lexing::
     do {
 
         // Column Name
-        Expr* name = ColumnName::ParseColumnName(t);
+        ColumnName* name = ColumnName::ParseColumnName(t);
 
         next = t->peek();
 
@@ -345,7 +345,7 @@ std::variant<OrderByClause*, Errors::Error> OrderByClause::ParseOrderBy(Lexing::
     do {
 
         // Column Name
-        Expr* name = ColumnName::ParseColumnName(t);
+        ColumnName* name = ColumnName::ParseColumnName(t);
 
         next = t->peek();
 

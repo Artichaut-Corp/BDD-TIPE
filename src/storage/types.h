@@ -1,6 +1,5 @@
 #include <array>
 #include <cstdint>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <string>
@@ -113,12 +112,8 @@ public:
     }
 
     static ColumnData intToColumnData(int value)
-    {
-        if (value <= std::numeric_limits<DbInt8>::max())
-            return static_cast<DbInt8>(value);
-        if (value <= std::numeric_limits<DbInt16>::max())
-            return static_cast<DbInt16>(value);
-        return static_cast<DbInt>(value);
+    {   
+        return static_cast<DbInt64>(value);
     }
 };
 inline std::ostream& operator<<(std::ostream& out, const ColumnData& cd)

@@ -37,6 +37,8 @@ const ErrorCode ERROR_NETWORK_FAILURE = std::pair(21, "Networking capabilities h
 const ErrorCode ERROR_TABLE_EMPTY = std::pair(22, "Requested an empty table");
 const ErrorCode ERROR_UNKNOW_TYPE_BINARYEXPR = std::pair(23, "Uknown type in the BinaryExpression Tree");
 const ErrorCode ERROR_UNKNOW_LOGICAL_OPERATOR = std::pair(24, "Uknown operator Type in Evaluation of a BinaryExpression");
+const ErrorCode ERROR_FORBIDEN_AGREGATE_ON_STRING = std::pair(25, "Agregate function is not allowed on String");
+
 
 
 

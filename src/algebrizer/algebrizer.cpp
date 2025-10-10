@@ -34,6 +34,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     std::vector<ReturnType> colonnes_de_retour;
     std::vector<std::string> NomColonneDeRetour; // à supprimer en fonction
     std::map<std::string, std::unordered_set<std::string>> TableNameToColumnList;
+    bool IsAgregate = false;
 
     for (std::variant<Parsing::SelectField, Parsing::AggregateFunction> colonne_info : Selection->getFields()->getField()) { // permet de convertir m_fields list en un autre type plus utile
         std::visit([&](auto&& arg) {
@@ -58,8 +59,8 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                     std::string NomColonne = GetColumnFullName(TablePrincipaleNom, arg.getColumnName());
                     TableNameToColumnList[NomColonne.substr(0, NomColonne.find("."))].emplace(NomColonne);
                     NomColonneDeRetour.push_back(NomColonne);
-
                     colonnes_de_retour.push_back(ReturnType(NomColonne, arg.getType()));
+                    IsAgregate = true;
                 } else {
                     std::cout << "y'as une étoile\n"
                               << std::endl; // erreur
@@ -101,6 +102,33 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 // à implémenter
                 throw std::runtime_error("TODO: type de join pas traité");
             }
+        }
+    }
+
+    Final AppliqueAggr(colonnes_de_retour);
+    if (IsAgregate) {
+        Parsing::GroupByClause* Groupby = Selection->getGroupBy();
+        if (Groupby != nullptr) {
+            std::vector<std::string> ColumnGroupByed;
+            for (auto e : Groupby->getByItems()) {
+                // TODO implémenter les ASC et DSC
+                bool est_présent = false;
+                std::string NomColonne = GetColumnFullName(TablePrincipaleNom, e.getColName());
+
+                for (auto x : NomColonneDeRetour) {
+                    if (x == NomColonne) {
+                        est_présent = true;
+                    }
+                }
+                if (est_présent) {
+                    throw std::runtime_error("Une colonne ne peut être retourné et dans le Group By en même temps !!!");
+                } else {
+                    TableNameToColumnList[NomColonne.substr(0, NomColonne.find("."))].emplace(NomColonne);
+                    NomColonneDeRetour.push_back(NomColonne);
+                    ColumnGroupByed.push_back(NomColonne);
+                }
+            }
+            AppliqueAggr.AjouteGroupBy(ColumnGroupByed);
         }
     }
 
@@ -194,12 +222,16 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     Ikea* Magasin = new Ikea(Tables);
     RacineExec.printBT(std::cout);
     if (where != NULL) {
-        std::cout << "\n et maintenant en descendant les sélections on a : \n  ";
+        std::cout << "\n et maintenant en descendant les sélections on a : \n";
         RacineExec.SelectionDescent(Magasin, MainSelect);
         RacineExec.printBT(std::cout);
     }
     Table* Table_Finale = RacineExec.Pronf(Magasin);
-    Utils::AfficheResultat(Table_Finale);
+    if (IsAgregate) {
+        AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale);
+    } else {
+        Utils::AfficheResultat(Table_Finale);
+    }
 }
 
 };

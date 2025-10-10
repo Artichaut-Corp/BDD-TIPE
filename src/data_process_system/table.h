@@ -42,7 +42,6 @@ public:
 
     ColumnData get_value(std::string column_name, int pos_ind)
     {
-        ;
         return map[column_name]->getValue(pos_ind);
     }
 
