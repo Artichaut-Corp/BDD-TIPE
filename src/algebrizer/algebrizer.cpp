@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -106,10 +107,10 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
 
     Final AppliqueAggr(colonnes_de_retour);
-    if (IsAgregate) {
+    if (IsAgregate) {//permet de créer les agrégation si il y en as
         Parsing::GroupByClause* Groupby = Selection->getGroupBy();
         if (Groupby != nullptr) {
-            std::vector<std::string> ColumnGroupByed;
+            std::vector<std::string>* ColumnGroupByed = new std::vector<std::string> ;
             for (auto e : Groupby->getByItems()) {
                 // TODO implémenter les ASC et DSC
                 bool est_présent = false;
@@ -120,18 +121,29 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                         est_présent = true;
                     }
                 }
-                if (est_présent) {
-                    throw std::runtime_error("Une colonne ne peut être retourné et dans le Group By en même temps !!!");
-                } else {
+                if (!est_présent) { // évite les doublons dans la projection finale et dans la création des tables
                     TableNameToColumnList[NomColonne.substr(0, NomColonne.find("."))].emplace(NomColonne);
                     NomColonneDeRetour.push_back(NomColonne);
-                    ColumnGroupByed.push_back(NomColonne);
                 }
+                ColumnGroupByed->push_back(NomColonne);
             }
             AppliqueAggr.AjouteGroupBy(ColumnGroupByed);
         }
     }
 
+
+    //permet de créer les OrderBy si il y en as 
+    Parsing::OrderByClause* order = Selection->getOrderBy();
+    bool IsOrderBy = false;
+    if(order!=nullptr){
+        IsOrderBy = true;
+        std::vector<std::pair<std::string, bool>>* OrderVect = new std::vector<std::pair<std::string, bool>>;
+        for(auto e : order->getByItems()){
+            OrderVect->push_back(std::pair<std::string, bool>(GetColumnFullName(TablePrincipaleNom, e.getColName()),(!e.isDsc()))); //on inverse le Desc car il est vrai si c'est inversé et dans la suite on considère que si c'est vrai alors c'est Asc
+        }
+        AppliqueAggr.AjouteOrderBy(OrderVect);
+    }
+    
     Parsing::WhereClause* where = Selection->getWhere();
     Select* MainSelect;
     std::unordered_set<std::string>* ConditionColumn;
@@ -227,7 +239,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         RacineExec.printBT(std::cout);
     }
     Table* Table_Finale = RacineExec.Pronf(Magasin);
-    if (IsAgregate) {
+    if (IsAgregate || IsOrderBy) { // la requete possède une agregation et donc un group by
         AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale);
     } else {
         Utils::AfficheResultat(Table_Finale);

@@ -48,7 +48,7 @@ public:
     {
     }
 
-    bool isDesc() const { return m_Desc; }
+    bool isDsc() const { return m_Desc; }
 
     ColumnName* getColName() { return &m_ColName; }
 };

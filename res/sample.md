@@ -39,10 +39,13 @@ Select country.name, city.pop, president.first_name from city Join country on co
 
 SELECT president.first_name, president.last_name, city.pop FROM president JOIN country ON country.name = president.country JOIN city ON city.country = president.country;
 
-Select MAX(city.pop) from city group by city.country ASC;
+Select MAX(city.pop) from city group by city.country ;
 
-Select avg(city.pop) from city group by city.country ASC;
+Select avg(city.pop) from city group by city.country ;
 
-Select count(city.name) from city group by city.country ASC;
+Select count(city.name),city.country from city group by city.country ;
+
+
+Select count(city.name),city.country from city group by city.country order by city.country ASC ;
 
 ```

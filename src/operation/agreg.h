@@ -13,12 +13,6 @@
 #define agreg_H
 namespace Database::QueryPlanning {
 
-static std::vector<int>& Sum();
-static std::vector<int>& Average();
-static std::vector<int>& Count();
-static std::vector<int>& Min();
-static std::vector<int>& Max();
-
 class ReturnType {
 private:
     std::string colonne;
@@ -30,7 +24,7 @@ public:
         , opération(type_)
     {
     }
-    const Parsing::AggrFuncType GetType() { return opération; };
+    Parsing::AggrFuncType GetType() { return opération; };
 
     std::string GetColonne() { return colonne; };
 
@@ -41,24 +35,36 @@ public:
 class Final {
 private:
     std::vector<ReturnType> ColonneInfo;
-    std::optional<std::vector<std::string>> ColumnsToGroubBy;
+    std::optional<std::vector<std::string>> ColumnsToGroupBy;
+    std::optional<std::vector<std::pair<std::string, bool>>> OrderByCol; // liste des colonne par lesquelles trié, le booléen est vrai si on doit triér dans l'ordre décroissant
 
 public:
     Final(std::vector<ReturnType> ColonneInfo_)
         : ColonneInfo(ColonneInfo_)
-        , ColumnsToGroubBy(std::nullopt)
+        , ColumnsToGroupBy(std::nullopt)
     {
     }
 
     Final(std::vector<ReturnType> ColonneInfo_, std::vector<std::string> GroupByInfo_)
         : ColonneInfo(ColonneInfo_)
-        , ColumnsToGroubBy(GroupByInfo_) {
+        , ColumnsToGroupBy(GroupByInfo_) {
         };
 
-    void AjouteGroupBy(std::vector<std::string>& GroupBy){ColumnsToGroubBy=GroupBy;}
-    int GetTailleClef() { return ColumnsToGroubBy->size(); }
+    Final(std::vector<ReturnType> ColonneInfo_, std::vector<std::string> GroupByInfo_, std::vector<std::pair<std::string, bool>> OrderByCol_)
+        : ColonneInfo(ColonneInfo_)
+        , ColumnsToGroupBy(GroupByInfo_)
+        , OrderByCol(OrderByCol_) {
+        };
+
+    void AjouteGroupBy(std::vector<std::string>* GroupBy) { ColumnsToGroupBy = *GroupBy; }
+    void AjouteOrderBy(std::vector<std::pair<std::string, bool>>* OrderBy) { OrderByCol = *OrderBy; }
+
+    int GetTailleClef() { return ColumnsToGroupBy->size(); }
 
     void AppliqueAgregateAndPrint(Table* table);
+    void TrierListe(std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues, std::vector<int>* IndicesVierge);
+
+    bool CompareDeuxIndices(std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues, int ind1, int ind2);
 };
 
 } // Database::QueryPlanning
