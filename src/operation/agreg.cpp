@@ -2,6 +2,7 @@
 #include "../utils/hashmap.h"
 #include "../utils/table_utils.h"
 #include <cstddef>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -184,14 +185,12 @@ void Final::AppliqueAgregateAndPrint(Table* table)
             auto ColName = Return.GetColonne();
             ColumnNameToValues[ColName] = new std::vector<ColumnData>;
         }
-        int i = 0;
 
         for (auto it = AgregMap.begin(); it != AgregMap.end(); ++it) { // pour toute les combi de clef possible
             auto& values = it->second; // récupère les valeur associé
             auto& keys = it->first;
             for (auto& Return : ColonneInfo) { // on applique les agrégat
                 auto ColName = Return.GetColonne();
-                i++;
 
                 if (Return.GetType() != Parsing::AggrFuncType::NOTHING_F) { // dans colonneinfo il y a aussi les colonne qu'on retourne sans rien faire
                     ColumnData temp = Return.AppliqueOperation(values[pos_in_map_map[ColName]]); // performe l'opération
@@ -205,10 +204,16 @@ void Final::AppliqueAgregateAndPrint(Table* table)
 
     } else {
         for (auto e : ColonneInfo) {
-            std::vector<ColumnData>* ResultVector;
+            std::vector<ColumnData>* ResultVector = new std::vector<ColumnData>;
             auto ColName = e.GetColonne();
             ColumnNameToValues[ColName] = ResultVector;
-            ColumnNameToValues[ColName]->push_back(e.AppliqueOperationOnCol(ColName, table));
+            if (e.GetType() != Parsing::AggrFuncType::NOTHING_F) {
+                ColumnNameToValues[ColName]->push_back(e.AppliqueOperationOnCol(ColName, table));
+            } else {
+                for (int i = 0; i < table->Columnsize(); ++i) {
+                    ColumnNameToValues[ColName]->push_back(table->get_value(ColName, i));
+                }
+            }
         }
     }
 
@@ -222,7 +227,12 @@ void Final::AppliqueAgregateAndPrint(Table* table)
         TrierListe(&ColumnNameToValues, OrdreIndice);
     }
 
-    Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice,&ColonneInfo);
+    if (Limite.has_value()) {
+        std::span<int> sub = std::span<int>(*OrdreIndice).subspan(Limite->first, Limite->second);
+        Database::Utils::AfficheAgregSpan(&ColumnNameToValues, &sub, &ColonneInfo);
+    } else {
+        Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice, &ColonneInfo);
+    }
 }
 
 void Final::TrierListe(std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues, std::vector<int>* IndicesVierge)
@@ -258,5 +268,4 @@ bool Final::CompareDeuxIndices(std::unordered_map<std::string, std::vector<Colum
     }
     return true; // valeur par défaut
 }
-
 }

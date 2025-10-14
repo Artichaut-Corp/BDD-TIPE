@@ -107,10 +107,10 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
 
     Final AppliqueAggr(colonnes_de_retour);
-    if (IsAgregate) {//permet de créer les agrégation si il y en as
+    if (IsAgregate) { // permet de créer les agrégation si il y en as
         Parsing::GroupByClause* Groupby = Selection->getGroupBy();
         if (Groupby != nullptr) {
-            std::vector<std::string>* ColumnGroupByed = new std::vector<std::string> ;
+            std::vector<std::string>* ColumnGroupByed = new std::vector<std::string>;
             for (auto e : Groupby->getByItems()) {
                 // TODO implémenter les ASC et DSC
                 bool est_présent = false;
@@ -131,19 +131,25 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         }
     }
 
-
-    //permet de créer les OrderBy si il y en as 
+    // permet de créer les OrderBy si il y en as
     Parsing::OrderByClause* order = Selection->getOrderBy();
     bool IsOrderBy = false;
-    if(order!=nullptr){
+    if (order != nullptr) {
         IsOrderBy = true;
         std::vector<std::pair<std::string, bool>>* OrderVect = new std::vector<std::pair<std::string, bool>>;
-        for(auto e : order->getByItems()){
-            OrderVect->push_back(std::pair<std::string, bool>(GetColumnFullName(TablePrincipaleNom, e.getColName()),(!e.isDsc()))); //on inverse le Desc car il est vrai si c'est inversé et dans la suite on considère que si c'est vrai alors c'est Asc
+        for (auto e : order->getByItems()) {
+            OrderVect->push_back(std::pair<std::string, bool>(GetColumnFullName(TablePrincipaleNom, e.getColName()), (!e.isDsc()))); // on inverse le Desc car il est vrai si c'est inversé et dans la suite on considère que si c'est vrai alors c'est Asc
         }
         AppliqueAggr.AjouteOrderBy(OrderVect);
     }
-    
+
+    bool IsLimite = false;
+    Parsing::Limit* Limite = Selection->getLimit();
+    if (Limite != nullptr) {
+        IsLimite = true;
+        AppliqueAggr.AjouterLimite(Limite->getOffset(), Limite->getCount());
+    }
+
     Parsing::WhereClause* where = Selection->getWhere();
     Select* MainSelect;
     std::unordered_set<std::string>* ConditionColumn;
@@ -239,7 +245,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         RacineExec.printBT(std::cout);
     }
     Table* Table_Finale = RacineExec.Pronf(Magasin);
-    if (IsAgregate || IsOrderBy) { // la requete possède une agregation et donc un group by
+    if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
         AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale);
     } else {
         Utils::AfficheResultat(Table_Finale);

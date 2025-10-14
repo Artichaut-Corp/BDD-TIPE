@@ -9,10 +9,8 @@
 
 - Quand le BinaryTree est fini, modifier la partie touchant au close where
 
-- l'éxécution de la table dans le cas des join
-
--faire les fonction d'application des agregation et d'affiache du résultat
-
 - creer l'optimisateur de query
 
 - Utiliser le type Ikea dans pronf, pour que si un noeud est une feuille, qu'il récupere la table il a besoin et s'éxécute au lieu de planter
+
+- modifier toute les string avec un autre type où la comparaison entre deux ColumName serait défini par la recherche de noms en commun

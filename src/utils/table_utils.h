@@ -255,6 +255,131 @@ inline void AfficheAgreg(
 
     print_sep();
 }
+inline void AfficheAgregSpan(
+    std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues,
+    std::span<int>* OrdreIndice,
+    std::vector<QueryPlanning::ReturnType>* OpArray)
+{
+    if (!ColumnNameToValues || ColumnNameToValues->empty()) {
+        std::cout << "(table vide)" << std::endl;
+        return;
+    }
+
+    if (!OpArray || OpArray->empty()) {
+        std::cout << "(aucune colonne)" << std::endl;
+        return;
+    }
+
+    // --- Construire la liste des colonnes et des noms à afficher ---
+    std::vector<std::string> ColumnNameList;
+    std::vector<std::string> DisplayNames;
+    ColumnNameList.reserve(OpArray->size());
+    DisplayNames.reserve(OpArray->size());
+
+    for (auto& ret : *OpArray) {
+        std::string colName = ret.GetColonne();
+        ColumnNameList.push_back(colName);
+
+        using AF = Parsing::AggrFuncType;
+        std::string display;
+        switch (ret.GetType()) {
+            case AF::AVG_F:   display = "AVG("   + colName + ")"; break;
+            case AF::COUNT_F: display = "COUNT(" + colName + ")"; break;
+            case AF::MAX_F:   display = "MAX("   + colName + ")"; break;
+            case AF::MIN_F:   display = "MIN("   + colName + ")"; break;
+            case AF::SUM_F:   display = "SUM("   + colName + ")"; break;
+            case AF::NOTHING_F:
+            default:
+                display = colName;
+                break;
+        }
+        DisplayNames.push_back(std::move(display));
+    }
+
+    // --- Nombre de lignes ---
+    size_t nRows = 0;
+    if (auto it = ColumnNameToValues->find(ColumnNameList[0]); it != ColumnNameToValues->end())
+        nRows = it->second ? it->second->size() : 0;
+
+    if (nRows == 0) {
+        std::cout << "(aucune donnée)" << std::endl;
+        return;
+    }
+
+    // --- Calcul des largeurs de colonnes ---
+    std::vector<int> colWidths(ColumnNameList.size());
+    for (size_t i = 0; i < ColumnNameList.size(); ++i) {
+        const std::string& colName = ColumnNameList[i];
+        colWidths[i] = (int)display_width(DisplayNames[i]);
+
+        auto it = ColumnNameToValues->find(colName);
+        if (it != ColumnNameToValues->end() && it->second) {
+            for (const auto& valData : *it->second) {
+                std::string val;
+                std::visit([&val](auto&& elem) {
+                    using T = std::decay_t<decltype(elem)>;
+                    if constexpr (std::is_same_v<T, DbString>)
+                        val = Convert::DbStringToString(elem);
+                    else
+                        val = std::to_string(elem);
+                }, valData);
+                colWidths[i] = std::max(colWidths[i], (int)display_width(val));
+            }
+        }
+    }
+
+    auto print_sep = [&]() {
+        for (int w : colWidths)
+            std::cout << "+" << std::string(w + 2, '-');
+        std::cout << "+\n";
+    };
+
+    // --- Affiche l’en-tête ---
+    print_sep();
+    for (size_t i = 0; i < DisplayNames.size(); ++i) {
+        std::cout << "| ";
+        print_cell(DisplayNames[i], colWidths[i]);
+        std::cout << " ";
+    }
+    std::cout << "|\n";
+    print_sep();
+
+    // --- Détermine l’ordre des lignes ---
+    std::vector<int> ordre;
+    if (!OrdreIndice->empty()) {
+        ordre.reserve(OrdreIndice->size());
+        for (int idx : *OrdreIndice)
+            if (idx >= 0 && static_cast<size_t>(idx) < nRows)
+                ordre.push_back(idx);
+    } else {
+        ordre.resize(nRows);
+        std::iota(ordre.begin(), ordre.end(), 0);
+    }
+
+    // --- Affiche les lignes selon OrdreIndice ---
+    for (int row : ordre) {
+        for (size_t i = 0; i < ColumnNameList.size(); ++i) {
+            const std::string& colName = ColumnNameList[i];
+            std::string val;
+            auto it = ColumnNameToValues->find(colName);
+            if (it != ColumnNameToValues->end() && it->second && row < (int)it->second->size()) {
+                std::visit([&val](auto&& elem) {
+                    using T = std::decay_t<decltype(elem)>;
+                    if constexpr (std::is_same_v<T, DbString>)
+                        val = Convert::DbStringToString(elem);
+                    else
+                        val = std::to_string(elem);
+                }, (*it->second)[row]);
+            }
+            std::cout << "| ";
+            print_cell(val, colWidths[i]);
+            std::cout << " ";
+        }
+        std::cout << "|\n";
+    }
+
+    print_sep();
+}
 
 }
 

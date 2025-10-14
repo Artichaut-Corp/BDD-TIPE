@@ -6,6 +6,7 @@
 #include "../data_process_system/table.h"
 #include "../parser/expression.h"
 #include "../storage/types.h"
+#include <utility>
 #include <vector>
 
 #ifndef agreg_H
@@ -37,6 +38,7 @@ private:
     std::vector<ReturnType> ColonneInfo;
     std::optional<std::vector<std::string>> ColumnsToGroupBy;
     std::optional<std::vector<std::pair<std::string, bool>>> OrderByCol; // liste des colonne par lesquelles trié, le booléen est vrai si on doit triér dans l'ordre décroissant
+    std::optional<std::pair<int, int>> Limite;
 
 public:
     Final(std::vector<ReturnType> ColonneInfo_)
@@ -55,9 +57,16 @@ public:
         , ColumnsToGroupBy(GroupByInfo_)
         , OrderByCol(OrderByCol_) {
         };
+    Final(std::vector<ReturnType> ColonneInfo_, std::vector<std::string> GroupByInfo_, std::vector<std::pair<std::string, bool>> OrderByCol_, std::pair<int, int> limite_)
+        : ColonneInfo(ColonneInfo_)
+        , ColumnsToGroupBy(GroupByInfo_)
+        , OrderByCol(OrderByCol_)
+        , Limite(limite_) {
+        };
 
     void AjouteGroupBy(std::vector<std::string>* GroupBy) { ColumnsToGroupBy = *GroupBy; }
     void AjouteOrderBy(std::vector<std::pair<std::string, bool>>* OrderBy) { OrderByCol = *OrderBy; }
+    void AjouterLimite(int offset, int count) { Limite = std::pair<int, int>(offset, count); }
 
     int GetTailleClef() { return ColumnsToGroupBy->size(); }
 
