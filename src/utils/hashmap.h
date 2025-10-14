@@ -1,23 +1,20 @@
-#include "../../lib/RobinHood/robin_hood.h"
+#include "../../lib/tsl/robin_map.h"
 #include "../algebrizer_types.h"
 #include "../storage/types.h"
 #include <cstdint>
+#include <set>
 
 #ifndef HASH_UTILS_H
 #define HASH_UTILS_H
 
-namespace Database::Utils::Hash {
-
-}
-namespace robin_hood {
 template <>
-struct hash<Database::ColumnData> {
+struct std::hash<Database::ColumnData> {
     size_t operator()(const Database::ColumnData& c) const noexcept
     {
         return Database::QueryPlanning::hashColumn(c); // ok, on utilise la fonction de hash dans Utils::Hash
     }
 };
-}
+
 namespace Database::Utils::Hash {
 
 // --- Clé composite dynamique ---
@@ -48,7 +45,7 @@ struct MultiKeyDynHash {
     }
 };
 
-using MultiValueMapDyn = std::unordered_map<MultiKeyDyn, std::vector<robin_hood::unordered_set<Database::ColumnData>>, MultiKeyDynHash>;
+using MultiValueMapDyn = tsl::robin_pg_map<MultiKeyDyn, std::vector<std::set<Database::ColumnData>>, MultiKeyDynHash>;
 
 inline void addValue(MultiValueMapDyn& map, const MultiKeyDyn& key, const ColumnData& value, const int& pos)
 {

@@ -1,6 +1,6 @@
 
-#include "../../lib/RobinHood/robin_hood.h"
 #include <optional>
+#include <set>
 #include <string>
 
 #include "../data_process_system/table.h"
@@ -29,7 +29,7 @@ public:
 
     std::string GetColonne() { return colonne; };
 
-    Database::ColumnData AppliqueOperation(robin_hood::unordered_set<Database::ColumnData>& Values); // in case of Groupby
+    Database::ColumnData AppliqueOperation(const std::set<Database::ColumnData>& Values); // in case of Groupby
     Database::ColumnData AppliqueOperationOnCol(const std::string& ColName, Table* table);
 };
 

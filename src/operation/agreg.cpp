@@ -1,7 +1,6 @@
 #include "agreg.h"
 #include "../utils/hashmap.h"
 #include "../utils/table_utils.h"
-#include <cstddef>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -15,7 +14,7 @@
 // MIN_F,
 // SUM_F,
 namespace Database::QueryPlanning {
-Database::ColumnData ReturnType::AppliqueOperation(robin_hood::unordered_set<Database::ColumnData>& Values)
+Database::ColumnData ReturnType::AppliqueOperation(const std::set<Database::ColumnData>& Values)
 {
     if (Values.empty())
         return (uint16_t)0; // safeguard
