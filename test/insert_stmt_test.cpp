@@ -14,7 +14,7 @@ using namespace Database::Parsing;
 // INSERT INTO Ville DEFAULT VALUES;
 TEST(InsertStmtTest, DefaultCase)
 {
-    auto name = new TableName("Ville");
+    auto name = new TableName("Ville", {});
 
     auto insert = new InsertStmt(name);
 
@@ -32,7 +32,7 @@ TEST(InsertStmtTest, SimpleValues)
     data->emplace_back(LitteralValue<std::string>(ColumnType::INTEGER_C, "54420"));
     data->emplace_back(LitteralValue<std::string>(ColumnType::TEXT_C, "Bretagne"));
 
-    auto name = new TableName("Ville");
+    auto name = new TableName("Ville", {});
 
     auto insert = new InsertStmt(name, false, data);
 

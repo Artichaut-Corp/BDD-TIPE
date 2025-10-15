@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include <variant>
 
 #include "../src/parser.h"
 
@@ -8,7 +7,7 @@ using namespace Database::Parsing;
 // DELETE FROM ville;
 TEST(DeleteStmtTest, BasicDelete)
 {
-    auto table = new TableName("city");
+    auto table = new TableName("city", {});
 
     auto del = new DeleteStmt(table, nullptr);
 

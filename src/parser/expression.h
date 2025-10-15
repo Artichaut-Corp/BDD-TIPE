@@ -16,6 +16,8 @@
 
 namespace Database::Parsing {
 
+std::variant<std::string, Errors::Error> ParseAs(Lexing::Tokenizer* t);
+
 enum class LogicalOperator { EQ,
     GT,
     LT,
@@ -97,24 +99,30 @@ public:
 
 std::ostream& operator<<(std::ostream& os, const SchemaName& schema);
 
+using Aliases = std::unordered_set<std::string>;
+
 class TableName : public Expr {
 
     std::string m_Name;
 
     std::optional<std::string> m_SchemaName;
 
+    Aliases m_Aliases;
+
 public:
     // One constructor for only a table name
-    TableName(std::string name)
+    TableName(std::string name, Aliases aka)
         : m_Name(name)
         , m_SchemaName(std::nullopt)
+        , m_Aliases(aka)
     {
     }
 
     // One constructor for schema AND table names
-    TableName(std::string name, std::string schema_name)
+    TableName(std::string name, std::string schema_name, Aliases aka)
         : m_Name(name)
         , m_SchemaName(schema_name)
+        , m_Aliases(aka)
     {
     }
 
@@ -146,27 +154,32 @@ class ColumnName : public Expr {
 
     std::optional<std::string> m_SchemaName;
 
+    Aliases m_Aliases;
+
 public:
     ColumnName() = default;
 
-    ColumnName(std::string name)
+    ColumnName(std::string name, Aliases aka)
         : m_Name(name)
         , m_TableName(std::nullopt)
         , m_SchemaName(std::nullopt)
+        , m_Aliases(aka)
     {
     }
 
-    ColumnName(std::string name, std::string table)
+    ColumnName(std::string name, std::string table, Aliases aka)
         : m_Name(name)
         , m_TableName(table)
         , m_SchemaName(std::nullopt)
+        , m_Aliases(aka)
     {
     }
 
-    ColumnName(std::string name, std::string table, std::string schema)
+    ColumnName(std::string name, std::string table, std::string schema, Aliases aka)
         : m_Name(name)
         , m_TableName(table)
         , m_SchemaName(schema)
+        , m_Aliases(aka)
     {
     }
 
@@ -287,7 +300,7 @@ public:
         : m_Op(op)
         , m_Lhs(lhs)
         , m_Rhs(rhs)
-        , m_ColumnUsedBelow(col_used) { };
+        , m_ColumnUsedBelow(col_used) {};
 
     // Parsing utilities
     static std::unordered_set<std::string> MergeColumns(Condition lhs, Condition rhs);

@@ -1,7 +1,6 @@
 #include "dml.h"
 #include <cassert>
 #include <memory>
-#include <new>
 #include <string>
 #include <sys/select.h>
 #include <variant>

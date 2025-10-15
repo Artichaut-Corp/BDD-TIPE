@@ -321,6 +321,8 @@ std::variant<Token, Errors::Error> Lexer::matchKeyword(Token t,
         t.createToken(PRIMARY_T);
     else if (keywd == "KEY")
         t.createToken(KEY_T);
+    else if (keywd == "AS")
+        t.createToken(AS_T);
     else {
         return matchIdentifier(t, str);
     }

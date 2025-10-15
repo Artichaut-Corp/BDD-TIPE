@@ -3,11 +3,27 @@
 #include "../utils.h"
 #include "../utils/unordered_set_utils.h"
 
+#include <cassert>
 #include <ostream>
 #include <unordered_set>
 #include <variant>
 
 namespace Database::Parsing {
+
+std::variant<std::string, Errors::Error> ParseAs(Lexing::Tokenizer* t)
+{
+    Lexing::Token tok = t->next();
+
+    assert(tok.m_Token == Lexing::AS_T);
+
+    tok = t->next();
+
+    if (tok.m_Token != Lexing::VAR_NAME_T) {
+        return Errors::Error(Errors::ErrorType::SyntaxError, "Expected alias name after 'AS'", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
+    }
+
+    return tok.m_Value;
+}
 
 std::variant<LogicalOperator, Errors::Error> ParseLogicalOperator(Lexing::Tokenizer* t)
 {
@@ -217,6 +233,8 @@ TableName* TableName::ParseTableName(Lexing::Tokenizer* t)
 {
     Lexing::Token tok = t->next();
 
+    Aliases aka;
+
     // Seulement les 'variables', c'est à dire chaîne de caractères
     // sans "" ou ''
     if (tok.m_Token != Lexing::VAR_NAME_T) {
@@ -228,10 +246,21 @@ TableName* TableName::ParseTableName(Lexing::Tokenizer* t)
     Lexing::Token next = t->peek();
 
     if (next.m_Token != Lexing::DOT_T) {
-        return new TableName(tok.m_Value);
+        if (next.m_Token == Lexing::AS_T) {
+            auto alias = ParseAs(t);
+
+            if (std::holds_alternative<Errors::Error>(alias))
+                throw alias;
+
+            aka.insert(std::get<std::string>(alias));
+        }
+
+        aka.insert(tok.m_Value);
+
+        return new TableName(tok.m_Value, aka);
     }
 
-    // On peut alors consommer
+    // On peut alors consommer le point
     t->next();
 
     // Et regarder le suivant. On peut le consommer directement
@@ -243,8 +272,24 @@ TableName* TableName::ParseTableName(Lexing::Tokenizer* t)
         throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected Table Name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
     }
 
+    // On garde la valeur pour explorer la suite
+    std::string name = next.m_Value;
+
+    aka.insert(std::format("{}.{}", name, tok.m_Value));
+
+    next = t->peek();
+
+    if (next.m_Token == Lexing::AS_T) {
+        auto alias = ParseAs(t);
+
+        if (std::holds_alternative<Errors::Error>(alias))
+            throw alias;
+
+        aka.insert(std::get<std::string>(alias));
+    }
+
     // Schema + Table
-    return new TableName(tok.m_Value, next.m_Value);
+    return new TableName(tok.m_Value, name, aka);
 }
 
 std::ostream& operator<<(std::ostream& os, const TableName& table)
@@ -263,6 +308,8 @@ ColumnName* ColumnName::ParseColumnName(Lexing::Tokenizer* t)
 
     Lexing::Token tok = t->next();
 
+    Aliases aka;
+
     // Seulement les 'variables', c'est à dire chaîne de caractères
     // sans "" ou ''
     if (tok.m_Token != Lexing::VAR_NAME_T) {
@@ -274,8 +321,19 @@ ColumnName* ColumnName::ParseColumnName(Lexing::Tokenizer* t)
     Lexing::Token next = t->peek();
 
     if (next.m_Token != Lexing::DOT_T) {
+        if (next.m_Token == Lexing::AS_T) {
+            auto alias = ParseAs(t);
+
+            if (std::holds_alternative<Errors::Error>(alias))
+                throw alias;
+
+            aka.insert(std::get<std::string>(alias));
+        }
+
+        aka.insert(tok.m_Value);
+
         // Schema seul
-        return new ColumnName(tok.m_Value);
+        return new ColumnName(tok.m_Value, aka);
     }
 
     // On peut alors consommer
@@ -292,8 +350,20 @@ ColumnName* ColumnName::ParseColumnName(Lexing::Tokenizer* t)
     Lexing::Token next_next = t->peek();
 
     if (next_next.m_Token != Lexing::DOT_T) {
+
+        if (next_next.m_Token == Lexing::AS_T) {
+            auto alias = ParseAs(t);
+
+            if (std::holds_alternative<Errors::Error>(alias))
+                throw alias;
+
+            aka.insert(std::get<std::string>(alias));
+        }
+
+        aka.insert(std::format("{}.{}", next.m_Value, tok.m_Value));
+
         //  Table et Colonne
-        return new ColumnName(next.m_Value, tok.m_Value);
+        return new ColumnName(next.m_Value, tok.m_Value, aka);
     }
 
     t->next();
@@ -305,8 +375,23 @@ ColumnName* ColumnName::ParseColumnName(Lexing::Tokenizer* t)
         throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected  Column Name", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
     }
 
+    std::string name = next_next.m_Value;
+
+    aka.insert(std::format("{}.{}.{}", name, next.m_Value, tok.m_Value));
+
+    next_next = t->peek();
+
+    if (next_next.m_Token == Lexing::AS_T) {
+        auto alias = ParseAs(t);
+
+        if (std::holds_alternative<Errors::Error>(alias))
+            throw alias;
+
+        aka.insert(std::get<std::string>(alias));
+    }
+
     // Schema + Table + Colonne
-    return new ColumnName(tok.m_Value, next.m_Value, next_next.m_Value);
+    return new ColumnName(tok.m_Value, next.m_Value, next_next.m_Value, aka);
 }
 
 std::ostream& operator<<(std::ostream& os, const ColumnName& col)

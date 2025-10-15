@@ -34,7 +34,7 @@ enum TokenType {
     DEFAULT_T,
     TRANSACTION_T,
     END_T,
-    
+
     // Aggregate Functions
     AGGR_FUNC_T,
 
@@ -82,6 +82,8 @@ enum TokenType {
 
     // Identifiers
     VAR_NAME_T,
+
+    AS_T
 };
 
 class Token {

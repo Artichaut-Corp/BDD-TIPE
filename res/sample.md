@@ -34,25 +34,10 @@ Select country.name, country.pop, city.country, city.name, city.pop from city Jo
 
 Select country.name, country.pop, city.country, city.name, city.pop from city Join country on country.name = city.country where country.name = "France";
 
-Select country.name, city.pop, president.first_name, president.last_name from city Join country on country.name = city.country JOIN president ON president.country = city.country;
 
 Select country.name, city.pop, president.first_name from city Join country on country.name = city.country JOIN president ON president.country = city.country;
 
-select president.first_name, country.name from president join country on country.name = president.country;
+SELECT president.first_name, president.last_name, city.pop FROM president JOIN country ON country.name = president.country JOIN city ON city.country = president.country;
 
-SELECT first_name,last_name,Sum(city.pop)   FROM president JOIN country ON country.name = president.country JOIN city ON city.country = president.country group by country.name order by first_name Limit 5 offset 5;
-
-Select MAX(city.pop) from city group by city.country ;
-
-Select avg(city.pop) from city group by city.country ;
-
-Select count(city.name),city.country from city group by city.country ;
-
-
-Select count(city.name),city.country from city group by city.country order by city.country ASC ;
-
-Select country, AVG(pop) from city group by country order by pop Limit 10;
-
-
-
+SELECT president.first_name FROM president JOIN country on country.name = president.country WHERE country.pop > 5000000;
 ```
