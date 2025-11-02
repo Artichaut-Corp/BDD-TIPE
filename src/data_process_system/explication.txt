@@ -22,3 +22,4 @@ Si jamais l'age est utilisé à deux endroit différent, alors il suffit uniquem
 Le but de cette représentation est qu'elle permet d'éviter les problèmes suivants : 
  - stocker dans la RAM toute les information d'une BDD (seuls des pointeurs sont utilisé)
  - permet d'augmenter la rapidité des jointure et des projection en supprimant au fur et à mesure toute les informations inutile
+ - profiter au maximum de la représentation en mémoire particulière du column-Based

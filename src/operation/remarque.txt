@@ -1,5 +1,0 @@
-Lors du join, si des colonne sont en communs avec les deux table, alors seule les informations de la colonne stocker dans la première table sont enregistrer
-
-quand on feras les join, faut implémenter dans la projection le cas où on compare deux élément entre eux parce que pour l'instant les projections c'est que entre un élément et une constante 
-
-le type root sert de type de retour, une fois la table fini d'être modifier c'est là dedans que ce se fait les agrégation et l'affichage des valeur

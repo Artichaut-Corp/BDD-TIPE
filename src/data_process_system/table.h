@@ -13,8 +13,8 @@ namespace Database::QueryPlanning {
 
 class Table {
 private:
-    std::unordered_map<std::string, std::shared_ptr<Colonne>> map; // permet de trouver la position d'une colonne à partir de son nom
-    std::vector<ColonneNamesSet*> Colonnes_names; // contient les noms de toute les colonnes présente dans la table (ces noms sont de la forme Table@colonnes) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
+    std::unordered_map<std::string, std::shared_ptr<Colonne>> m_Map; // permet de trouver la position d'une colonne à partir de son nom
+    std::vector<ColonneNamesSet*> m_ColonnesNames; // contient les noms de toute les colonnes présente dans la table (de manière unique) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
     TableNamesSet* Name;
 
 public:
@@ -23,10 +23,10 @@ public:
     {
         for (auto e : *data_) {
             for (auto n : e->get_name()->GetAllFullNames()) {
-                map[n] = e;
+                m_Map[n] = e;
             }
-            map[e->get_name()->GetMainName()] = e;
-            Colonnes_names.push_back(e->get_name());
+            m_Map[e->get_name()->GetMainName()] = e;
+            m_ColonnesNames.push_back(e->get_name());
         } 
     }
 
@@ -35,42 +35,44 @@ public:
 
     int size()
     {
-        return map.size();
+        return m_Map.size();
     }
     int Columnsize()
     {
-        return map[Colonnes_names[0]->GetMainName()]->size();
+        return m_Map[m_ColonnesNames[0]->GetMainName()]->size();
     }
 
     ColumnData get_value(ColonneNamesSet* column_name, int pos_ind)
     {
-        auto temp = map[column_name->GetMainName()];
+        auto temp = m_Map[column_name->GetMainName()];
         return temp->getValue(pos_ind);
     }
 
     bool colonne_exist(ColonneNamesSet clef_testé)
     {
-        return !(map.end() == map.find(clef_testé.GetMainName())); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
+        return !(m_Map.end() == m_Map.find(clef_testé.GetMainName())); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
     }
     TableNamesSet* Get_name() { return Name; };
 
     std::unordered_map<std::string, std::shared_ptr<Colonne>> GetMap()
     {
-        return map;
+        return m_Map;
     };
 
     std::vector<std::shared_ptr<Colonne>>* get_data_ptr()
     {
         auto res = new std::vector<std::shared_ptr<Colonne>>();
 
-        res->reserve(map.size());
-        for (auto e : map) {
+        res->reserve(m_Map.size());
+        for (auto e : m_Map) {
             res->emplace_back(e.second);
         }
 
         return res;
     }
-    std::vector<ColonneNamesSet*>* GetColumnNames() { return &Colonnes_names; }
+    std::vector<ColonneNamesSet*>* GetColumnNames() { return &m_ColonnesNames; }
+
+    void Sort( ColonneNamesSet* ColonneToSortBy);
 };
 
 } // Database::QueryPlanning

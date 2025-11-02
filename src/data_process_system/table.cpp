@@ -3,6 +3,7 @@
 #include "colonne.h"
 #include <algorithm>
 #include <memory>
+#include <numeric>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -26,10 +27,10 @@ void Table::Selection(const Parsing::BinaryExpression::Condition pred, const std
         for (auto e : *nom_colonnes) {
             const std::string& nom = e->GetMainName();
             auto itC = CoupleTesté.find(nom);
-            auto itM = map.find(nom);
-            if (itC != CoupleTesté.end() && itM != map.end() && itC->second != nullptr) {
+            auto itM = m_Map.find(nom);
+            if (itC != CoupleTesté.end() && itM != m_Map.end() && itC->second != nullptr) {
                 *(itC->second) = itM->second->getValue(i);
-            } 
+            }
         }
         bool eval = false;
         if (std::holds_alternative<Parsing::Clause*>(pred)) {
@@ -46,8 +47,8 @@ void Table::Selection(const Parsing::BinaryExpression::Condition pred, const std
     }
     // quand on arrive ici, les élément dans indices_valides sont les positions vérifiant tout les prédicat dans les liste des colonnes, il faut alors les modifié ne garder que les bons
     std::shared_ptr<std::vector<int>> indices_valides_ptr = std::make_shared<std::vector<int>>(indices_valides);
-    for (auto e : Colonnes_names) {
-        std::shared_ptr<Colonne> colonne_testé = map[e->GetMainName()];
+    for (auto e : m_ColonnesNames) {
+        std::shared_ptr<Colonne> colonne_testé = m_Map[e->GetMainName()];
         colonne_testé->garder_indice_valide(indices_valides_ptr);
     }
 };
@@ -57,7 +58,7 @@ void Table::Projection(std::unique_ptr<std::unordered_set<ColonneNamesSet*>> Col
 
     std::vector<ColonneNamesSet*> difference;
 
-    for (auto Cn : Colonnes_names) {
+    for (auto Cn : m_ColonnesNames) {
         bool is_not_saved = true;
         for (auto Cts : *ColumnToSave) {
             if (*Cn == *Cts) {
@@ -69,10 +70,27 @@ void Table::Projection(std::unique_ptr<std::unordered_set<ColonneNamesSet*>> Col
         }
     }
     for (int i = 0; i < difference.size(); ++i) {
-        Colonnes_names.erase(std::find(Colonnes_names.begin(), Colonnes_names.end(), difference[i]));
+        m_ColonnesNames.erase(std::find(m_ColonnesNames.begin(), m_ColonnesNames.end(), difference[i]));
         for (auto n : difference[i]->GetAllFullNames()) {
-            map.erase(n);
+            m_Map.erase(n);
         }
     }
 }
+
+void Table::Sort(ColonneNamesSet* ColonneToSortBy)
+{
+    auto ColonneSorted = m_Map[ColonneToSortBy->GetMainName()];
+    
+    std::vector<int> PosInColonneToSortBy(ColonneSorted->size());
+    std::iota(PosInColonneToSortBy.begin(), PosInColonneToSortBy.end(), 0);
+
+    std::sort(PosInColonneToSortBy.begin(), PosInColonneToSortBy.end(),
+              [&](int a, int b){ return ColonneSorted->getValue(a) < ColonneSorted->getValue(b); });
+
+    for (auto e : m_ColonnesNames){
+        m_Map[e->GetMainName()]->AppliqueOrdre(&PosInColonneToSortBy);
+    }
+}
+
+
 }

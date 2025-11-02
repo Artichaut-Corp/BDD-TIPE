@@ -13,17 +13,17 @@ namespace Database::QueryPlanning {
 class TableNamesSet {
 private:
     std::unordered_set<std::string> m_ListOfName;
-    std::string NameInMemory;
-    std::string MainName;
+    std::string m_NameInMemory;
+    std::string m_MainName;
 
 public:
     explicit TableNamesSet(std::string mainName)
         : m_ListOfName()
-        , NameInMemory(std::move(mainName))
-        , MainName(NameInMemory)
+        , m_NameInMemory(std::move(mainName))
+        , m_MainName(m_NameInMemory)
     {
-        m_ListOfName.emplace(NameInMemory);
-        m_ListOfName.emplace(MainName);
+        m_ListOfName.emplace(m_NameInMemory);
+        m_ListOfName.emplace(m_MainName);
     }
 
     bool TableEqual(const TableNamesSet* other) const noexcept
@@ -35,17 +35,17 @@ public:
                 }
             }
         }
-        return MainName == other->MainName;
+        return m_MainName == other->m_MainName;
     }
 
     std::string GetMainName() const
     {
-        return MainName;
+        return m_MainName;
     }
 
     const std::string& GetNameInMemory() const
     {
-        return NameInMemory;
+        return m_NameInMemory;
     }
 
     void AddAlias(const std::string& table)
@@ -65,7 +65,7 @@ inline bool operator==(const TableNamesSet& first, const TableNamesSet& second)
 class ColonneNamesSet {
 private:
     std::unordered_set<std::string> m_ListOfFullName; // tous les noms possibles (Union entre le main name, alias et pour chaque noms de la table, table.(main name ou alias de la colonne))
-    std::string MainName; // nom principal unique
+    std::string m_MainName; // nom principal unique
     std::unordered_set<std::string> Aliases; // alias possibles(sans le main name)
     TableNamesSet* Table; // pointeur nullable, ownership externe
     std::string MainAlias;
@@ -74,17 +74,17 @@ public:
     // Constructeur avec table
     ColonneNamesSet(std::string mainName_, std::unordered_set<std::string> aliases, TableNamesSet* table)
         : m_ListOfFullName()
-        , MainName(std::move(mainName_))
+        , m_MainName(std::move(mainName_))
         , Aliases(std::move(aliases))
         , Table(table)
     {
-        m_ListOfFullName.emplace(MainName);
+        m_ListOfFullName.emplace(m_MainName);
         for (const auto& alias : Aliases) {
             m_ListOfFullName.emplace(alias);
         }
         if (Table) {
             for (const auto& tName : Table->GetAllNames()) {
-                m_ListOfFullName.emplace(std::format("{}.{}", tName, MainName));
+                m_ListOfFullName.emplace(std::format("{}.{}", tName, m_MainName));
                 for (const auto& cName : GetAlias()) {
                     MainAlias = cName;
                     m_ListOfFullName.emplace(std::format("{}.{}", tName, cName));
@@ -96,7 +96,7 @@ public:
     // Constructeur sans table (colonne générique)
     ColonneNamesSet(std::string mainName, std::unordered_set<std::string> aliases)
         : m_ListOfFullName()
-        , MainName(std::move(mainName))
+        , m_MainName(std::move(mainName))
         , Aliases(std::move(aliases))
         , Table(nullptr)
 
@@ -112,9 +112,9 @@ public:
     {
         if (Table != nullptr) {
             auto tName = Table->GetMainName();
-            return std::format("{}.{}", tName, MainName);
+            return std::format("{}.{}", tName, m_MainName);
         } else {
-            return MainName;
+            return m_MainName;
         }
     }
 
@@ -135,7 +135,7 @@ public:
         Table = newTable;
         if (Table) {
             for (const auto& tName : Table->GetAllNames()) {
-                m_ListOfFullName.emplace(std::format("{}.{}", tName, MainName));
+                m_ListOfFullName.emplace(std::format("{}.{}", tName, m_MainName));
                 for (const auto& cName : GetAlias()) {
                     m_ListOfFullName.emplace(std::format("{}.{}", tName, cName));
                 }
@@ -149,7 +149,7 @@ public:
                 auto tName = Table->GetMainName();
                 return std::format("{}.{}", tName, MainAlias);
             } else {
-                return MainName;
+                return m_MainName;
             }
         }else {
             return GetMainName();

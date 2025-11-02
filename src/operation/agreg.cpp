@@ -20,7 +20,7 @@ Database::ColumnData ReturnType::AppliqueOperation(std::set<Database::ColumnData
         return (uint16_t)0; // safeguard
 
     if (std::holds_alternative<Database::DbString>(*Values.begin())) {
-        if (opération == Parsing::AggrFuncType::COUNT_F) {
+        if (m_Opération == Parsing::AggrFuncType::COUNT_F) {
             return static_cast<Database::DbInt>(Values.size());
         } else {
             throw Errors::Error(
@@ -32,7 +32,7 @@ Database::ColumnData ReturnType::AppliqueOperation(std::set<Database::ColumnData
     }
 
     // Pour les types numériques
-    if (opération == Parsing::AggrFuncType::AVG_F || opération == Parsing::AggrFuncType::SUM_F) {
+    if (m_Opération == Parsing::AggrFuncType::AVG_F || m_Opération == Parsing::AggrFuncType::SUM_F) {
         uint64_t sum = 0;
         size_t count = 0;
         for (const auto& e : Values) {
@@ -44,25 +44,25 @@ Database::ColumnData ReturnType::AppliqueOperation(std::set<Database::ColumnData
                 ++count;
             }
         }
-        if (opération == Parsing::AggrFuncType::AVG_F)
+        if (m_Opération == Parsing::AggrFuncType::AVG_F)
             return static_cast<Database::DbInt>(sum / count);
         return static_cast<Database::DbInt>(sum);
     }
 
-    if (opération == Parsing::AggrFuncType::MIN_F || opération == Parsing::AggrFuncType::MAX_F) {
+    if (m_Opération == Parsing::AggrFuncType::MIN_F || m_Opération == Parsing::AggrFuncType::MAX_F) {
         auto it = Values.begin();
         Database::ColumnData extremum = *it;
         ++it;
         for (; it != Values.end(); ++it) {
-            if (opération == Parsing::AggrFuncType::MIN_F && *it < extremum)
+            if (m_Opération == Parsing::AggrFuncType::MIN_F && *it < extremum)
                 extremum = *it;
-            if (opération == Parsing::AggrFuncType::MAX_F && *it > extremum)
+            if (m_Opération == Parsing::AggrFuncType::MAX_F && *it > extremum)
                 extremum = *it;
         }
         return extremum;
     }
 
-    if (opération == Parsing::AggrFuncType::COUNT_F)
+    if (m_Opération == Parsing::AggrFuncType::COUNT_F)
         return static_cast<Database::DbInt>(Values.size());
 
     throw std::runtime_error(
@@ -81,7 +81,7 @@ Database::ColumnData ReturnType::AppliqueOperationOnCol(ColonneNamesSet* ColName
     // Sur les string, on ne peut count car max et min ne sont pas défini tout comme AVG et Sum
     ColumnData firstValue = table->get_value(ColName, 0);
     if (std::holds_alternative<Database::DbString>(firstValue)) {
-        if (opération == Parsing::AggrFuncType::COUNT_F) {
+        if (m_Opération == Parsing::AggrFuncType::COUNT_F) {
             return static_cast<Database::DbInt>(n);
         } else {
             throw Errors::Error(
@@ -93,7 +93,7 @@ Database::ColumnData ReturnType::AppliqueOperationOnCol(ColonneNamesSet* ColName
     }
 
     // Pour les types numériques
-    if (opération == Parsing::AggrFuncType::SUM_F || opération == Parsing::AggrFuncType::AVG_F) {
+    if (m_Opération == Parsing::AggrFuncType::SUM_F || m_Opération == Parsing::AggrFuncType::AVG_F) {
         uint64_t sum = 0;
         for (int i = 0; i < n; ++i) {
             ColumnData val = table->get_value(ColName, i);
@@ -103,24 +103,24 @@ Database::ColumnData ReturnType::AppliqueOperationOnCol(ColonneNamesSet* ColName
                 sum += std::get<Database::DbInt64>(val);
             }
         }
-        if (opération == Parsing::AggrFuncType::AVG_F)
+        if (m_Opération == Parsing::AggrFuncType::AVG_F)
             return static_cast<Database::DbInt>(sum / n);
         return static_cast<Database::DbInt>(sum);
     }
 
-    if (opération == Parsing::AggrFuncType::MIN_F || opération == Parsing::AggrFuncType::MAX_F) {
+    if (m_Opération == Parsing::AggrFuncType::MIN_F || m_Opération == Parsing::AggrFuncType::MAX_F) {
         ColumnData extremum = table->get_value(ColName, 0);
         for (int i = 1; i < n; ++i) {
             ColumnData val = table->get_value(ColName, i);
-            if (opération == Parsing::AggrFuncType::MIN_F && val < extremum)
+            if (m_Opération == Parsing::AggrFuncType::MIN_F && val < extremum)
                 extremum = val;
-            if (opération == Parsing::AggrFuncType::MAX_F && val > extremum)
+            if (m_Opération == Parsing::AggrFuncType::MAX_F && val > extremum)
                 extremum = val;
         }
         return extremum;
     }
 
-    if (opération == Parsing::AggrFuncType::COUNT_F)
+    if (m_Opération == Parsing::AggrFuncType::COUNT_F)
         return static_cast<Database::DbInt>(n);
 
     throw std::runtime_error(
@@ -130,7 +130,7 @@ Database::ColumnData ReturnType::AppliqueOperationOnCol(ColonneNamesSet* ColName
 void Final::AppliqueAgregateAndPrint(Table* table)
 {
     std::unordered_map<std::string, std::vector<ColumnData>*> ColumnNameToValues;
-    if (ColumnsToGroupBy.has_value()) {
+    if (m_ColumnsToGroupBy.has_value()) {
 
         std::vector<ColonneNamesSet*>* AgregNames = new std::vector<ColonneNamesSet*>();
         int pos_in_map_incr = 0;
@@ -138,7 +138,7 @@ void Final::AppliqueAgregateAndPrint(Table* table)
         Utils::Hash::MultiValueMapDyn AgregMap; // la map en position i est celle de la colonne Agreg[column]
         for (auto x : (*table->GetColumnNames())) {
             bool est_group_by = false;
-            for (auto e : *ColumnsToGroupBy.value()) {
+            for (auto e : *m_ColumnsToGroupBy.value()) {
                 if (e == x) { // la colonne est dans les groupby
                     est_group_by = true;
                 }
@@ -153,24 +153,24 @@ void Final::AppliqueAgregateAndPrint(Table* table)
         int posInKeyVec = 0;
         std::unordered_map<std::string, int> PosInKeyVecToPrint; // les élément dont la position est dans ce vecteur correspondent aux élement qui seront à afficher
 
-        for (auto e : *ColumnsToGroupBy.value()) {
+        for (auto e : *m_ColumnsToGroupBy.value()) {
             bool est_retourné = false;
-            for (auto f : *ColonneInfo) {
+            for (auto f : *m_ColonneInfo) {
                 if (*f->GetColonne() == *e) {
                     est_retourné = true;
                 }
             }
             if (est_retourné) {
                 PosInKeyVecToPrint[e->GetMainName()] = posInKeyVec;
-                posInKeyVec++;
             }
+            posInKeyVec++;
         }
 
         // pour chaque ligne
         for (int i = 0; i < table->Columnsize(); i++) {
             // on créer la combinaison
             Utils::Hash::MultiKeyDyn KeyVec; // défini la comparaison entre clef et permet d'accéder à l'affichage des clefs
-            for (auto e : *ColumnsToGroupBy.value()) {
+            for (auto e : *m_ColumnsToGroupBy.value()) {
                 auto temp = table->get_value(e, i);
                 KeyVec.keys.push_back(temp);
             } // pour chaque colonne on l'ajoute dans la map associé
@@ -180,7 +180,7 @@ void Final::AppliqueAgregateAndPrint(Table* table)
             }
         }
 
-        for (auto& Return : *ColonneInfo) {
+        for (auto& Return : *m_ColonneInfo) {
             auto ColName = Return->GetColonne();
             ColumnNameToValues[ColName->GetMainName()] = new std::vector<ColumnData>;
         }
@@ -188,11 +188,11 @@ void Final::AppliqueAgregateAndPrint(Table* table)
         for (auto it = AgregMap.begin(); it != AgregMap.end(); ++it) { // pour toute les combi de clef possible
             auto values = it->second; // récupère les valeur associé
             auto& keys = it->first;
-            for (auto& Return : *ColonneInfo) { // on applique les agrégat
+            for (auto& Return : *m_ColonneInfo) { // on applique les agrégat
                 auto ColName = Return->GetColonne();
 
                 if (Return->GetType() != Parsing::AggrFuncType::NOTHING_F) { // dans colonneinfo il y a aussi les colonne qu'on retourne sans rien faire
-                    ColumnData temp = Return->AppliqueOperation(values[pos_in_map_map[ColName]]); // performe l'opération
+                    ColumnData temp = Return->AppliqueOperation(values[pos_in_map_map[ColName]]); // performe l'm_Opération
                     ColumnNameToValues[ColName->GetMainName()]->push_back(temp);
                 } else {
                     auto PosInKeys = PosInKeyVecToPrint[ColName->GetMainName()];
@@ -202,7 +202,7 @@ void Final::AppliqueAgregateAndPrint(Table* table)
         }
 
     } else {
-        for (auto e : *ColonneInfo) {
+        for (auto e : *m_ColonneInfo) {
             std::vector<ColumnData>* ResultVector = new std::vector<ColumnData>;
             auto ColName = e->GetColonne();
             ColumnNameToValues[ColName->GetMainName()] = ResultVector;
@@ -222,15 +222,15 @@ void Final::AppliqueAgregateAndPrint(Table* table)
     for (int i = 0; i < ColumnNameToValues[ColumnNameToValues.begin()->first]->size(); i++) {
         OrdreIndice->push_back(i);
     }
-    if (OrderByCol.has_value() && (OrdreIndice->size() > 2)) {
+    if (m_OrderByCol.has_value() && (OrdreIndice->size() > 2)) {
         TrierListe(&ColumnNameToValues, OrdreIndice);
     }
 
-    if (Limite.has_value()) {
-        std::span<int> sub = std::span<int>(*OrdreIndice).subspan(Limite->first, Limite->second);
-        Database::Utils::AfficheAgregSpan(&ColumnNameToValues, &sub, ColonneInfo);
+    if (m_Limite.has_value()) {
+        std::span<int> sub = std::span<int>(*OrdreIndice).subspan(m_Limite->first, m_Limite->second);
+        Database::Utils::AfficheAgregSpan(&ColumnNameToValues, &sub, m_ColonneInfo);
     } else {
-        Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice, ColonneInfo);
+        Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice, m_ColonneInfo);
     }
 }
 
@@ -245,7 +245,7 @@ void Final::TrierListe(std::unordered_map<std::string, std::vector<ColumnData>*>
 bool Final::CompareDeuxIndices(std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues, int ind1, int ind2)
 {
 
-    for (auto e : OrderByCol.value()) {
+    for (auto e : m_OrderByCol.value()) {
         auto ColonneCompared= e.first;
         auto estCroissant = e.second;
         auto are_equal = ((*((*ColumnNameToValues)[ColonneCompared->GetMainName()]))[ind1] == (*((*ColumnNameToValues)[ColonneCompared->GetMainName()]))[ind2]); // si les deux valeurs sont égale on passe à la condition suivante

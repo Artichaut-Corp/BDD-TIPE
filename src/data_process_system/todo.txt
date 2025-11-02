@@ -1,5 +1,0 @@
-Dans Racine, il faut définir la méthode pour récupérer la liste de valeur
-
-lors de la projection, il peut être intérressant de trier les clauses de la plus "stricte" a la "moins" stricte (la relation d'ordre est à définir) pour enlever le plus d'indice faux le plus rapidement possible et donc gagner du temps lors de l'éxécution
-
-

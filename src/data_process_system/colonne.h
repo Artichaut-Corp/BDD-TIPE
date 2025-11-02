@@ -14,73 +14,82 @@ namespace Database::QueryPlanning {
 // Colonne : contient un pointeur vers une racine + indices valides + nom de la colonne
 class Colonne {
 private:
-    std::shared_ptr<Racine> racine;
-    std::vector<int> indices; // indices valides dans racine
-    ColonneNamesSet* nom_colonne; // nom de la colonne de la forme "Table.nom_colonne"
+    std::shared_ptr<Racine> m_Racine;
+    std::vector<int> m_Indices; // indices valides dans racine
+    ColonneNamesSet* m_NomColonne; // nom de la colonne de la forme "Table.nom_colonne"
 
 public:
     Colonne(std::shared_ptr<Racine> racine_, ColonneNamesSet* nom_colonne_)
-        : racine(racine_)
-        , nom_colonne(nom_colonne_)
+        : m_Racine(racine_)
+        , m_NomColonne(nom_colonne_)
     {
         std::vector<int> temp;
-        temp.reserve(racine->size());
-        for (int i = 0; i < racine->size(); i++) {
+        temp.reserve(m_Racine->size());
+        for (int i = 0; i < m_Racine->size(); i++) {
             temp.push_back(i);
         }
-        indices = temp;
+        m_Indices = temp;
     }
 
     Colonne(std::shared_ptr<Racine> racine_,  ColonneNamesSet* nom_, const std::vector<int>* indices_)
-        : racine(racine_)
-        , nom_colonne(nom_)
-        , indices(*indices_)
+        : m_Racine(racine_)
+        , m_NomColonne(nom_)
+        , m_Indices(*indices_)
     {
     }
 
     // Accès à une valeur via l'indice de la colonne
     ColumnData getValue(const int idx) const
     {
-        return racine->getValue(indices[idx]);
+        return m_Racine->getValue(m_Indices[idx]);
     }
 
     int size() const
     {
-        return indices.size();
+        return m_Indices.size();
     }
 
     void
     print() const
     {
-        for (int i = 0; i < indices.size(); i++) {
-            Database::QueryPlanning::afficherColumnData(racine->getValue((indices)[i]));
+        for (int i = 0; i < m_Indices.size(); i++) {
+            Database::QueryPlanning::afficherColumnData(m_Racine->getValue((m_Indices)[i]));
         }
         std::cout << "\n";
     }
 
     ColonneNamesSet* get_name()
     {
-        return nom_colonne;
+        return m_NomColonne;
     }
     std::shared_ptr<Racine> get_racine_ptr()
     {
-        return racine;
+        return m_Racine;
     }
     int get_pos_at_pos(int i)
     {
-        return indices[i];
+        return m_Indices[i];
     }
     void garder_indice_valide(std::shared_ptr<std::vector<int>> indices_valide)
     {
         std::vector<int> filtré;
-        filtré.reserve(indices_valide->size()); // optimisation (merci chat gpt)
+        filtré.reserve(indices_valide->size()); 
 
         for (int idx : *indices_valide) {
-            if (idx < indices.size()) {
-                filtré.push_back(indices[idx]);
+            if (idx < m_Indices.size()) {
+                filtré.push_back(m_Indices[idx]);
             }
         }
-        indices = filtré;
+        m_Indices = filtré;
+    }
+
+    void AppliqueOrdre(std::vector<int>* OrdreAApplique){
+        std::vector<int> NouveauOrdreIndice;
+        NouveauOrdreIndice.reserve(m_Indices.size());
+        for (auto e : *OrdreAApplique){
+            NouveauOrdreIndice.push_back(m_Indices[e]);
+        }
+        m_Indices = NouveauOrdreIndice;
     }
 };
 
