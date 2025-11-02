@@ -1,5 +1,5 @@
 #include <format>
-#include <map>
+#include <unordered_map>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -7,6 +7,7 @@
 #include <variant>
 
 #include "../algebrizer_types.h"
+#include "../data_process_system/namingsystem.h"
 #include "../lexer/tokenizer.h"
 #include "../utils.h"
 
@@ -143,6 +144,8 @@ public:
 
         return res;
     }
+
+    Aliases* GetAlias() { return &m_Aliases; };
 };
 
 std::ostream& operator<<(std::ostream& os, const TableName& table);
@@ -187,20 +190,15 @@ public:
 
     std::string getColumnName() const
     {
-        std::string res;
-        if (m_TableName.has_value())
-            res = std::format("{}.{}", m_TableName.value(), m_Name);
-        else
-            res = m_Name;
 
-        return res;
+        return m_Name;
     }
 
     void SetTable(std::string NouvelleTable) { m_TableName = NouvelleTable; }
 
     bool HaveSchema() { return m_SchemaName.has_value(); };
 
-    bool HaveTable() { return m_TableName.has_value(); };
+    bool HaveTable() const { return m_TableName.has_value(); };
 
     static ColumnName* ParseColumnName(Lexing::Tokenizer* t);
 
@@ -217,6 +215,9 @@ public:
 
         return res;
     }
+    Aliases* GetAlias() { return &m_Aliases; }
+
+    std::string GetTable() const { return m_TableName.value(); }
 };
 
 std::ostream& operator<<(std::ostream& os, const ColumnName& column);
@@ -249,7 +250,7 @@ public:
     static std::variant<AggregateFunction*, Errors::Error> ParseAggregateFunction(Lexing::Tokenizer* t);
 };
 
-using ClauseMember = std::variant<ColumnName, ColumnData>;
+using ClauseMember = std::variant<QueryPlanning::ColonneNamesSet*, ColumnData>;
 
 std::ostream& operator<<(std::ostream& out, const ClauseMember& member);
 
@@ -259,10 +260,10 @@ class Clause {
 
     ClauseMember m_Lhs;
     ClauseMember m_Rhs;
-    std::unordered_set<std::string> m_ColumnUsed;
+    std::unordered_set<QueryPlanning::ColonneNamesSet*>* m_ColumnUsed;
 
 public:
-    Clause(LogicalOperator op, ClauseMember lhs, ClauseMember rhs, std::unordered_set<std::string> col_used)
+    Clause(LogicalOperator op, ClauseMember lhs, ClauseMember rhs, std::unordered_set<QueryPlanning::ColonneNamesSet*>* col_used)
         : m_Op(op)
         , m_Lhs(lhs)
         , m_Rhs(rhs)
@@ -273,18 +274,18 @@ public:
     auto Lhs() const -> ClauseMember { return m_Lhs; }
     auto Rhs() const -> ClauseMember { return m_Rhs; }
     auto Op() const -> LogicalOperator { return m_Op; }
-    auto Column() -> std::unordered_set<std::string>* { return &m_ColumnUsed; }
+    auto Column() -> std::unordered_set<QueryPlanning::ColonneNamesSet*>* { return m_ColumnUsed; }
     auto EditLhs(ClauseMember NewClause) { m_Lhs = NewClause; }
     auto EditRhs(ClauseMember NewClause) { m_Rhs = NewClause; }
     void Print(std::ostream& out);
 
-    static std::pair<ClauseMember, std::string> ParseClauseMember(Lexing::Tokenizer* t);
+    static std::pair<ClauseMember, QueryPlanning::ColonneNamesSet*> ParseClauseMember(Lexing::Tokenizer* t);
 
     static Clause* ParseClause(Lexing::Tokenizer* t);
 
-    void FormatColumnName(std::string NomTablePrincipale);
+    void FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale);
 
-    bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
+    bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
 };
 
 std::ostream& operator<<(std::ostream& out, const Clause& member);
@@ -294,16 +295,14 @@ class BinaryExpression {
 public:
     using Condition = std::variant<BinaryExpression*, Clause*, std::monostate>; // monostate représente le noeud vide
 
-    BinaryExpression() = default;
-
-    BinaryExpression(LogicalOperator op, Condition lhs, Condition rhs, std::unordered_set<std::string> col_used)
+    BinaryExpression(LogicalOperator op, Condition lhs, Condition rhs, std::unordered_set<QueryPlanning::ColonneNamesSet*>* col_used)
         : m_Op(op)
         , m_Lhs(lhs)
         , m_Rhs(rhs)
-        , m_ColumnUsedBelow(col_used) {};
+        , m_ColumnUsedBelow(col_used) { };
 
     // Parsing utilities
-    static std::unordered_set<std::string> MergeColumns(Condition lhs, Condition rhs);
+    static std::unordered_set<QueryPlanning::ColonneNamesSet*>* MergeColumns(Condition lhs, Condition rhs);
 
     static BinaryExpression::Condition ParseCondition(Lexing::Tokenizer* t);
 
@@ -330,9 +329,9 @@ public:
         if (std::holds_alternative<std::monostate>(right)) {
             m_ColumnUsedBelow = {};
         } else if (std::holds_alternative<Clause*>(right)) {
-            m_ColumnUsedBelow = *std::get<Clause*>(right)->Column();
+            m_ColumnUsedBelow = std::get<Clause*>(right)->Column();
         } else {
-            m_ColumnUsedBelow = *std::get<BinaryExpression*>(right)->Column();
+            m_ColumnUsedBelow = std::get<BinaryExpression*>(right)->Column();
         }
     }
     auto NullifyRhs() -> void
@@ -342,21 +341,21 @@ public:
         if (std::holds_alternative<std::monostate>(left)) {
             m_ColumnUsedBelow = {};
         } else if (std::holds_alternative<Clause*>(left)) {
-            m_ColumnUsedBelow = *std::get<Clause*>(left)->Column();
+            m_ColumnUsedBelow = std::get<Clause*>(left)->Column();
         } else {
-            m_ColumnUsedBelow = *std::get<BinaryExpression*>(left)->Column();
+            m_ColumnUsedBelow = std::get<BinaryExpression*>(left)->Column();
         }
     }
 
-    auto Column() -> std::unordered_set<std::string>* { return &m_ColumnUsedBelow; }
+    auto Column() -> std::unordered_set<QueryPlanning::ColonneNamesSet*>* { return m_ColumnUsedBelow; }
 
     // Evaluation methods
 
-    Condition ExtraireCond(std::unordered_set<std::string>* ColonnesAExtraire);
+    Condition ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire);
 
-    bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
+    bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
 
-    void FormatColumnName(std::string NomTablePrincipale);
+    void FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale);
 
 private:
     // Opérateur, ne peut être que AND / OR
@@ -364,7 +363,7 @@ private:
 
     Condition m_Lhs;
     Condition m_Rhs;
-    std::unordered_set<std::string> m_ColumnUsedBelow;
+    std::unordered_set<QueryPlanning::ColonneNamesSet*>* m_ColumnUsedBelow;
 };
 
 } // namespace parsing

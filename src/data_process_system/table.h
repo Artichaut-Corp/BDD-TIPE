@@ -1,6 +1,5 @@
-#include <map>
 #include <memory>
-#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "../algebrizer_types.h"
@@ -14,22 +13,25 @@ namespace Database::QueryPlanning {
 
 class Table {
 private:
-    std::map<std::string, std::shared_ptr<Colonne>> map; // permet de trouver la position d'une colonne à partir de son nom
-    std::vector<std::string> Colonnes_names; // contient les noms de toute les colonnes présente dans la table (ces noms sont de la forme Table@colonnes) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
-    std::string Name;
+    std::unordered_map<std::string, std::shared_ptr<Colonne>> map; // permet de trouver la position d'une colonne à partir de son nom
+    std::vector<ColonneNamesSet*> Colonnes_names; // contient les noms de toute les colonnes présente dans la table (ces noms sont de la forme Table@colonnes) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
+    TableNamesSet* Name;
 
 public:
-    Table(std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> data_, std::string Name_)
+    Table(std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> data_, TableNamesSet* Name_)
         : Name(Name_)
     {
         for (auto e : *data_) {
-            map[e->get_name()] = e;
+            for (auto n : e->get_name()->GetAllFullNames()) {
+                map[n] = e;
+            }
+            map[e->get_name()->GetMainName()] = e;
             Colonnes_names.push_back(e->get_name());
-        }
+        } 
     }
 
-    void Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<std::string>> nom_colonnes);
-    void Projection(std::unique_ptr<std::vector<std::string>> ColumnToSave);
+    void Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<ColonneNamesSet*>> nom_colonnes);
+    void Projection(std::unique_ptr<std::unordered_set<ColonneNamesSet*>> ColumnToSave);
 
     int size()
     {
@@ -37,21 +39,22 @@ public:
     }
     int Columnsize()
     {
-        return map[Colonnes_names[0]]->size();
+        return map[Colonnes_names[0]->GetMainName()]->size();
     }
 
-    ColumnData get_value(std::string column_name, int pos_ind)
+    ColumnData get_value(ColonneNamesSet* column_name, int pos_ind)
     {
-        return map[column_name]->getValue(pos_ind);
+        auto temp = map[column_name->GetMainName()];
+        return temp->getValue(pos_ind);
     }
 
-    bool colonne_exist(std::string clef_testé)
+    bool colonne_exist(ColonneNamesSet clef_testé)
     {
-        return !(map.end() == map.find(clef_testé)); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
+        return !(map.end() == map.find(clef_testé.GetMainName())); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
     }
-    std::string Get_name() { return Name; };
+    TableNamesSet* Get_name() { return Name; };
 
-    std::map<std::string, std::shared_ptr<Colonne>> GetMap()
+    std::unordered_map<std::string, std::shared_ptr<Colonne>> GetMap()
     {
         return map;
     };
@@ -67,7 +70,7 @@ public:
 
         return res;
     }
-    std::vector<std::string>* GetColumnNames() { return &Colonnes_names; }
+    std::vector<ColonneNamesSet*>* GetColumnNames() { return &Colonnes_names; }
 };
 
 } // Database::QueryPlanning

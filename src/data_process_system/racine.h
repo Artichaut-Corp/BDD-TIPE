@@ -2,6 +2,7 @@
 #include "../database.h"
 
 #include <memory>
+#include <variant>
 #include <vector>
 
 #ifndef RACINE_H
@@ -12,13 +13,13 @@ namespace Database::QueryPlanning {
 // Racine : contient des pointeurs vers les données brutes (immutable)
 class Racine {
 private:
-    std::string NomColonne;
-    std::variant<std::unique_ptr<std::vector<DbString>>, std::unique_ptr<std::vector<DbInt>>, std::unique_ptr<std::vector<DbInt16>>, std::unique_ptr<std::vector<DbInt8>>> data; // données immuables
+    ColonneNamesSet* NomColonne;
+    std::variant<std::shared_ptr<std::vector<DbString>>, std::shared_ptr<std::vector<DbInt>>, std::shared_ptr<std::vector<DbInt16>>, std::shared_ptr<std::vector<DbInt8>>> data; // données immuables
 public:
-    Racine(std::string NomColonne_, int fd, Storing::DBTableIndex* IndexGet)
+    Racine(ColonneNamesSet* NomColonne_, int fd, Storing::DBTableIndex* IndexGet)
         : NomColonne(NomColonne_)
     {
-        std::variant<Column, Errors::Error> ValeurRecuper = Storing::Store::GetDBColumn(fd, IndexGet, NomColonne_.substr(0, NomColonne_.find(".")), NomColonne_.substr( NomColonne_.find(".")+1));
+        std::variant<Column, Errors::Error> ValeurRecuper = Storing::Store::GetDBColumn(fd, IndexGet, NomColonne_->GetTableSet()->GetNameInMemory(), NomColonne_->GetMainName().substr(NomColonne_->GetMainName().find(".") + 1));
         if (std::holds_alternative<Errors::Error>(ValeurRecuper)) {
             Errors::Error e = std::get<Errors::Error>(ValeurRecuper);
             throw e;
@@ -27,16 +28,20 @@ public:
         auto column_data = std::get<Column>(std::move(ValeurRecuper));
 
         if (std::holds_alternative<std::unique_ptr<std::vector<DbString>>>(column_data)) {
-            data = std::get<std::unique_ptr<std::vector<DbString>>>(std::move(column_data));
+            auto temp = std::get<std::unique_ptr<std::vector<DbString>>>(std::move(column_data));
+            data = std::move(temp);
 
         } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt>>>(column_data)) {
-            data = std::get<std::unique_ptr<std::vector<DbInt>>>(std::move(column_data));
+            auto temp = std::get<std::unique_ptr<std::vector<DbInt>>>(std::move(column_data));
+            data = std::move(temp);
 
         } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt16>>>(column_data)) {
-            data = std::get<std::unique_ptr<std::vector<DbInt16>>>(std::move(column_data));
+            auto temp = std::get<std::unique_ptr<std::vector<DbInt16>>>(std::move(column_data));
+            data = std::move(temp);
 
         } else {
-            data = std::get<std::unique_ptr<std::vector<DbInt8>>>(std::move(column_data));
+            auto temp = std::get<std::unique_ptr<std::vector<DbInt8>>>(std::move(column_data));
+            data = std::move(temp);
         }
     }
     Racine(const Racine& other)
@@ -56,13 +61,32 @@ public:
 
     ColumnData getValue(int i) const
     {
-        return std::visit([i](auto const& vecPtr) -> ColumnData {
-            if (!vecPtr || i >= vecPtr->size()) {
+        if (std::holds_alternative<std::shared_ptr<std::vector<DbString>>>(data)) {
+            auto temp = std::get<std::shared_ptr<std::vector<DbString>>>(data);
+            if (!temp || i >= temp->size()) {
                 throw std::out_of_range("Index hors limites");
             }
-            return (*vecPtr)[i]; // renvoie soit un DbString, soit un DbInt
-        },
-            data);
+            return (*temp)[i];
+        }else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt>>>(data)) {
+            auto temp = std::get<std::shared_ptr<std::vector<DbInt>>>(data);
+            if (!temp || i >= temp->size()) {
+                throw std::out_of_range("Index hors limites");
+            }
+            return (*temp)[i];
+        }else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt16>>>(data)) {
+            auto temp = std::get<std::shared_ptr<std::vector<DbInt16>>>(data);
+            if (!temp || i >= temp->size()) {
+                throw std::out_of_range("Index hors limites");
+            }
+            return (*temp)[i];
+        }
+        else {
+            auto temp = std::get<std::shared_ptr<std::vector<DbInt8>>>(data);
+            if (!temp || i >= temp->size()) {
+                throw std::out_of_range("Index hors limites");
+            }
+            return (*temp)[i];
+        }
     }
 
     int size() const

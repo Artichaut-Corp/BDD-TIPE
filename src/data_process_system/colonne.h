@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <memory>
-#include <string>
 #include <vector>
 
 #ifndef COLONNE_OP_H
@@ -17,10 +16,10 @@ class Colonne {
 private:
     std::shared_ptr<Racine> racine;
     std::vector<int> indices; // indices valides dans racine
-    std::string nom_colonne; // nom de la colonne de la forme "Table.nom_colonne"
+    ColonneNamesSet* nom_colonne; // nom de la colonne de la forme "Table.nom_colonne"
 
 public:
-    Colonne(std::shared_ptr<Racine> racine_, const std::string& nom_colonne_)
+    Colonne(std::shared_ptr<Racine> racine_, ColonneNamesSet* nom_colonne_)
         : racine(racine_)
         , nom_colonne(nom_colonne_)
     {
@@ -32,18 +31,17 @@ public:
         indices = temp;
     }
 
-    Colonne(std::shared_ptr<Racine> racine_, const std::string& nom_, const std::vector<int>& indices_)
-        : racine(std::move(racine_))
+    Colonne(std::shared_ptr<Racine> racine_,  ColonneNamesSet* nom_, const std::vector<int>* indices_)
+        : racine(racine_)
         , nom_colonne(nom_)
-        , indices(indices_)
+        , indices(*indices_)
     {
     }
 
-
     // Accès à une valeur via l'indice de la colonne
     ColumnData getValue(const int idx) const
-    {   
-        return racine->getValue((indices)[idx]);
+    {
+        return racine->getValue(indices[idx]);
     }
 
     int size() const
@@ -60,13 +58,13 @@ public:
         std::cout << "\n";
     }
 
-    std::string get_name()
+    ColonneNamesSet* get_name()
     {
         return nom_colonne;
     }
-    Racine* get_racine_ptr()
+    std::shared_ptr<Racine> get_racine_ptr()
     {
-        return racine.get();
+        return racine;
     }
     int get_pos_at_pos(int i)
     {

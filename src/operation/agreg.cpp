@@ -1,6 +1,6 @@
 #include "agreg.h"
 #include "../utils/hashmap.h"
-#include "../utils/table_utils.h"
+#include "../utils/printing_utils.h"
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -14,7 +14,7 @@
 // MIN_F,
 // SUM_F,
 namespace Database::QueryPlanning {
-Database::ColumnData ReturnType::AppliqueOperation(const std::set<Database::ColumnData>& Values)
+Database::ColumnData ReturnType::AppliqueOperation(std::set<Database::ColumnData>& Values)
 {
     if (Values.empty())
         return (uint16_t)0; // safeguard
@@ -69,7 +69,7 @@ Database::ColumnData ReturnType::AppliqueOperation(const std::set<Database::Colu
         "Une Agrégation a été tentée alors qu'aucune fonction d'agrégation n'a été définie pour cette colonne");
 }
 
-Database::ColumnData ReturnType::AppliqueOperationOnCol(const std::string& ColName, Table* table)
+Database::ColumnData ReturnType::AppliqueOperationOnCol(ColonneNamesSet* ColName, Table* table)
 {
     if (!table)
         throw std::runtime_error("Table invalide");
@@ -132,36 +132,36 @@ void Final::AppliqueAgregateAndPrint(Table* table)
     std::unordered_map<std::string, std::vector<ColumnData>*> ColumnNameToValues;
     if (ColumnsToGroupBy.has_value()) {
 
-        std::vector<std::string> AgregNames;
+        std::vector<ColonneNamesSet*>* AgregNames = new std::vector<ColonneNamesSet*>();
         int pos_in_map_incr = 0;
-        std::unordered_map<std::string, int> pos_in_map_map;
+        std::unordered_map<ColonneNamesSet*, int> pos_in_map_map;
         Utils::Hash::MultiValueMapDyn AgregMap; // la map en position i est celle de la colonne Agreg[column]
         for (auto x : (*table->GetColumnNames())) {
             bool est_group_by = false;
-            for (auto e : ColumnsToGroupBy.value()) {
+            for (auto e : *ColumnsToGroupBy.value()) {
                 if (e == x) { // la colonne est dans les groupby
                     est_group_by = true;
                 }
             }
             if (!est_group_by) {
-                AgregNames.push_back(x);
+                AgregNames->push_back(x);
                 pos_in_map_map[x] = pos_in_map_incr;
                 pos_in_map_incr++;
             }
         }
 
         int posInKeyVec = 0;
-        std::map<std::string, int> PosInKeyVecToPrint; // les élément dont la position est dans ce vecteur correspondent aux élement qui seront à afficher
+        std::unordered_map<std::string, int> PosInKeyVecToPrint; // les élément dont la position est dans ce vecteur correspondent aux élement qui seront à afficher
 
-        for (auto e : ColumnsToGroupBy.value()) {
+        for (auto e : *ColumnsToGroupBy.value()) {
             bool est_retourné = false;
-            for (auto f : ColonneInfo) {
-                if (f.GetColonne() == e) {
+            for (auto f : *ColonneInfo) {
+                if (*f->GetColonne() == *e) {
                     est_retourné = true;
                 }
             }
             if (est_retourné) {
-                PosInKeyVecToPrint[e] = posInKeyVec;
+                PosInKeyVecToPrint[e->GetMainName()] = posInKeyVec;
                 posInKeyVec++;
             }
         }
@@ -170,47 +170,47 @@ void Final::AppliqueAgregateAndPrint(Table* table)
         for (int i = 0; i < table->Columnsize(); i++) {
             // on créer la combinaison
             Utils::Hash::MultiKeyDyn KeyVec; // défini la comparaison entre clef et permet d'accéder à l'affichage des clefs
-            for (auto e : ColumnsToGroupBy.value()) {
+            for (auto e : *ColumnsToGroupBy.value()) {
                 auto temp = table->get_value(e, i);
                 KeyVec.keys.push_back(temp);
             } // pour chaque colonne on l'ajoute dans la map associé
-            for (auto e : AgregNames) {
+            for (auto e : *AgregNames) {
                 auto temp = table->get_value(e, i);
                 Utils::Hash::addValue(AgregMap, KeyVec, temp, pos_in_map_map[e]);
             }
         }
 
-        for (auto& Return : ColonneInfo) {
-            auto ColName = Return.GetColonne();
-            ColumnNameToValues[ColName] = new std::vector<ColumnData>;
+        for (auto& Return : *ColonneInfo) {
+            auto ColName = Return->GetColonne();
+            ColumnNameToValues[ColName->GetMainName()] = new std::vector<ColumnData>;
         }
 
         for (auto it = AgregMap.begin(); it != AgregMap.end(); ++it) { // pour toute les combi de clef possible
-            auto& values = it->second; // récupère les valeur associé
+            auto values = it->second; // récupère les valeur associé
             auto& keys = it->first;
-            for (auto& Return : ColonneInfo) { // on applique les agrégat
-                auto ColName = Return.GetColonne();
+            for (auto& Return : *ColonneInfo) { // on applique les agrégat
+                auto ColName = Return->GetColonne();
 
-                if (Return.GetType() != Parsing::AggrFuncType::NOTHING_F) { // dans colonneinfo il y a aussi les colonne qu'on retourne sans rien faire
-                    ColumnData temp = Return.AppliqueOperation(values[pos_in_map_map[ColName]]); // performe l'opération
-                    ColumnNameToValues[ColName]->push_back(temp);
+                if (Return->GetType() != Parsing::AggrFuncType::NOTHING_F) { // dans colonneinfo il y a aussi les colonne qu'on retourne sans rien faire
+                    ColumnData temp = Return->AppliqueOperation(values[pos_in_map_map[ColName]]); // performe l'opération
+                    ColumnNameToValues[ColName->GetMainName()]->push_back(temp);
                 } else {
-                    auto PosInKeys = PosInKeyVecToPrint[ColName];
-                    ColumnNameToValues[ColName]->push_back(keys.keys[PosInKeys]);
+                    auto PosInKeys = PosInKeyVecToPrint[ColName->GetMainName()];
+                    ColumnNameToValues[ColName->GetMainName()]->push_back(keys.keys[PosInKeys]);
                 }
             }
         }
 
     } else {
-        for (auto e : ColonneInfo) {
+        for (auto e : *ColonneInfo) {
             std::vector<ColumnData>* ResultVector = new std::vector<ColumnData>;
-            auto ColName = e.GetColonne();
-            ColumnNameToValues[ColName] = ResultVector;
-            if (e.GetType() != Parsing::AggrFuncType::NOTHING_F) {
-                ColumnNameToValues[ColName]->push_back(e.AppliqueOperationOnCol(ColName, table));
+            auto ColName = e->GetColonne();
+            ColumnNameToValues[ColName->GetMainName()] = ResultVector;
+            if (e->GetType() != Parsing::AggrFuncType::NOTHING_F) {
+                ColumnNameToValues[ColName->GetMainName()]->push_back(e->AppliqueOperationOnCol(ColName, table));
             } else {
                 for (int i = 0; i < table->Columnsize(); ++i) {
-                    ColumnNameToValues[ColName]->push_back(table->get_value(ColName, i));
+                    ColumnNameToValues[ColName->GetMainName()]->push_back(table->get_value(ColName, i));
                 }
             }
         }
@@ -228,9 +228,9 @@ void Final::AppliqueAgregateAndPrint(Table* table)
 
     if (Limite.has_value()) {
         std::span<int> sub = std::span<int>(*OrdreIndice).subspan(Limite->first, Limite->second);
-        Database::Utils::AfficheAgregSpan(&ColumnNameToValues, &sub, &ColonneInfo);
+        Database::Utils::AfficheAgregSpan(&ColumnNameToValues, &sub, ColonneInfo);
     } else {
-        Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice, &ColonneInfo);
+        Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice, ColonneInfo);
     }
 }
 
@@ -246,11 +246,11 @@ bool Final::CompareDeuxIndices(std::unordered_map<std::string, std::vector<Colum
 {
 
     for (auto e : OrderByCol.value()) {
-        auto ColonneCompared = e.first;
+        auto ColonneCompared= e.first;
         auto estCroissant = e.second;
-        auto are_equal = ((*((*ColumnNameToValues)[ColonneCompared]))[ind1] == (*((*ColumnNameToValues)[ColonneCompared]))[ind2]); // si les deux valeurs sont égale on passe à la condition suivante
+        auto are_equal = ((*((*ColumnNameToValues)[ColonneCompared->GetMainName()]))[ind1] == (*((*ColumnNameToValues)[ColonneCompared->GetMainName()]))[ind2]); // si les deux valeurs sont égale on passe à la condition suivante
         if (!are_equal) {
-            return (estCroissant == (*((*ColumnNameToValues)[ColonneCompared]))[ind1] < (*((*ColumnNameToValues)[ColonneCompared]))[ind2]);
+            return (estCroissant == (*((*ColumnNameToValues)[ColonneCompared->GetMainName()]))[ind1] < (*((*ColumnNameToValues)[ColonneCompared->GetMainName()]))[ind2]);
             /*
             estCroissant | ind1<ind2 | Result    (on entend par ind1<ind2, la comparaison dans la colonne des column data en position ind1 et ind2)
             ----------------------------------
@@ -258,7 +258,6 @@ bool Final::CompareDeuxIndices(std::unordered_map<std::string, std::vector<Colum
                 T        |     F      |    F
                 F        |     T      |    F
                 F        |     F      |    T
-
 
             Cette table correspond à ce qui est renvoyé
 

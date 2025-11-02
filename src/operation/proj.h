@@ -2,8 +2,7 @@
 #include "../data_process_system/table.h"
 
 #include <memory>
-#include <string>
-#include <vector>
+#include <unordered_set>
 
 #ifndef PROJ_H
 
@@ -13,11 +12,11 @@ namespace Database::QueryPlanning {
 
 class Proj {
 private:
-    std::vector<std::string> m_Cols; // all the column who stays once they got there
-    std::string TableNameToExec;
+    std::unordered_set<ColonneNamesSet*>* m_Cols; // all the column who stays once they got there
+    TableNamesSet* TableNameToExec;
 
 public:
-    Proj(std::vector<std::string> cols, std::string Table)
+    Proj(std::unordered_set<ColonneNamesSet*>* cols, TableNamesSet* Table)
         : TableNameToExec(Table)
         , m_Cols(cols)
 
@@ -26,11 +25,13 @@ public:
 
     Table* Exec(Table* table)
     {
-        table->Projection(std::make_unique<std::vector<std::string>>(m_Cols));
+        table->Projection(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*m_Cols));
 
         return table;
     }
-    std::string GetTableName() { return TableNameToExec; }
+    TableNamesSet* GetTableName() { return TableNameToExec; }
+
+    std::unordered_set<ColonneNamesSet*>* Getm_Cols(){return m_Cols;}
 };
 
 } // Database::QueryPlanning
