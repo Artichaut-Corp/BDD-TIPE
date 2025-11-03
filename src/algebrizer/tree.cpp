@@ -26,7 +26,7 @@ Table* Node::Pronf(Ikea* Tables) // parcours en profondeur pour calculer le rés
     if (m_Fd) {
         tFd = m_Fd->Pronf(Tables);
     }
-    int JoinParam = 0; // allow us to chose which join use
+    int JoinParam = 3; // allow us to chose which join use
     if (std::holds_alternative<Join*>(m_Type)) {
         auto op = std::get<Join*>(m_Type);
         if (!tFd) {
@@ -41,9 +41,10 @@ Table* Node::Pronf(Ikea* Tables) // parcours en profondeur pour calculer le rés
             result = op->ExecTrier(tFg, tFd);
         } // else if (JoinParam == 2    ) {
         //    result = op->ExecTrierStockerMemoire(tFg, tFd);
-        //}else if (JoinParam == 1) {
-        //    result = op->ExecGrouByStyle(tFg, tFd);
         //}
+        else if (JoinParam == 3) {
+            result = op->ExecGrouByStyle(tFg, tFd);
+        }
         else {
             throw std::runtime_error("Type de Join Inconnu");
         }
