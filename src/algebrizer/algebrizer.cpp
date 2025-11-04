@@ -283,7 +283,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             TableToRootOfTableMap[TableGauche->GetMainName()] = std::pair<Node*, bool>(EmplacementNouveauJoin, true);
         }
     }
-
+    //TODO insérer ici la fonction qui permet de calculer et d'ordonné la selectivité de chaque querry
     Ikea* Magasin = new Ikea(Tables);
     RacineExec.printBT(std::cout);
     if (where != NULL) {

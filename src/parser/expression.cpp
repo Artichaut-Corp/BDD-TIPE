@@ -255,7 +255,6 @@ TableName* TableName::ParseTableName(Lexing::Tokenizer* t)
             aka.insert(std::get<std::string>(alias));
         }
 
-
         return new TableName(tok.m_Value, aka);
     }
 
@@ -273,7 +272,6 @@ TableName* TableName::ParseTableName(Lexing::Tokenizer* t)
 
     // On garde la valeur pour explorer la suite
     std::string name = next.m_Value;
-
 
     next = t->peek();
 
@@ -371,7 +369,6 @@ ColumnName* ColumnName::ParseColumnName(Lexing::Tokenizer* t)
 
     std::string name = next_next.m_Value;
 
-
     next_next = t->peek();
 
     if (next_next.m_Token == Lexing::AS_T) {
@@ -426,7 +423,7 @@ std::pair<ClauseMember, QueryPlanning::ColonneNamesSet*> Clause::ParseClauseMemb
                 *col_parsed_name->GetAlias());
         }
 
-        member = column_used; 
+        member = column_used;
         break;
     }
     default:
@@ -437,7 +434,7 @@ std::pair<ClauseMember, QueryPlanning::ColonneNamesSet*> Clause::ParseClauseMemb
             Errors::ERROR_EXPECTED_IDENTIFIER);
     }
 
-    return { member, column_used }; 
+    return { member, column_used };
 }
 
 std::ostream& operator<<(std::ostream& out, const ClauseMember& member)
@@ -501,10 +498,10 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
 
     col_used->reserve(2);
 
-    if (column_used_l!= nullptr&& column_used_l->GetMainName() != "")
+    if (column_used_l != nullptr && column_used_l->GetMainName() != "")
         col_used->emplace(column_used_l);
 
-    if (column_used_r!= nullptr&&column_used_r->GetMainName() != "")
+    if (column_used_r != nullptr && column_used_r->GetMainName() != "")
         col_used->emplace(column_used_r);
 
     return new Clause(std::get<LogicalOperator>(op), lhs, rhs, col_used);
@@ -931,4 +928,121 @@ void BinaryExpression::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePr
     }
 }
 
+bool BinaryExpression::EstimeSelectivite(std::unordered_map<std::string, ColumnData*>* CombinaisonATester)
+{
+    m_InfoSelectivité.first++;
+    bool resultat_eval;
+    bool ResultAGauche;
+    auto left = Lhs();
+    if (std::holds_alternative<BinaryExpression*>(left)) {
+        ResultAGauche = std::get<BinaryExpression*>(left)->EstimeSelectivite(CombinaisonATester);
+    } else if (std::holds_alternative<Clause*>(left)) {
+        ResultAGauche = std::get<Clause*>(left)->EstimeSelectivite(CombinaisonATester);
+    } else {
+        ResultAGauche = true;
+    }
+    if (Op() == LogicalOperator::OR && ResultAGauche) {
+        resultat_eval = true; // on rend paraisseuse l'évaluation
+    } else if (m_Op == LogicalOperator::AND && !ResultAGauche) {
+        resultat_eval = false;
+    }
+    bool ResultADroite;
+    auto droite = Rhs();
+    if (std::holds_alternative<BinaryExpression*>(droite)) {
+        ResultADroite = std::get<BinaryExpression*>(droite)->EstimeSelectivite(CombinaisonATester);
+    } else if (std::holds_alternative<Clause*>(droite)) {
+        ResultADroite = std::get<Clause*>(droite)->EstimeSelectivite(CombinaisonATester);
+    } else {
+        ResultADroite = true;
+    }
+    if (Op() == LogicalOperator::OR) {
+        resultat_eval = ResultADroite;
+    } else {
+        resultat_eval = ResultADroite && ResultAGauche;
+    }
+    if (resultat_eval) {
+        m_InfoSelectivité.second++;
+    }
+    return resultat_eval;
+}
+
+bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData*>* CombinaisonATester)
+{
+    m_InfoSelectivité.first++;
+    bool resultat_eval;
+    ColumnData LeftVal;
+    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(Lhs())) {
+        auto temp = std::get<QueryPlanning::ColonneNamesSet*>(Lhs());
+        LeftVal = *(*CombinaisonATester)[temp->GetMainName()];
+
+    } else if (std::holds_alternative<ColumnData>(Lhs())) {
+        LeftVal = std::get<ColumnData>(Lhs());
+    } else {
+        throw Errors::Error(Errors::ErrorType::RuntimeError,
+            "Unknown type in the Clause parameter",
+            0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+    }
+
+    ColumnData RightVal;
+    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(Rhs())) {
+        auto temp = std::get<QueryPlanning::ColonneNamesSet*>(Rhs());
+        RightVal = *(*CombinaisonATester)[temp->GetMainName()];
+
+    } else if (std::holds_alternative<ColumnData>(Rhs())) {
+
+        RightVal = std::get<ColumnData>(Rhs());
+    } else {
+        throw Errors::Error(Errors::ErrorType::RuntimeError,
+            "Unknown type in the Clause parameter",
+            0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+    }
+    switch (Op()) {
+    case Parsing::LogicalOperator::EQ:
+        resultat_eval = Database::QueryPlanning::operator==(LeftVal, RightVal);
+    case Parsing::LogicalOperator::GT:
+        resultat_eval = Database::QueryPlanning::operator>(LeftVal, RightVal);
+
+    case Parsing::LogicalOperator::LT:
+        resultat_eval = Database::QueryPlanning::operator<(LeftVal, RightVal);
+    case Parsing::LogicalOperator::GTE:
+        resultat_eval = Database::QueryPlanning::operator>=(LeftVal, RightVal);
+    case Parsing::LogicalOperator::LTE:
+        resultat_eval = Database::QueryPlanning::operator<=(LeftVal, RightVal);
+    case Parsing::LogicalOperator::NE:
+        resultat_eval = Database::QueryPlanning::operator!=(LeftVal, RightVal);
+    default:
+        throw Errors::Error(Errors::ErrorType::RuntimeError,
+            "Unknown Logical Operator",
+            0, 0, Errors::ERROR_UNKNOW_LOGICAL_OPERATOR);
+    }
+    if (resultat_eval) {
+        m_InfoSelectivité.second++;
+    }
+    return resultat_eval;
+}
+float BinaryExpression::OptimiseBinaryExpression()
+{
+    float RatioGauche;
+    auto left = Lhs();
+    if (std::holds_alternative<BinaryExpression*>(left)) {
+        RatioGauche = std::get<BinaryExpression*>(left)->OptimiseBinaryExpression();
+    } else if (std::holds_alternative<Clause*>(left)) {
+        RatioGauche = std::get<Clause*>(left)->GetSelectivite();
+    }
+
+    float RatioDroite;
+    auto droite = Rhs();
+    if (std::holds_alternative<BinaryExpression*>(droite)) {
+        RatioDroite = std::get<BinaryExpression*>(droite)->OptimiseBinaryExpression();
+    } else if (std::holds_alternative<Clause*>(droite)) {
+        RatioDroite = std::get<Clause*>(droite)->GetSelectivite();
+    }
+    if ((Op() == LogicalOperator::OR && RatioDroite > RatioGauche) ||(Op() == LogicalOperator::AND && RatioDroite < RatioGauche) ) {
+        //si on as un Or, on passe en premier sur celle qui a le plus de chance de passer, si on a un and, on passe en premier sur celle qui a les plus de chance d'être fausse et donc d'éviter les execution inutile
+        Condition temp = m_Lhs;
+        m_Lhs = m_Rhs; 
+        m_Rhs = temp; 
+    }
+    return m_InfoSelectivité.second/m_InfoSelectivité.first;
+}
 } // namespace parsing

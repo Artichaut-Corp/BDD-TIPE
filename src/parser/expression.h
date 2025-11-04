@@ -1,10 +1,11 @@
 #include <format>
-#include <unordered_map>
 #include <optional>
 #include <ostream>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <variant>
+
 
 #include "../algebrizer_types.h"
 #include "../data_process_system/namingsystem.h"
@@ -261,6 +262,8 @@ class Clause {
     ClauseMember m_Lhs;
     ClauseMember m_Rhs;
     std::unordered_set<QueryPlanning::ColonneNamesSet*>* m_ColumnUsed;
+    std::pair<float,float> m_InfoSelectivité;
+
 
 public:
     Clause(LogicalOperator op, ClauseMember lhs, ClauseMember rhs, std::unordered_set<QueryPlanning::ColonneNamesSet*>* col_used)
@@ -286,6 +289,10 @@ public:
     void FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale);
 
     bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
+
+    bool EstimeSelectivite(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
+
+    float GetSelectivite(){return m_InfoSelectivité.second/m_InfoSelectivité.first;}
 };
 
 std::ostream& operator<<(std::ostream& out, const Clause& member);
@@ -355,7 +362,11 @@ public:
 
     bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
 
+    bool EstimeSelectivite(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
+
     void FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale);
+
+    float OptimiseBinaryExpression();
 
 private:
     // Opérateur, ne peut être que AND / OR
@@ -364,6 +375,8 @@ private:
     Condition m_Lhs;
     Condition m_Rhs;
     std::unordered_set<QueryPlanning::ColonneNamesSet*>* m_ColumnUsedBelow;
+
+    std::pair<float,float> m_InfoSelectivité;
 };
 
 } // namespace parsing
