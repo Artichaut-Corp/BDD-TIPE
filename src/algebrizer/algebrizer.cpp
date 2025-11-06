@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <gperftools/heap-profiler.h>
 #include <unordered_set>
 #include <utility>
 #include <variant>
@@ -39,8 +40,13 @@ TableNamesSet* ConvertToStandardTableName(Database::Parsing::TableName* Table,st
     return StandardName;
 }
 
-void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo>* IndexGet)
+void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo>* IndexGet, std::vector<int>* param)
 {
+    int descend_select = (*param)[0];
+    int type_of_join = (*param)[1];
+    int InserProj = (*param)[2];
+
+    HeapProfilerStart("heap_profile");
     // Implémentation d'une conversion en arbre d'une query simple
     std::unordered_map<std::string, TableNamesSet*> variation_of_tablename_to_main_table_name;
     TableNamesSet* TablePrincipaleNom = ConvertToStandardTableName(Selection->getTable(),&variation_of_tablename_to_main_table_name); // ne peut pas être nullptr
@@ -286,16 +292,24 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     //TODO insérer ici la fonction qui permet de calculer et d'ordonné la selectivité de chaque querry
     Ikea* Magasin = new Ikea(Tables);
     RacineExec.printBT(std::cout);
-    if (where != NULL) {
+    if (where != NULL and descend_select == 1) {
         std::cout << "\n et maintenant en descendant les sélections on a : \n";
         RacineExec.SelectionDescent(Magasin, MainSelect);
         RacineExec.printBT(std::cout);
     }
-    Table* Table_Finale = RacineExec.Pronf(Magasin);
+    if(InserProj == 1){
+        std::cout << "\n et maintenant en insérant des Projections là où il faut : \n";
+        std::unordered_set<ColonneNamesSet*>*  ColumnToKeep = new std::unordered_set<ColonneNamesSet*> ;
+        RacineExec.InsertProj(ColumnToKeep);
+        RacineExec.printBT(std::cout);
+    }
+    Table* Table_Finale = RacineExec.Pronf(Magasin,type_of_join);
     if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
         AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale);
     } else {
         Utils::AfficheResultat(Table_Finale, &colonnes_de_retour);
     }
+    HeapProfilerDump("Checkpoint");
+    HeapProfilerStop();
 }
 };

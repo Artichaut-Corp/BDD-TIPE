@@ -12,3 +12,8 @@ enable_testing()
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(lib/googletest)
+
+add_custom_target(memcheck
+    COMMAND valgrind --leak-check=full --track-origins=yes ./src/TIPE-BDD_run
+    DEPENDS ${PROJECT_NAME}
+)

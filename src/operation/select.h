@@ -12,13 +12,12 @@
 namespace Database::QueryPlanning {
 class Select {
 private:
-    ;
-    std::unique_ptr<std::unordered_set<ColonneNamesSet*>> m_Cols; // set of all the column who are being checked
+    std::shared_ptr<std::unordered_set<ColonneNamesSet*>> m_Cols; // set of all the column who are being checked
     Parsing::BinaryExpression::Condition m_Conds; // the condition those column are being test on
     TableNamesSet* TableNameToExec;
 
 public:
-    Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>> cols, Parsing::BinaryExpression::Condition cond, TableNamesSet* Table)
+    Select(std::shared_ptr<std::unordered_set<ColonneNamesSet*>> cols, Parsing::BinaryExpression::Condition cond, TableNamesSet* Table)
         : TableNameToExec(Table)
         , m_Cols(std::move(cols))
         , m_Conds(cond)
@@ -32,7 +31,7 @@ public:
         if (std::holds_alternative<std::monostate>(m_Conds)) {
             return table; // pas besoin dans le reflechir la comparaison est nulle
         }
-        table->Selection(m_Conds, std::move(m_Cols));
+        table->Selection(m_Conds,m_Cols);
         return table;
     }
     TableNamesSet* GetTableName()
@@ -44,6 +43,9 @@ public:
     {
         m_Cols = nullptr;
         m_Conds = std::monostate {};
+    }
+    std::shared_ptr<std::unordered_set<ColonneNamesSet*>> Getm_Cols(){
+        return m_Cols;
     }
 };
 

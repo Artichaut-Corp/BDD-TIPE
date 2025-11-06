@@ -10,7 +10,7 @@
 
 namespace Database::QueryPlanning {
 
-void Table::Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<ColonneNamesSet*>> nom_colonnes) // colonnes qui vont être modifié
+void Table::Selection(const Parsing::BinaryExpression::Condition pred, const std::shared_ptr<std::unordered_set<ColonneNamesSet*>> nom_colonnes) // colonnes qui vont être modifié
 {
     // Pour faire une projection, d'abord, il faut garder que les indices qui vérifient toute les conditions, ensuite, il faut modifier chaque colonne en ne gardant que ces indices, on rapelle que toute les colonne ont le même nombre d'indices mais ceux-ci diffère en valeur (voire explication.txt)
     int taille = Columnsize();

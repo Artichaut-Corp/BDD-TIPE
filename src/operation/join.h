@@ -34,7 +34,7 @@ public:
     Table* ExecTrier(Table* table1, Table* table2);
     Table* ExecGrouByStyle(Table* table1, Table* table2); // do the same as above but presort each table
 
-        void SetRootInfo(TableNamesSet* LeftTableName, TableNamesSet* RightTableName)
+    void SetRootInfo(TableNamesSet* LeftTableName, TableNamesSet* RightTableName)
     {
         LTable = LeftTableName;
         RTable = RightTableName;

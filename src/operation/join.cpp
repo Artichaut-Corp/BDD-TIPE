@@ -122,7 +122,7 @@ Table* Join::ExecTrier(Table* table1, Table* table2) // do the same as above but
             }
         }
     }
-    
+
     // Vecteurs pour stocker les infos des colonnes et indices valides
     int nb_colonnes = table1->GetColumnNames()->size() + table2->GetColumnNames()->size() - 1;
     std::vector<std::vector<int>> pos_valid_in_colonne(nb_colonnes);
@@ -191,20 +191,14 @@ Table* Join::ExecTrier(Table* table1, Table* table2) // do the same as above but
 Table* Join::ExecGrouByStyle(Table* table1, Table* table2) // do the same as above but presort each table
 {
     std::vector<std::pair<int, int>> couple_valides; // stocke tout les couple de ligne valide
-    
-    std::unordered_map<ColumnData,std::pair<std::vector<int>,std::vector<int>>> map_col;
-    for (int i =0; i<table1->Columnsize();i++){
-        map_col[table1->get_value(m_ColumnName1,i)].first.push_back(i);
+
+    std::unordered_map<ColumnData, std::vector<int>> map_col;
+    for (int i = 0; i < table1->Columnsize(); i++) {
+        map_col[table1->get_value(m_ColumnName1, i)].push_back(i);
     }
-    for (int i = 0; i<table2->Columnsize();i++){
-        map_col[table2->get_value(m_ColumnName2,i)].second.push_back(i);
-    }
-    for(auto it = map_col.begin(); it != map_col.end(); ++it) {
-        auto values = it->second;
-        for (auto i : values.first){
-            for (auto j : values.second){
-                couple_valides.push_back({i,j});
-            }
+    for (int i = 0; i < table2->Columnsize(); i++) {
+        for (auto j : map_col[table2->get_value(m_ColumnName2, i)]) {
+            couple_valides.push_back({ j, i });
         }
     }
     // Vecteurs pour stocker les infos des colonnes et indices valides

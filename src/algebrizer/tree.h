@@ -35,14 +35,45 @@ public:
             m_Fd = child;
     }
 
-    Table* Pronf(Ikea* Tables);
+    Table* Pronf(Ikea* Tables, int type_of_join);
 
     void printBT(const std::string& prefix, const Node* node, bool isLeft, std::ostream& out);
-    
+
     void printBT(std::ostream& out);
 
-
+    TableNamesSet* GetTableUsedByCurrL()
+    {
+        if (std::holds_alternative<Join*>(m_Type)) {
+            auto op = std::get<Join*>(m_Type);
+            return op->GetLTable();
+        } else if (std::holds_alternative<Proj*>(m_Type)) {
+            auto op = std::get<Proj*>(m_Type);
+            return op->GetTableName();
+        } else if (std::holds_alternative<Select*>(m_Type)) {
+            auto op = std::get<Select*>(m_Type);
+            return op->GetTableName();
+        } else {
+            throw std::runtime_error("Unknown node type");
+        }
+    }
+    TableNamesSet* GetTableUsedByCurrR()
+    {
+        if (std::holds_alternative<Join*>(m_Type)) {
+            auto op = std::get<Join*>(m_Type);
+            return op->GetRTable();
+        } else if (std::holds_alternative<Proj*>(m_Type)) {
+            auto op = std::get<Proj*>(m_Type);
+            return op->GetTableName();
+        } else if (std::holds_alternative<Select*>(m_Type)) {
+            auto op = std::get<Select*>(m_Type);
+            return op->GetTableName();
+        } else {
+            throw std::runtime_error("Unknown node type");
+        }
+    }
     std::unordered_set<ColonneNamesSet*>* SelectionDescent(Ikea* Tables, Select* MainSelect);
+
+    void InsertProj(std::unordered_set<ColonneNamesSet*>* ColumnToKeep);
 };
 }
 #endif // ! TREE_H

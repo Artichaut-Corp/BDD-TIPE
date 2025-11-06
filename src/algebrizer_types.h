@@ -219,19 +219,26 @@ inline uint64_t mix64(uint64_t x) noexcept
 // --- Hash d'une colonne ---
 inline uint64_t hashColumn(const Database::ColumnData& c) noexcept
 {
+    // All integers normalized to int64_t
+    if (std::holds_alternative<DbInt8>(c))
+        return mix64(static_cast<int64_t>(std::get<DbInt8>(c)));
+    if (std::holds_alternative<DbInt16>(c))
+        return mix64(static_cast<int64_t>(std::get<DbInt16>(c)));
     if (std::holds_alternative<DbInt>(c))
-        return mix64(std::get<DbInt>(c));
+        return mix64(static_cast<int64_t>(std::get<DbInt>(c)));
     if (std::holds_alternative<DbInt64>(c))
         return mix64(std::get<DbInt64>(c));
+
+    // Strings handled normally
     const auto& s = std::get<DbString>(c);
     uint64_t h = 0xcbf29ce484222325ULL;
     for (uint8_t b : s) {
-        if (b == 0)
-            break;
+        if (b == 0) break;
         h = (h ^ b) * 0x100000001b3ULL; // FNV-1a
     }
     return mix64(h);
 }
+
 
 }
 #endif // !ALGEBRIZER_TYPES_H

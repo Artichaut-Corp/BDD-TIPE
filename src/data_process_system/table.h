@@ -30,7 +30,7 @@ public:
         } 
     }
 
-    void Selection(const Parsing::BinaryExpression::Condition pred, const std::unique_ptr<std::unordered_set<ColonneNamesSet*>> nom_colonnes);
+    void Selection(const Parsing::BinaryExpression::Condition pred, const std::shared_ptr<std::unordered_set<ColonneNamesSet*>> nom_colonnes);
     void Projection(std::unique_ptr<std::unordered_set<ColonneNamesSet*>> ColumnToSave);
 
     int size()

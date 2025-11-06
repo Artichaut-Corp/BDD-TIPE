@@ -13,7 +13,7 @@
 namespace Database::QueryPlanning {
 using NodeType = std::variant<Join*, Proj*, Select*>; // le type root est censé être la racine de la query et ne jamais parti de là
 
-Table* Node::Pronf(Ikea* Tables) // parcours en profondeur pour calculer le résultat de l'arbre d'éxécution
+Table* Node::Pronf(Ikea* Tables, int type_of_join) // parcours en profondeur pour calculer le résultat de l'arbre d'éxécution
 {
     Table* result = nullptr;
 
@@ -21,12 +21,11 @@ Table* Node::Pronf(Ikea* Tables) // parcours en profondeur pour calculer le rés
     Table* tFd = nullptr;
 
     if (m_Fg) {
-        tFg = m_Fg->Pronf(Tables);
+        tFg = m_Fg->Pronf(Tables, type_of_join);
     }
     if (m_Fd) {
-        tFd = m_Fd->Pronf(Tables);
+        tFd = m_Fd->Pronf(Tables, type_of_join);
     }
-    int JoinParam = 3; // allow us to chose which join use
     if (std::holds_alternative<Join*>(m_Type)) {
         auto op = std::get<Join*>(m_Type);
         if (!tFd) {
@@ -35,17 +34,16 @@ Table* Node::Pronf(Ikea* Tables) // parcours en profondeur pour calculer le rés
         if (!tFg) {
             tFg = Tables->GetTableByName(op->GetLTable());
         }
-        if (JoinParam == 0) {
+        if (type_of_join == 0) {
             result = op->ExecNaif(tFg, tFd);
-        } else if (JoinParam == 1) {
+        } else if (type_of_join == 1) {
             result = op->ExecTrier(tFg, tFd);
         } // else if (JoinParam == 2    ) {
         //    result = op->ExecTrierStockerMemoire(tFg, tFd);
         //}
-        else if (JoinParam == 3) {
+        else if (type_of_join == 3) {
             result = op->ExecGrouByStyle(tFg, tFd);
-        }
-        else {
+        } else {
             throw std::runtime_error("Type de Join Inconnu");
         }
     } else if (std::holds_alternative<Proj*>(m_Type)) {
@@ -334,4 +332,51 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
         return nullptr; // on remonte l'arbre
     }
 }
+
+void Node::InsertProj(std::unordered_set<ColonneNamesSet*>* ColumnToKeep)
+{
+    if (std::holds_alternative<Join*>(m_Type)) {
+        auto op = std::get<Join*>(m_Type);
+        ColumnToKeep->insert(op->GetLCol());
+        ColumnToKeep->insert(op->GetRCol());
+        std::unordered_set<ColonneNamesSet*> ColumnD = *ColumnToKeep;
+        std::unordered_set<ColonneNamesSet*> ColumnG = *ColumnToKeep;
+
+        if (m_Fg) { // if the left side have something (i.e, is not an "entry point")
+            m_Fg->InsertProj(&ColumnG);
+            Node* Proj_G = new Node(new Proj(ColumnToKeep, op->GetLTable()));
+            auto TempG = m_Fg;
+            m_Fg = Proj_G;
+            m_Fg->AddChild(true, TempG);
+        }
+        if (m_Fd) {
+            m_Fd->InsertProj(&ColumnD);
+            Node* Proj_D = new Node(new Proj(ColumnToKeep, op->GetRTable()));
+            auto TempD = m_Fd;
+            m_Fd = Proj_D;
+            m_Fd->AddChild(true, TempD);
+        }
+    } else if (std::holds_alternative<Proj*>(m_Type)) {
+        auto op = std::get<Proj*>(m_Type);
+        ColumnToKeep->insert(op->Getm_Cols()->begin(), op->Getm_Cols()->end());
+        if (m_Fg) { // if the left side have something (i.e, is not an "entry point")
+            m_Fg->InsertProj(ColumnToKeep);
+            
+        }
+    } else if (std::holds_alternative<Select*>(m_Type)) {
+        auto op = std::get<Select*>(m_Type);
+        ColumnToKeep->insert(op->Getm_Cols()->begin(), op->Getm_Cols()->end());
+        std::unordered_set<ColonneNamesSet*> ColumnG = *ColumnToKeep;
+        if (m_Fg) { // if the left side have something (i.e, is not an "entry point")
+            m_Fg->InsertProj(&ColumnG);
+            Node* Proj_G = new Node(new Proj(ColumnToKeep, op->GetTableName()));
+            auto TempG = m_Fg;
+            m_Fg = Proj_G;
+            m_Fg->AddChild(true, TempG);
+        }
+    } else {
+        throw std::runtime_error("Unknown node type");
+    }
+}
+
 };

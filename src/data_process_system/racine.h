@@ -47,16 +47,7 @@ public:
     Racine(const Racine& other)
         : m_NomColonne(other.m_NomColonne)
     {
-        m_data = std::visit([](auto const& vecPtr) -> decltype(m_data) {
-            using VecType = std::decay_t<decltype(*vecPtr)>;
-            if (!vecPtr) {
-                // retourne un unique_ptr vide, mais du bon type
-                return std::unique_ptr<VecType> {};
-            }
-            // copie du vecteur sous-jacent
-            return std::make_unique<VecType>(*vecPtr);
-        },
-            other.m_data);
+        m_data = other.m_data;
     }
 
     ColumnData getValue(int i) const
