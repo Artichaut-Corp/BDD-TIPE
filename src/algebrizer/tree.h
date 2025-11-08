@@ -74,6 +74,10 @@ public:
     std::unordered_set<ColonneNamesSet*>* SelectionDescent(Ikea* Tables, Select* MainSelect);
 
     void InsertProj(std::unordered_set<ColonneNamesSet*>* ColumnToKeep);
+
+    Node* GetLeftPtr(){return m_Fg;}
+
+    NodeType GetAction(){return m_Type;}
 };
 }
 #endif // ! TREE_H

@@ -6,9 +6,9 @@
 #include "../storage.h"
 #include "../utils/printing_utils.h"
 #include <cstddef>
+#include <gperftools/heap-profiler.h>
 #include <stdexcept>
 #include <string>
-#include <gperftools/heap-profiler.h>
 #include <unordered_set>
 #include <utility>
 #include <variant>
@@ -29,7 +29,7 @@ ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet* NomTablePrincipale, 
 
     return StandardName;
 }
-TableNamesSet* ConvertToStandardTableName(Database::Parsing::TableName* Table,std::unordered_map<std::string, TableNamesSet*>*variation_of_tablename_to_main_table_name)
+TableNamesSet* ConvertToStandardTableName(Database::Parsing::TableName* Table, std::unordered_map<std::string, TableNamesSet*>* variation_of_tablename_to_main_table_name)
 {
     TableNamesSet* StandardName = new TableNamesSet(Table->getTableName());
     (*variation_of_tablename_to_main_table_name)[StandardName->GetMainName()] = StandardName;
@@ -45,11 +45,11 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     int descend_select = (*param)[0];
     int type_of_join = (*param)[1];
     int InserProj = (*param)[2];
-
+    int optimize_BinaryExpr = (*param)[3];
     HeapProfilerStart("heap_profile");
     // Implémentation d'une conversion en arbre d'une query simple
     std::unordered_map<std::string, TableNamesSet*> variation_of_tablename_to_main_table_name;
-    TableNamesSet* TablePrincipaleNom = ConvertToStandardTableName(Selection->getTable(),&variation_of_tablename_to_main_table_name); // ne peut pas être nullptr
+    TableNamesSet* TablePrincipaleNom = ConvertToStandardTableName(Selection->getTable(), &variation_of_tablename_to_main_table_name); // ne peut pas être nullptr
     // récupérer la liste des colonne de retour,
     std::vector<ReturnType*> colonnes_de_retour;
     std::unordered_map<std::string, std::unordered_set<ColonneNamesSet*>> TableNameToColumnList;
@@ -70,8 +70,8 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
                 tables_secondaires.push_back(ConvertToStandardTableName(j.getTable(), &variation_of_tablename_to_main_table_name));
 
-                ColonneNamesSet* colonne_gauche = ConvertToStandardColumnName(TablePrincipaleNom, j.getLeftColumn(),&variation_of_tablename_to_main_table_name);
-                ColonneNamesSet* colonne_droite = ConvertToStandardColumnName(TablePrincipaleNom, j.getRightColumn(),&variation_of_tablename_to_main_table_name);
+                ColonneNamesSet* colonne_gauche = ConvertToStandardColumnName(TablePrincipaleNom, j.getLeftColumn(), &variation_of_tablename_to_main_table_name);
+                ColonneNamesSet* colonne_droite = ConvertToStandardColumnName(TablePrincipaleNom, j.getRightColumn(), &variation_of_tablename_to_main_table_name);
 
                 TableNameToColumnList[colonne_gauche->GetTableSet()->GetMainName()].emplace(colonne_gauche);
 
@@ -96,7 +96,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
             } else { // il faut savoir de quelle table vient cette colonne
                 if (arg.m_Field.has_value()) { // on vérifie que y'as bien une valeur, c'est un type optional
-                    ColonneNamesSet* NomColonne = ConvertToStandardColumnName(TablePrincipaleNom, &(arg.m_Field.value()),&variation_of_tablename_to_main_table_name);
+                    ColonneNamesSet* NomColonne = ConvertToStandardColumnName(TablePrincipaleNom, &(arg.m_Field.value()), &variation_of_tablename_to_main_table_name);
                     colonnes_de_retour.push_back(new ReturnType(NomColonne, Parsing::AggrFuncType::NOTHING_F));
                     TableNameToColumnList[NomColonne->GetTableSet()->GetMainName()].emplace(NomColonne);
                     UsefullColumnForAggrAndOutput.emplace(NomColonne);
@@ -108,7 +108,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             auto arg = std::get<Parsing::AggregateFunction>(colonne_info);
             if (!arg.isAll()) {
                 // on vérifie que y'as bien une valeur, c'est un type optinal
-                ColonneNamesSet* NomColonne = ConvertToStandardColumnName(TablePrincipaleNom, arg.getColumnName(),&variation_of_tablename_to_main_table_name);
+                ColonneNamesSet* NomColonne = ConvertToStandardColumnName(TablePrincipaleNom, arg.getColumnName(), &variation_of_tablename_to_main_table_name);
                 TableNameToColumnList[NomColonne->GetTableSet()->GetMainName()].emplace(NomColonne);
                 colonnes_de_retour.push_back(new ReturnType(NomColonne, arg.getType()));
                 IsAgregate = true;
@@ -124,15 +124,13 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         }
     }
 
-    
-
     Final AppliqueAggr(&colonnes_de_retour);
     if (IsAgregate) { // permet de créer les agrégation si il y en as
         Parsing::GroupByClause* Groupby = Selection->getGroupBy();
         if (Groupby != nullptr) {
             std::vector<ColonneNamesSet*>* ColumnGroupByed = new std::vector<ColonneNamesSet*>;
             for (auto e : Groupby->getByItems()) {
-                ColonneNamesSet* NomColonne = ConvertToStandardColumnName(TablePrincipaleNom, e.getColName(),&variation_of_tablename_to_main_table_name);
+                ColonneNamesSet* NomColonne = ConvertToStandardColumnName(TablePrincipaleNom, e.getColName(), &variation_of_tablename_to_main_table_name);
                 TableNameToColumnList[NomColonne->GetTableSet()->GetMainName()].emplace(NomColonne);
                 ColumnGroupByed->push_back(NomColonne);
                 UsefullColumnForAggrAndOutput.emplace(NomColonne);
@@ -148,7 +146,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         IsOrderBy = true;
         std::vector<std::pair<ColonneNamesSet*, bool>>* OrderVect = new std::vector<std::pair<ColonneNamesSet*, bool>>;
         for (auto e : order->getByItems()) {
-            ColonneNamesSet* NomColonne = ConvertToStandardColumnName(TablePrincipaleNom, e.getColName(),&variation_of_tablename_to_main_table_name);
+            ColonneNamesSet* NomColonne = ConvertToStandardColumnName(TablePrincipaleNom, e.getColName(), &variation_of_tablename_to_main_table_name);
             bool est_présent = false;
             for (auto x : colonnes_de_retour) {
                 if (*x->GetColonne() == *NomColonne) {
@@ -289,21 +287,65 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             TableToRootOfTableMap[TableGauche->GetMainName()] = std::pair<Node*, bool>(EmplacementNouveauJoin, true);
         }
     }
-    //TODO insérer ici la fonction qui permet de calculer et d'ordonné la selectivité de chaque querry
     Ikea* Magasin = new Ikea(Tables);
     RacineExec.printBT(std::cout);
+    if (where != NULL and optimize_BinaryExpr == 1) {
+        auto SelectNode = RacineExec.GetLeftPtr();
+        if (SelectNode == nullptr) {
+            std::cout << "Absurdité, where n'est pas null mais aucun select n'est présent\n"
+                      << std::endl; // erreur
+        } else {
+            auto SelectAct = SelectNode->GetAction();
+            if (std::holds_alternative<Select*>(SelectAct)) {
+                Select* op = std::get<Select*>(SelectAct);
+                if (std::holds_alternative<Parsing::BinaryExpression*>(op->GetCond())) { // if the cond is a clause or a tautology, we can't otpimize it
+                    Parsing::BinaryExpression* cond = std::get<Database::Parsing::BinaryExpression*>(op->GetCond());
+                    auto usefull_col = op->Getm_Cols();
+                    std::unordered_map<std::string, std::vector<ColumnData>*>* colToValList = new std::unordered_map<std::string, std::vector<ColumnData>*>();
+                    int nbr_ligne_mini = -1;
+                    for (auto* e : *usefull_col) {
+                        auto temp = Magasin->GetTableByName(e->GetTableSet())->GetSample(e);
+                        if (nbr_ligne_mini == -1 || (*temp).size() < nbr_ligne_mini) {
+                            nbr_ligne_mini = (*temp).size();
+                        }
+                        (*colToValList)[e->GetMainName()] = temp;
+                    }
+
+                    std::unordered_map<std::string, ColumnData>* CombinaisonATester = new std::unordered_map<std::string, ColumnData>();
+                    for (int ligne = 0; ligne < nbr_ligne_mini; ligne++) {
+                        for (auto* e : *usefull_col) {
+                            (*CombinaisonATester)[e->GetMainName()] = (*(*colToValList)[e->GetMainName()])[ligne];
+                        }
+                        auto temp = cond->EstimeSelectivite(CombinaisonATester);
+                    }
+
+                    std::cout << "\n Voici la condition brute : \n";
+
+                    cond->PrintCondition(std::cout);
+
+                    std::cout << "\n et maintenant optimisant la condition : \n";
+                    cond->OptimiseBinaryExpression();
+                    cond->PrintCondition(std::cout);
+
+                }
+            } else {
+                std::cout << "Il y as where mais aucun select après le projecteur principal\n"
+                          << std::endl; // erreur
+            }
+        }
+    }
     if (where != NULL and descend_select == 1) {
         std::cout << "\n et maintenant en descendant les sélections on a : \n";
         RacineExec.SelectionDescent(Magasin, MainSelect);
         RacineExec.printBT(std::cout);
     }
-    if(InserProj == 1){
+    if (InserProj == 1) {
         std::cout << "\n et maintenant en insérant des Projections là où il faut : \n";
-        std::unordered_set<ColonneNamesSet*>*  ColumnToKeep = new std::unordered_set<ColonneNamesSet*> ;
+        std::unordered_set<ColonneNamesSet*>* ColumnToKeep = new std::unordered_set<ColonneNamesSet*>;
         RacineExec.InsertProj(ColumnToKeep);
         RacineExec.printBT(std::cout);
     }
-    Table* Table_Finale = RacineExec.Pronf(Magasin,type_of_join);
+    Table* Table_Finale = RacineExec.Pronf(Magasin, type_of_join);
     if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
         AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale);
     } else {

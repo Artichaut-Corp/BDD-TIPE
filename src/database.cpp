@@ -415,10 +415,12 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
         auto select = std::get<Parsing::SelectStmt*>(stmt);
 
         auto joins = select->getJoins();
-        std::vector<int>* param = new std::vector<int>(3);
+        std::vector<int>* param = new std::vector<int>(4);
         (*param)[0] = 1; //if SelectionDescent set to  1
         (*param)[1] = 3; //see Node::Pronf function in tree.cpp in order to understand what each number do, actually defined are 0,1,3
         (*param)[2] = 1; //if  InserProj set to  1
+        (*param)[3] = 1; //if  OptimizeBinaryExpression set to  1
+
         QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get(),param);
 
         // auto fields = select->getFields()->getField();

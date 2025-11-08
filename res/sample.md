@@ -39,7 +39,7 @@ Select country.name, city.pop, president.first_name from city Join country on co
 
 SELECT president.first_name, president.last_name, city.pop FROM president JOIN country ON country.name = president.country JOIN city ON city.country = president.country;
 
-SELECT president.first_name FROM president JOIN country on country.name = president.country WHERE country.pop > 5000000;
+SELECT president.first_name FROM president JOIN country on country.name = president.country WHERE ( country.name = "France" AND country.pop > 5000000 );
 
 SELECT president.first_name FROM president JOIN country on country.name = president.country WHERE country.name = "France";
 

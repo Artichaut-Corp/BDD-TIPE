@@ -1,9 +1,11 @@
+#include <cmath>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
 #include "../algebrizer_types.h"
 #include "colonne.h"
+#include "namingsystem.h"
 
 #ifndef TABLE_OP
 
@@ -27,7 +29,7 @@ public:
             }
             m_Map[e->get_name()->GetMainName()] = e;
             m_ColonnesNames.push_back(e->get_name());
-        } 
+        }
     }
 
     void Selection(const Parsing::BinaryExpression::Condition pred, const std::shared_ptr<std::unordered_set<ColonneNamesSet*>> nom_colonnes);
@@ -72,7 +74,19 @@ public:
     }
     std::vector<ColonneNamesSet*>* GetColumnNames() { return &m_ColonnesNames; }
 
-    void Sort( ColonneNamesSet* ColonneToSortBy);
+    void Sort(ColonneNamesSet* ColonneToSortBy);
+
+    std::vector<ColumnData>* GetSample(ColonneNamesSet* ColonneGetValueFrom)
+    {
+        std::vector<ColumnData>* ValSet = new std::vector<ColumnData>();
+        ValSet->reserve(1000);
+        for (int i = 0; i < 1000 and i < this->Columnsize(); i++) {
+            int pos = int(std::max(i * (this->Columnsize() / 1000), i));
+            auto temp = this->get_value(ColonneGetValueFrom, pos);
+            ValSet->push_back(temp);
+        }
+        return ValSet;
+    }
 };
 
 } // Database::QueryPlanning

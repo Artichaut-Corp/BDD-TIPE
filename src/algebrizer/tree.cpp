@@ -361,18 +361,22 @@ void Node::InsertProj(std::unordered_set<ColonneNamesSet*>* ColumnToKeep)
         ColumnToKeep->insert(op->Getm_Cols()->begin(), op->Getm_Cols()->end());
         if (m_Fg) { // if the left side have something (i.e, is not an "entry point")
             m_Fg->InsertProj(ColumnToKeep);
-            
         }
     } else if (std::holds_alternative<Select*>(m_Type)) {
         auto op = std::get<Select*>(m_Type);
-        ColumnToKeep->insert(op->Getm_Cols()->begin(), op->Getm_Cols()->end());
-        std::unordered_set<ColonneNamesSet*> ColumnG = *ColumnToKeep;
-        if (m_Fg) { // if the left side have something (i.e, is not an "entry point")
-            m_Fg->InsertProj(&ColumnG);
-            Node* Proj_G = new Node(new Proj(ColumnToKeep, op->GetTableName()));
-            auto TempG = m_Fg;
-            m_Fg = Proj_G;
-            m_Fg->AddChild(true, TempG);
+        if (!std::holds_alternative<std::monostate>(op->GetCond())) {
+            ColumnToKeep->insert(op->Getm_Cols()->begin(), op->Getm_Cols()->end());
+            std::unordered_set<ColonneNamesSet*> ColumnG = *ColumnToKeep;
+            if (m_Fg) { // if the left side have something (i.e, is not an "entry point")
+                m_Fg->InsertProj(&ColumnG);
+                Node* Proj_G = new Node(new Proj(ColumnToKeep, op->GetTableName()));
+                auto TempG = m_Fg;
+                m_Fg = Proj_G;
+                m_Fg->AddChild(true, TempG);
+            }
+        }else {
+            m_Fg->InsertProj(ColumnToKeep);
+
         }
     } else {
         throw std::runtime_error("Unknown node type");

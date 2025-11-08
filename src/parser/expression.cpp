@@ -555,7 +555,7 @@ std::unordered_set<QueryPlanning::ColonneNamesSet*>* BinaryExpression::MergeColu
         right = b->m_ColumnUsedBelow;
 
     } else {
-        left = std::get<Clause*>(lhs)->Column();
+        right = std::get<Clause*>(rhs)->Column();
     }
 
     size_t tot_size = left->size() + right->size();
@@ -833,7 +833,6 @@ bool Clause::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATest
         return Database::QueryPlanning::operator==(LeftVal, RightVal);
     case Parsing::LogicalOperator::GT:
         return Database::QueryPlanning::operator>(LeftVal, RightVal);
-
     case Parsing::LogicalOperator::LT:
         return Database::QueryPlanning::operator<(LeftVal, RightVal);
     case Parsing::LogicalOperator::GTE:
@@ -908,7 +907,7 @@ void Clause::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
 
 void BinaryExpression::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
 {
-    m_ColumnUsedBelow = {};
+    m_ColumnUsedBelow->clear();
     auto left = Lhs();
     if (std::holds_alternative<BinaryExpression*>(left)) {
         std::get<BinaryExpression*>(left)->FormatColumnName(NomTablePrincipale);
@@ -928,7 +927,7 @@ void BinaryExpression::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePr
     }
 }
 
-bool BinaryExpression::EstimeSelectivite(std::unordered_map<std::string, ColumnData*>* CombinaisonATester)
+bool BinaryExpression::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* CombinaisonATester)
 {
     m_InfoSelectivité.first++;
     bool resultat_eval;
@@ -966,14 +965,14 @@ bool BinaryExpression::EstimeSelectivite(std::unordered_map<std::string, ColumnD
     return resultat_eval;
 }
 
-bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData*>* CombinaisonATester)
+bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* CombinaisonATester)
 {
     m_InfoSelectivité.first++;
     bool resultat_eval;
     ColumnData LeftVal;
     if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(Lhs())) {
         auto temp = std::get<QueryPlanning::ColonneNamesSet*>(Lhs());
-        LeftVal = *(*CombinaisonATester)[temp->GetMainName()];
+        LeftVal = (*CombinaisonATester)[temp->GetMainName()];
 
     } else if (std::holds_alternative<ColumnData>(Lhs())) {
         LeftVal = std::get<ColumnData>(Lhs());
@@ -986,7 +985,7 @@ bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData*>* Com
     ColumnData RightVal;
     if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(Rhs())) {
         auto temp = std::get<QueryPlanning::ColonneNamesSet*>(Rhs());
-        RightVal = *(*CombinaisonATester)[temp->GetMainName()];
+        RightVal = (*CombinaisonATester)[temp->GetMainName()];
 
     } else if (std::holds_alternative<ColumnData>(Rhs())) {
 
@@ -999,22 +998,35 @@ bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData*>* Com
     switch (Op()) {
     case Parsing::LogicalOperator::EQ:
         resultat_eval = Database::QueryPlanning::operator==(LeftVal, RightVal);
+        break;
+
     case Parsing::LogicalOperator::GT:
         resultat_eval = Database::QueryPlanning::operator>(LeftVal, RightVal);
+        break;
 
     case Parsing::LogicalOperator::LT:
         resultat_eval = Database::QueryPlanning::operator<(LeftVal, RightVal);
+        break;
+
     case Parsing::LogicalOperator::GTE:
         resultat_eval = Database::QueryPlanning::operator>=(LeftVal, RightVal);
+        break;
+
     case Parsing::LogicalOperator::LTE:
         resultat_eval = Database::QueryPlanning::operator<=(LeftVal, RightVal);
+        break;
+
     case Parsing::LogicalOperator::NE:
         resultat_eval = Database::QueryPlanning::operator!=(LeftVal, RightVal);
+        break;
+
     default:
-        throw Errors::Error(Errors::ErrorType::RuntimeError,
+        throw Errors::Error(
+            Errors::ErrorType::RuntimeError,
             "Unknown Logical Operator",
             0, 0, Errors::ERROR_UNKNOW_LOGICAL_OPERATOR);
     }
+
     if (resultat_eval) {
         m_InfoSelectivité.second++;
     }
@@ -1037,12 +1049,12 @@ float BinaryExpression::OptimiseBinaryExpression()
     } else if (std::holds_alternative<Clause*>(droite)) {
         RatioDroite = std::get<Clause*>(droite)->GetSelectivite();
     }
-    if ((Op() == LogicalOperator::OR && RatioDroite > RatioGauche) ||(Op() == LogicalOperator::AND && RatioDroite < RatioGauche) ) {
-        //si on as un Or, on passe en premier sur celle qui a le plus de chance de passer, si on a un and, on passe en premier sur celle qui a les plus de chance d'être fausse et donc d'éviter les execution inutile
+    if ((Op() == LogicalOperator::OR && RatioDroite > RatioGauche) || (Op() == LogicalOperator::AND && RatioDroite < RatioGauche)) {
+        // si on as un Or, on passe en premier sur celle qui a le plus de chance de passer, si on a un and, on passe en premier sur celle qui a les plus de chance d'être fausse et donc d'éviter les execution inutile
         Condition temp = m_Lhs;
-        m_Lhs = m_Rhs; 
-        m_Rhs = temp; 
+        m_Lhs = m_Rhs;
+        m_Rhs = temp;
     }
-    return m_InfoSelectivité.second/m_InfoSelectivité.first;
+    return m_InfoSelectivité.second / m_InfoSelectivité.first;
 }
 } // namespace parsing

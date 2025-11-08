@@ -290,7 +290,7 @@ public:
 
     bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
 
-    bool EstimeSelectivite(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
+    bool EstimeSelectivite(std::unordered_map<std::string, ColumnData>* CombinaisonATester);
 
     float GetSelectivite(){return m_InfoSelectivité.second/m_InfoSelectivité.first;}
 };
@@ -362,7 +362,7 @@ public:
 
     bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
 
-    bool EstimeSelectivite(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
+    bool EstimeSelectivite(std::unordered_map<std::string, ColumnData>* CombinaisonATester);
 
     void FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale);
 
