@@ -3,7 +3,6 @@
 #include "table.h"
 #include "types.h"
 
-#include <cstring>
 #include <memory>
 #include <stdexcept>
 #include <string>

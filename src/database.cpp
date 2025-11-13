@@ -194,131 +194,19 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
     TableOrder.push_back("schema_table");
 }
 
-// Crée en mémoire la représentation de la table pays
-auto DatabaseEngine::CreateCountryTable(int fd) -> void
+auto DatabaseEngine::CreateTable(int fd, const std::string& name, Storing::TableInfo t) -> void
 {
     using namespace Database::Storing;
 
-    // -- Country Table --
-    // Text name
-    // Int pop
+    for (auto c : t.m_Columns) {
+        Record::Write(fd, &Index->at("schema_column"), &c.second, c.first);
+    }
 
-    DbInt first_offset = Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE);
+    Index->insert({ name, t });
 
-    // Passer comme offset la première localisation encore disponible
-    ColumnInfo* c_name = new ColumnInfo(first_offset, DB_STRING_SIZE, false);
+    Record::Write(fd, &Index->at("schema_table"), &t, name);
 
-    Record::Write(fd, &Index->at("schema_column"), c_name, "name");
-
-    ColumnInfo* c_pop = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-        DB_INT_SIZE, false);
-
-    Record::Write(fd, &Index->at("schema_column"), c_pop, "pop");
-
-    auto c_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-        { "name", *c_name }, { "pop", *c_pop }
-    };
-
-    // 3. Write it on disk in the dedicated system table
-
-    auto country = new TableInfo(false, 2, first_offset, c_columns);
-
-    Index->insert({ "country", *country });
-
-    Record::Write(fd, &Index->at("schema_table"), country, "country");
-
-    TableOrder.push_back("country");
-
-    File::IncrTableCount(fd);
-}
-
-// Crée en mémoire la représentation de la table pays
-auto DatabaseEngine::CreateCityTable(int fd) -> void
-{
-    using namespace Database::Storing;
-
-    // -- City Table --
-    // Text name
-    // Int pop
-    // Text country
-
-    DbInt first_offset = Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE);
-
-    // Passer comme offset la première localisation encore disponible
-    ColumnInfo* c_name = new ColumnInfo(first_offset, DB_STRING_SIZE, false);
-
-    Record::Write(fd, &Index->at("schema_column"), c_name, "name");
-
-    ColumnInfo* c_pop = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-        DB_INT_SIZE, false);
-
-    Record::Write(fd, &Index->at("schema_column"), c_pop, "pop");
-
-    ColumnInfo* c_country = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE),
-        DB_STRING_SIZE, false);
-
-    Record::Write(fd, &Index->at("schema_column"), c_country, "country");
-
-    auto c_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-        { "name", *c_name }, { "pop", *c_pop }, { "country", *c_country }
-    };
-
-    // 3. Write it on disk in the dedicated system table
-
-    auto city = new TableInfo(false, 3, first_offset, c_columns);
-
-    Index->insert({ "city", *city });
-
-    Record::Write(fd, &Index->at("schema_table"), city, "city");
-
-    TableOrder.push_back("city");
-
-    File::IncrTableCount(fd);
-}
-
-auto DatabaseEngine::CreatePresidentTable(int fd) -> void
-{
-    using namespace Database::Storing;
-
-    // -- President Table --
-    // Text first_name
-    // Text last_name
-    // Text country
-    // Int mandate_beginning
-
-    DbInt first_offset = Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE);
-
-    // Passer comme offset la première localisation encore disponible
-    ColumnInfo* c_first_name = new ColumnInfo(first_offset, DB_STRING_SIZE, false);
-
-    Record::Write(fd, &Index->at("schema_column"), c_first_name, "first_name");
-
-    ColumnInfo* c_last_name = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
-
-    Record::Write(fd, &Index->at("schema_column"), c_last_name, "last_name");
-
-    ColumnInfo* c_country = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
-
-    Record::Write(fd, &Index->at("schema_column"), c_country, "country");
-
-    ColumnInfo* c_mandate_beg = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-        DB_INT_SIZE, false);
-
-    Record::Write(fd, &Index->at("schema_column"), c_mandate_beg, "mandate_beginning");
-
-    auto c_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-        { "first_name", *c_first_name }, { "last_name", *c_last_name }, { "country", *c_country }, { "mandate_beginning", *c_mandate_beg }
-    };
-
-    // 3. Write it on disk in the dedicated system table
-
-    auto president = new TableInfo(false, 4, first_offset, c_columns);
-
-    Index->insert({ "president", *president });
-
-    Record::Write(fd, &Index->at("schema_table"), president, "president");
-
-    TableOrder.push_back("president");
+    TableOrder.push_back(name);
 
     File::IncrTableCount(fd);
 }
@@ -416,12 +304,12 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
         auto joins = select->getJoins();
         std::vector<int>* param = new std::vector<int>(4);
-        (*param)[0] = 1; //if SelectionDescent set to  1
-        (*param)[1] = 3; //see Node::Pronf function in tree.cpp in order to understand what each number do, actually defined are 0,1,3
-        (*param)[2] = 1; //if  InserProj set to  1
-        (*param)[3] = 1; //if  OptimizeBinaryExpression set to  1
+        (*param)[0] = 1; // if SelectionDescent set to  1
+        (*param)[1] = 3; // see Node::Pronf function in tree.cpp in order to understand what each number do, actually defined are 0,1,3
+        (*param)[2] = 1; // if  InserProj set to  1
+        (*param)[3] = 1; // if  OptimizeBinaryExpression set to  1
 
-        QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get(),param);
+        QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get(), param);
 
         // auto fields = select->getFields()->getField();
 

@@ -2,6 +2,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "cursor.h"
 #include "types.h"
 
 #ifndef COLUMN_H
@@ -27,7 +28,17 @@ class ColumnInfo {
 public:
     ColumnInfo() = default;
 
-    ColumnInfo(int offset, uint8_t e_size, bool opt)
+    ColumnInfo(uint8_t e_size, bool opt)
+        : m_Offset(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * e_size))
+        , m_ElementSize(e_size)
+        , m_Sortable(opt)
+        , m_IsSorted(opt)
+        , m_Compressable(opt)
+        , m_IsCompressed(opt)
+    {
+    }
+
+  ColumnInfo(int offset, uint8_t e_size, bool opt)
         : m_Offset(offset)
         , m_ElementSize(e_size)
         , m_Sortable(opt)

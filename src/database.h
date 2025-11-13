@@ -47,12 +47,7 @@ private:
     // sur les futures tables
     auto InitializeSystemTables(int fd) -> void;
 
-    // Crée en mémoire la représentation de la table pays
-    auto CreateCountryTable(int fd) -> void;
-
-    auto CreateCityTable(int fd) -> void;
-
-    auto CreatePresidentTable(int fd) -> void;
+    auto CreateTable(int fd, const std::string& name, Storing::TableInfo t) -> void;
 
     // Prépare et charge l'index des tables déjà présentes en mémoire
     auto FillIndex() -> void;
@@ -107,6 +102,7 @@ public:
 
     auto Init(DatabaseSetting* s) -> void
     {
+        using namespace Database::Storing;
 
         Settings = *s;
 
@@ -135,12 +131,131 @@ public:
                 // Write System Tables
                 InitializeSystemTables(fd);
 
-                // Create new table and insert some data
-                CreateCountryTable(fd);
+                /*
+                        // -- Country Table --
+                        // Text name
+                        // Int pop
 
-                CreateCityTable(fd);
+                        ColumnInfo country_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
 
-                CreatePresidentTable(fd);
+                        ColumnInfo country_pop = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
+                            DB_INT_SIZE, false);
+
+                        auto country_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+                            { "name", country_name }, { "pop", country_pop }
+                        };
+
+                        auto country = TableInfo(false, 2, 0, country_columns);
+
+                        CreateTable(fd, "country", country);
+
+                        // -- City Table --
+                        // Text name
+                        // Int pop
+                        // Text country
+
+                        ColumnInfo city_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+
+                        ColumnInfo city_pop = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
+                            DB_INT_SIZE, false);
+
+                        ColumnInfo city_country = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE),
+                            DB_STRING_SIZE, false);
+
+                        auto city_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+                            { "name", city_name }, { "pop", city_pop }, { "country", city_country }
+                        };
+
+                        auto city = TableInfo(false, 3, 0, city_columns);
+
+                        CreateTable(fd, "city", city);
+
+                        // -- President Table --
+                        // Text first_name
+                        // Text last_name
+                        // Text country
+                        // Int mandate_beginning
+
+                        ColumnInfo pres_first_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+
+                        ColumnInfo pres_last_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+
+                        ColumnInfo pres_mandate_beg = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
+                            DB_INT_SIZE, false);
+
+                        ColumnInfo pres_country = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+
+                        auto pres_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+                            { "first_name", pres_first_name }, { "last_name", pres_last_name }, { "country", pres_country }, { "mandate_beginning", pres_mandate_beg }
+                        };
+
+                        auto president = TableInfo(false, 4, 0, pres_columns);
+
+                        CreateTable(fd, "president", president);
+        */
+
+                auto page_id = ColumnInfo(DB_INT_SIZE, false);
+
+                auto page_ns = ColumnInfo(DB_INT8_SIZE, false);
+
+                auto page_title = ColumnInfo(DB_STRING_SIZE, false);
+
+                auto page_redirect = ColumnInfo(DB_INT_SIZE, false);
+
+                auto page_revision_id = ColumnInfo(DB_INT_SIZE, false);
+
+                auto page_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+                    { "id", page_id }, { "ns", page_ns }, { "title", page_title }, { "redirect", page_redirect }, { "revision_id", page_revision_id }
+                };
+
+                auto pages = TableInfo(false, 5, 0, page_columns);
+
+                CreateTable(fd, "pages", pages);
+
+                auto revision_id = ColumnInfo(DB_INT_SIZE, false);
+
+                auto revision_parent_id = ColumnInfo(DB_INT_SIZE, false);
+
+                auto revision_timestamp = ColumnInfo(DB_INT64_SIZE, false);
+
+                auto revision_contributor_id = ColumnInfo(DB_INT_SIZE, false);
+
+                auto revision_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+                    { "id", revision_id },
+                    { "parent_id", revision_parent_id },
+                    { "timestamp", revision_timestamp },
+                    { "contributor_id", revision_contributor_id },
+                };
+
+                auto revisions = TableInfo(false, 4, 0, revision_columns);
+
+                CreateTable(fd, "revisions", revisions);
+
+                auto contr_id = ColumnInfo(DB_INT_SIZE, false);
+
+                auto contr_username = ColumnInfo(DB_STRING_SIZE, false);
+
+                auto contr_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+                    { "id", contr_id },
+                    { "username", contr_username },
+                };
+
+                auto contributors = TableInfo(false, 2, 0, contr_columns);
+
+                CreateTable(fd, "contributors", contributors);
+
+                auto ns_key = ColumnInfo(DB_INT_SIZE, false);
+
+                auto ns_name = ColumnInfo(DB_STRING_SIZE, false);
+
+                auto ns_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+                    { "key", ns_key },
+                    { "name", ns_name },
+                };
+
+                auto ns = TableInfo(false, 2, 0, ns_columns);
+
+                CreateTable(fd, "ns", ns);
 
                 // Clean up and close
                 close(fd);
