@@ -179,7 +179,7 @@ std::optional<Errors::Error> Lexer::identifyFirst()
         m_CurrToken++;
         break;
     // Numbers from 0 to 9. FLOATS NOT IMPLEMENTED
-    case 49 ... 57: {
+    case 48 ... 57: {
         std::string num = "";
         do {
             num.push_back(*it);

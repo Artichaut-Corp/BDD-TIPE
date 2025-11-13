@@ -255,7 +255,7 @@ public:
 
                 auto ns = TableInfo(false, 2, 0, ns_columns);
 
-                CreateTable(fd, "ns", ns);
+                CreateTable(fd, "namespaces", ns);
 
                 // Clean up and close
                 close(fd);
