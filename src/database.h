@@ -291,6 +291,9 @@ public:
                     m_Quit = true;
 
                     break;
+                } else if (input == ".insert_data") {
+                    std::cout << "Insertion des data\n";
+                    import_all_csv();
                 }
 
                 Utils::Repl::Print(Eval(input));
@@ -339,8 +342,10 @@ public:
     {
         Cleanup();
     }
-};
 
+    void import_all_csv();
+    void process_csv_streaming(const std::string& path, const std::string& table, const std::vector<std::string>& columns);
+};
 }
 
 #endif // !DATA

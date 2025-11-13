@@ -2,6 +2,7 @@ import os
 import csv
 import mwxml
 import time
+import re
 from datetime import datetime
 
 # -----------------------------
@@ -12,13 +13,15 @@ table_dir = "script/TABLE"
 os.makedirs(table_dir, exist_ok=True)
 
 # -----------------------------
-# CSV setup (sans dbname ni siteinfo)
+# CSV setup
 # -----------------------------
 csv_files = {
     "page.csv": ["id", "ns", "title", "redirect", "revision_id"],
     "revision.csv": ["id", "parentid", "timestamp", "model", "format", "contributor_id"],
     "contributor.csv": ["id", "username"],
-    "namespaces.csv": ["key", "name"]
+    "namespaces.csv": ["key", "name"],
+    "categories_pages.csv": ["id_cat", "page_id"],
+    "categories.csv": ["id", "name"]
 }
 
 files = {}
@@ -32,6 +35,8 @@ for filename, headers in csv_files.items():
     writers[filename] = writer
 
 contributors_seen = set()
+categories_seen = {}  # {category_name: category_id}
+category_counter = 1  # auto-increment pour id de catégorie
 
 # -----------------------------
 # Helper function: convert mwxml.Timestamp to UNIX int
@@ -43,19 +48,22 @@ def timestamp_to_int(ts):
         dt = datetime.strptime(str(ts), "%Y-%m-%dT%H:%M:%SZ")
     return int(time.mktime(dt.timetuple()))
 
-# ----------------------------- 
-# # Count total pages (approximation) 
-# ----------------------------- 
-#print("Counting total pages (this may take a while)...") 
-#with open(dump_path, "rb") as f: 
-# dump_for_count = mwxml.Dump.from_file(f) 
-# total_pages = 0 
-# for _ in dump_for_count.pages: 
-# total_pages +=1 
-# if total_pages %100_000 == 0:
-# print(total_pages) #print(f"Total pages: {total_pages}") 
+# -----------------------------
+# Helper function: extract categories from wikitext
+# -----------------------------
+category_pattern = re.compile(r"\[\[\s*Catégorie\s*:\s*([^\]\|#]+)", re.IGNORECASE)
 
-total_pages = 7502789 #for the french dump of 20251101
+def extract_categories(text):
+    """Retourne une liste de catégories trouvées dans le texte wiki."""
+    if not text:
+        return []
+    return [c.strip() for c in category_pattern.findall(text)]
+
+# -----------------------------
+# Total pages (estimé)
+# -----------------------------
+total_pages = 7502789  # pour le dump frwiktionary-20251101
+
 # -----------------------------
 # Parse the dump
 # -----------------------------
@@ -67,35 +75,31 @@ with open(dump_path, "rb") as f:
     # -------------------------
     si = dump.site_info
     for ns in si.namespaces or []:
-        writers["namespaces.csv"].writerow([
-            ns.id,
-            ns.name
-        ])
+        writers["namespaces.csv"].writerow([ns.id, ns.name])
 
     # -------------------------
-    # Pages, Revisions, Contributors
+    # Pages, Revisions, Contributors, Categories
     # -------------------------
     pages_processed = 0
+
     for page in dump.pages:
-        redirect_title = page.redirect.title if page.redirect else ""
+        redirect_title = page.redirect.title if page.redirect else -1
 
-        latest_revision_id = ""
-        revisions = []
+        latest_revision = None
         for rev in page:
-            revisions.append(rev)
-            latest_revision_id = rev.id
+            latest_revision = rev  # on garde la dernière
 
-        # Écriture page.csv
+        # --- page.csv ---
         writers["page.csv"].writerow([
             page.id,
             page.namespace,
             page.title,
             redirect_title,
-            latest_revision_id
+            latest_revision.id if latest_revision else ""
         ])
 
-        # Écriture revision.csv + contributor.csv
-        for rev in revisions:
+        # --- revision.csv + contributor.csv ---
+        for rev in page:
             user = getattr(rev, "user", None)
             user_id = getattr(user, "id", "") if user else ""
             user_name = getattr(user, "text", "") if user else ""
@@ -113,12 +117,30 @@ with open(dump_path, "rb") as f:
                 writers["contributor.csv"].writerow([user_id, user_name])
                 contributors_seen.add(user_id)
 
-        # -------------------------
-        # Progression
-        # -------------------------
+        # --- categories ---
+        if latest_revision and latest_revision.text:
+            cats = extract_categories(latest_revision.text)
+            if page.title == "Amsterdam":
+                print(latest_revision.text)
+                print(cats)
+            for cat in cats:
+                # Ajouter à categories.csv si nouvelle
+                if cat not in categories_seen:
+                    categories_seen[cat] = category_counter
+                    writers["categories.csv"].writerow([category_counter, cat])
+                    category_counter += 1
+                cat_id = categories_seen[cat]
+
+                # Ajouter à la table de liaison
+                writers["categories_pages.csv"].writerow([category_counter, page.id])
+
+        # --- Progression ---
         pages_processed += 1
-        percent = (pages_processed / total_pages) * 100
-        print(f"\rProgress: {pages_processed}/{total_pages} pages ({percent:.2f}%)", end="")
+        if pages_processed % 1000 == 0:
+            percent = (pages_processed / total_pages) * 100
+            if percent > 5:
+                break
+            print(f"\rProgress: {pages_processed}/{total_pages} pages ({percent:.2f}%)", end="")
 
 print("\n✅ CSV files created successfully in the TABLE directory.")
 
