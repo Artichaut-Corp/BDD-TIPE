@@ -57,4 +57,10 @@ Select MAX(city.pop) from city group by city.country ;
 Select count(city.name),city.country from city group by city.country ;
 
 Select count(city.name),city.country from city group by city.country order by city.country ASC ;
+
+
+Select  AVG(pages.id) from contributors join revisions on revisions.contributor_id = contributors.id Join pages ON pages.revision_id = revisions.id Group by contributors.id;
 ```
+
+
+

@@ -1,4 +1,4 @@
-SelectionDescent = 0
-PronfMode = 0
-InsertProj = 0
-OptimizeBinaryExpression = 0
+SelectionDescent = 1
+PronfMode = 1
+InsertProj = 1
+OptimizeBinaryExpression = 2

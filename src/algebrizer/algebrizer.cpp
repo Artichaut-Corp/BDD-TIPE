@@ -334,7 +334,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             }
         }
     }
-    
+        
     if (where != NULL and descend_select == 1) {
         std::cout << "\n et maintenant en descendant les sélections on a : \n";
         RacineExec.SelectionDescent(Magasin, MainSelect);

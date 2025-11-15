@@ -414,6 +414,7 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
 {
     constexpr int MAX_ROWS_PER_TRANSACTION = 50;
     const size_t ncols = columns.size();
+    int compteur = 0;
 
     std::ifstream in(path);
     if (!in.is_open())
@@ -427,6 +428,7 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
 
     std::string line;
     while (std::getline(in, line)) {
+        compteur++;
         batch.push_back(line.substr(0, line.size() - 1));
 
         if ((int)batch.size() >= MAX_ROWS_PER_TRANSACTION) {
@@ -439,16 +441,18 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
                 query << columns[i];
             }
             query << ") VALUES ";
-            std::cout << query.str() << std::endl;
+            bool peut_ajouter_virgule = false;
+            for (size_t j = 0; j < batch.size(); j++) {
 
-            for (size_t j = 0; j < batch.size(); ++j) {
-                if (j)
-                    query << ",";
                 std::stringstream ss(batch[j]);
                 std::string cell;
                 std::vector<std::string> vals;
                 size_t pos = ss.str().find("\"");
+
                 if (pos == std::string::npos) {
+                    if (j != 0 && peut_ajouter_virgule)
+                        query << ",";
+                    peut_ajouter_virgule = true;
                     while (std::getline(ss, cell, ','))
                         vals.push_back(cell);
 
@@ -469,23 +473,27 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
                             if (numeric)
                                 query << v;
                             else {
-                                v.erase(std::remove(v.begin(), v.end(), '"'), v.end());
                                 query << "\"" << v << "\"";
                             }
                         }
                     }
                     query << ")";
                 }
-                query << " END;";
-                std::cout << query.str() << std::endl;
-                Utils::Repl::Print(DatabaseEngine::Eval(query.str()));
+            }
+            query << " END;";
+            std::cout << query.str() << std::endl;
+            Utils::Repl::Print(DatabaseEngine::Eval(query.str()));
+            batch.clear();
+            if (compteur > 450000) {
                 batch.clear();
+
+                break;
             }
         }
     }
-
     // Handle the final partial batch
     if (!batch.empty()) {
+        // Process this batch
         std::ostringstream query;
         query << "TRANSACTION " << table << " (";
         for (size_t i = 0; i < ncols; ++i) {
@@ -494,52 +502,62 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
             query << columns[i];
         }
         query << ") VALUES ";
+        bool peut_ajouter_virgule = false;
+        for (size_t j = 0; j < batch.size(); j++) {
 
-        for (size_t j = 0; j < batch.size(); ++j) {
-            if (j)
-                query << ",";
             std::stringstream ss(batch[j]);
             std::string cell;
             std::vector<std::string> vals;
-            while (std::getline(ss, cell, ','))
-                vals.push_back(cell);
+            size_t pos = ss.str().find("\"");
 
-            query << "(";
-            for (size_t k = 0; k < vals.size(); ++k) {
-                if (k)
-                    query << ", ";
-                const auto& v = vals[k];
-                if (v.empty() || v == "NULL")
-                    query << "NULL";
-                else {
-                    bool numeric = true;
-                    for (char c : v)
-                        if (!std::isdigit(c) && c != '-' && c != '.') {
-                            numeric = false;
-                            break;
+            if (pos == std::string::npos) {
+                if (j != 0 && peut_ajouter_virgule)
+                    query << ",";
+                peut_ajouter_virgule = true;
+                while (std::getline(ss, cell, ','))
+                    vals.push_back(cell);
+
+                query << "(";
+                for (size_t k = 0; k < vals.size(); ++k) {
+                    if (k)
+                        query << ", ";
+                    auto& v = vals[k];
+                    if (v.empty() || v == "NULL")
+                        query << "0";
+                    else {
+                        bool numeric = true;
+                        for (char c : v)
+                            if (!std::isdigit(c)) {
+                                numeric = false;
+                                break;
+                            }
+                        if (numeric)
+                            query << v;
+                        else {
+                            query << "\"" << v << "\"";
                         }
-                    if (numeric)
-                        query << v;
-                    else
-                        query << "\"" << v << "\"";
+                    }
                 }
+                query << ")";
             }
-            query << ")";
         }
         query << " END;";
+        std::cout << query.str() << std::endl;
 
-        DatabaseEngine::Eval(query.str());
+        Utils::Repl::Print(DatabaseEngine::Eval(query.str()));
+        batch.clear();
     }
 }
 
 void DatabaseEngine::import_all_csv()
 {
-    DatabaseEngine::process_csv_streaming("../script/table/page.csv", "pages", { "id", "ns", "title", "redirect", "revision_id" });
-    DatabaseEngine::process_csv_streaming("../script/table/revision.csv", "revisions", { "id", "parentid", "timestamp", "model", "format", "contributor_id" });
     DatabaseEngine::process_csv_streaming("../script/table/contributor.csv", "contributors", { "id", "username" });
-    DatabaseEngine::process_csv_streaming("../script/table/namespaces.csv", "namespaces", { "key", "name" });
-    // DatabaseEngine::process_csv_streaming("../script/table/categories_pages.csv", "categories_pages", { "id_cat", "page_id" });
-    // DatabaseEngine::process_csv_streaming("../script/table/categories.csv", "categories", { "id", "name" });
+    DatabaseEngine::process_csv_streaming("../script/table/revision.csv", "revisions", { "id", "parent_id", "timestamp", "contributor_id" });
+    DatabaseEngine::process_csv_streaming("../script/table/page.csv", "pages", { "id", "ns", "title", "redirect", "revision_id" });
+
+    // DatabaseEngine::process_csv_streaming("../script/table/namespaces.csv", "namespaces", { "key", "name" });
+    //  DatabaseEngine::process_csv_streaming("../script/table/categories_pages.csv", "categories_pages", { "id_cat", "page_id" });
+    //  DatabaseEngine::process_csv_streaming("../script/table/categories.csv", "categories", { "id", "name" });
 }
 
 auto DatabaseEngine::PrintIndex(std::ostream& out) -> void
