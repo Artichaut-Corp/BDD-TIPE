@@ -1,6 +1,7 @@
 #include "agreg.h"
 #include "../utils/hashmap.h"
 #include "../utils/printing_utils.h"
+#include <gperftools/heap-profiler.h>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -227,9 +228,14 @@ void Final::AppliqueAgregateAndPrint(Table* table)
     }
 
     if (m_Limite.has_value()) {
+
         std::span<int> sub = std::span<int>(*OrdreIndice).subspan(m_Limite->first, m_Limite->second);
+        HeapProfilerDump("Checkpoint");
+        HeapProfilerStop();
         Database::Utils::AfficheAgregSpan(&ColumnNameToValues, &sub, m_ColonneInfo);
     } else {
+        HeapProfilerDump("Checkpoint");
+        HeapProfilerStop();
         Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice, m_ColonneInfo);
     }
 }
@@ -246,7 +252,7 @@ bool Final::CompareDeuxIndices(std::unordered_map<std::string, std::vector<Colum
 {
 
     for (auto e : m_OrderByCol.value()) {
-        auto ColonneCompared= e.first;
+        auto ColonneCompared = e.first;
         auto estCroissant = e.second;
         auto are_equal = ((*((*ColumnNameToValues)[ColonneCompared->GetMainName()]))[ind1] == (*((*ColumnNameToValues)[ColonneCompared->GetMainName()]))[ind2]); // si les deux valeurs sont égale on passe à la condition suivante
         if (!are_equal) {

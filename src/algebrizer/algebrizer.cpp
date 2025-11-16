@@ -326,7 +326,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                     std::cout << "\n et maintenant optimisant la condition : \n";
                     cond->OptimiseBinaryExpression();
                     cond->PrintCondition(std::cout);
-
                 }
             } else {
                 std::cout << "Il y as where mais aucun select après le projecteur principal\n"
@@ -334,7 +333,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             }
         }
     }
-        
+
     if (where != NULL and descend_select == 1) {
         std::cout << "\n et maintenant en descendant les sélections on a : \n";
         RacineExec.SelectionDescent(Magasin, MainSelect);
@@ -350,9 +349,9 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
         AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale);
     } else {
+        HeapProfilerDump("Checkpoint");
+        HeapProfilerStop();
         Utils::AfficheResultat(Table_Finale, &colonnes_de_retour);
     }
-    HeapProfilerDump("Checkpoint");
-    HeapProfilerStop();
 }
 };

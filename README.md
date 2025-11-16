@@ -14,6 +14,9 @@ Structure du projet
     │  └─ utils/
     ├─  test/           Tests
     └─  lib/            Dépendences Extérieures
+    └─ script/          Contient l'ensemble des script utile pour traiter les dumps de wikipedia, la conversion se fait xml->csv par la bibliothèque de wikipedia, et ensuite C++ traite ces csv pour les ajouter dans notre fichier main.db
+    └─ res /            Contient les requête à éxécuter pour créer un petit jeux de donnée pour tester les query et les optimisations
+    └─ pres /           Contient les diaporama et le code de ceux-ci qui ont été présenté aux professeur validant notre projet
 
 
 Features
@@ -27,6 +30,20 @@ Features
 - [ ] Hash
 
 
+Installation
+-----
+il faut télécharger le projet, le compiler en lançant "make all" dans le dossier build
+
+pour le lancer il suffit de d'éxécuter  ./src/TIPE-BDD_run dans le dossier build
+
+une fois lancer, vous aurez accès la REPL, un fichier main.db seras créé, il est propre à notre projet et inutilisable par tout autre SGBD
+
+vous devrez insérez les donnée à partir de la REPL, pour cela veuillez lancer les transaction présente dans le fichier res/sample.md, pour tester le SGBD avec de plus grande donnée, seul wikipedia est utilisable, et seulement la version que les fichiers dans le dossier script extraient à partir du dump fr
+
+Des exemples de requête que l'on traite actuelement sont présenté dans ce même fichier res/sample.md
+
+Si vous voulez sauvegardez l'insertions des valeurs dans le fichier, il faut quitte la REPL en appuyant sur entrée après la fin de vos test
+
 TODO
 ----
 
@@ -37,115 +54,40 @@ TODO
 - [x] BDD -> Créer les plans de requête 
 - [ ] BDD -> Comment organiser les données dans le fichier contenant la BDD (csv / json / vraie solution) 
 - [x] Interface -> Présenter et recevoir les données
-- [ ] Présentation -> Trouver un jeu de données adapté et des opérations dessus optimisables par notre algorithme
 
 
-# Notes 'The design and implementation of modern column based databases'
+Traitement d'une requête SQL depuis la REPL jusqu'au résultat
+----------
 
-Première idée 1970, utilisation commerciale à partir de 2000
+Tout d'abord la requête sql passe par le lexer, il vérifie la syntaxe global de la requête, et transforme les élément clef en token.
 
-## Comparaison en performance avec les classiques row bases databases
-- NSM = N-ary Storage Model (Globalement la norme, tuple stockés les uns à la suite des autres)
-- DSM = Decomposition Storage Model (une des première implémentation de CBD, tous les 1ers élements, puis tous les second, etc) 
+Ensuite le Parser regroupe les token en différent objet : la partie entre le select et le from, les différent join, sur quelle colonne se fait le Group by ...
 
-DSM rend la lecture d'une seule colonne rapide, mais plusieurs colonne ou une table entière c'est bien + lent que NSM
+Ces objets sont transmis à L'Algebrizer,
 
-## Architecture
+celui-ci reprend les différentes parties pour extraire les élement utiles, par exemple il liste les colonne utilisé et qui seront donc à charger, ou encore créer les objet qui appliqueront le group-by.
 
-3 architectures principalement
+Il créer ensuite un premier plan, très naïf en fonction de l'ordre de join qui lui ont été transmis, il créer ensuite les tables, et les charges dans la RAM.
 
-### [C-store](https://web.archive.org/web/20120305151916/http://db.lcs.mit.edu/projects/cstore/#papers)
+En fonction des parametres fourni dans le fichier Parametre.toml, différente heuristique et optimisation du plan vont s'éxécuté, chacune afficheras les modifications appliqué sur le plan.
 
-- Données représentées par un ensemble de fichiers contenant les colonnes
-- Les colonnes sont stockées compressées et ordonnées
-- Système à 2 buffers, 1 optimisé pour la lecture (ROS), un pour l'écriture (WOS).  
-  Régulièrement on bouge les données du ROS vers le WOS.  
-  C'est à ce moment qu'on compresse, ordonne et écrit sous forme de colonne.
-- Les colonnes peuvent apparaître rangées plusieurs fois dans plusieurs ordres
-  On crée des groupes (projections) de colonnes rangées par attribut pour répondre à n'importe quelle requête 
-- Les méthodes de compression peuvent être différentes pour chaque colonnes.
-- architecture "no overwrite" = pas de 'UPDATE' mais 'DELETE' puis 'INSERT'
-- Une requête regroupe donc l'accès à ROS et WOS
-- Un tas de méthode d'optimisation: Jointures, [Late Materialization](https://ceur-ws.org/Vol-3130/paper3.pdf), 'batch processing'
+Le plan est ensuite éxécuté par un parcours en profondeur détaillé dans src/data_process_system/explication.txt
+
+ensuite, si il y as des opération d'agrégation, une partie spécialement concu pour ce cas s'éxécute, elle applique (si il existe) le group by, via une map à plusieurs clef adapté de la bibliothèque RobinHoodMap, ensuite applique les order By et enfin les limit.
+
+Ensuite, l'affichage de la table obtenue à la fin s'éxécute
 
 
 
-### [MonetDB](https://www.monetdb.org/documentation-Aug2024/dev-guide/monetdb-internals/design-overview/)
+Plus d'information
+------
+pour plus de détail, une explication des différent paramètre est fourni dans Explication-Paramètre/md
 
-- Données stockées colonne par colonne
-- Pas de buffer 
-- Requêtes exécutées sous forme d'opérations simples, les unes à la suite des autres, colonne par colonne.  
-  **Préfere exploiter le CPU en compressant/décompressant à tour de bras plutôt que de faire beaucoup d'opérations I/O**  
-  En effet, si les procésseur ont gagné beaucoup de performances ces dernières années, la vitesse de lecture des disques  
-  est restée plutôt similaire. On préfere donc passer le travail au CPU plutôt que de réaliser beaucoup de lectures/écriture
-- [Algèbre BAT](https://www.researchgate.net/figure/MonetDB-a-BAT-Algebra-Machine_fig2_220538804) utilisée pour gérer les étapes de la requête
-- Techniques d'optimisation 'Bulk Processing', [Late Materialization](https://ceur-ws.org/Vol-3130/paper3.pdf)
+Une explication de la gestion mémoire des tables dans le cadre d'une requête sql de type select est décrite dans /src/data_process_system/explication.txt
 
+une liste d'erreur trouvé et d'optimisation prévue est décrite dans ToDo.txt
 
-### Vector-Wise
-- MonetDB est désavantagée par le fait que chaque opération charge une colonne entière en mémoire pour chaque opération.  
-  Ce qui peut être compliqué voire dangereux lorque la taille de la colonne commence à atteindre celle de la RAM
-  Pour régler ce problème, il faut gérer les colonnes par vecteurs de la taille du cache du CPU pour maximiser  
-  l'optimisation.
-
-## Techniques d'optimisation
-
-
-- Pour information, un papier décrivant la méthode classique [Tuple-at-a-time](https://dl.acm.org/doi/pdf/10.1145/152610.152611)
-- Une autre manière est d'exécuter chaque opération sur toute l'entrée
-- La dernière est l'exécution par vecteurs, entre les deux
-
-* ### Calcul Vectoriel
-- Plutôt que de charger un unique tuple, on charge un vecteur d'environ la taille du cache L1 du CPU
-- Par exemple on filtre en triant avec un vecteur de colonne 
-- Beaucoup d'avantages décrit dans le Doc
-[Comparatif et analyse ici](https://ir.cwi.nl/pub/13807/13807B.pdf)
-
-* ### Compression
-- Ranger les données par colonnes permet bien plus souvent de compresser.  
-  Il existe bien des manières de compresser, et elles varient selon le type de données.  
-  Ex: On ne compresse pas de la même manière des numéros de télephone que des noms de famille
-  * RLE
-  * Bit-Vector Encoding
-  * Dictionary
-  * Frame Of Reference 
-
-* ### Agir directement sur des données compressées
-
-Il est possible d'exécuter des fonctions sur des données sans les décompresser (Gain de Cycles CPU).
-Par exemple sommer des nombres. Se traite encore une fois au cas par cas
-
-* ### [Late Materialization](https://ceur-ws.org/Vol-3130/paper3.pdf)
-
-Les informations liées à une personne sont stockées côte-à-côte dans une RBDB ce qui est pratique
-car la plupart des requête accèdent à plusieurs champs d'un coup.  
-A l'inverse c'est moins optimisé quand on travaille par colonne. 
-Une méthode pourrait être de regrouper les données par tuples dès les premières opérations (prédicats / projections)
-mais en pratique on préfére appliquer ces opérations sur les colonnes en regroupant le plus tard possible.  
-Schéma très parlant p50
-
-* ### Jointures 
-
-Les méthode tradionelles peuvent fonctionner mais on peut trouver plus optimal. L'article 
-prend l'exemple du "Jive" join
-
-* ### Opérations UPDATE, DELETE, INSERT
-
-Moins optimisées car il faut effectuer N lectures/écritures avec N le nombre d'attributs de 
-la table
-
-* ### Indexation et "Cracking" 
-
-Même si les opérations dans les BDD Colonnes se résument à une boucle 
-scannant une colonne (ce qui dépasse déjà la perf d'une BDD Lignes) l'implémentation d'index 
-peut tout de même accélerer grandement le processus.  
-Ex: Regrouper les infos par rapport à un pivot pour faciliter la recherche
-
-
-
-
-
-
+nos note de première lecture sur certain papier décrivant les SGBD colonne sont présente dans notes.md
 
 
 

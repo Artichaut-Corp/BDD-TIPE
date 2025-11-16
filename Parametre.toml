@@ -1,4 +1,4 @@
 SelectionDescent = 1
 PronfMode = 1
 InsertProj = 1
-OptimizeBinaryExpression = 2
+OptimizeBinaryExpression = 1

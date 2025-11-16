@@ -15,7 +15,7 @@ os.makedirs(table_dir, exist_ok=True)
 # CSV setup (sans dbname ni siteinfo)
 # -----------------------------
 csv_files = {
-    "page.csv": ["id", "ns", "title", "redirect", "revision_id"],
+    "page.csv": ["id", "ns", "title", "revision_id"],
     "revision.csv": ["id", "parentid", "timestamp", "contributor_id"],
     "contributor.csv": ["id", "username"],
     "namespaces.csv": ["key", "name"]
@@ -69,8 +69,8 @@ with open(dump_path, "rb") as f:
     # -------------------------
     pages_processed = 0
     for page in dump.pages:
-        redirect_title = page.redirect.title if page.redirect else ""
-
+        if page.redirect is not None:
+            continue
         latest_revision_id = ""
         revisions = []
         for rev in page:
@@ -82,7 +82,6 @@ with open(dump_path, "rb") as f:
             page.id,
             page.namespace,
             page.title,
-            redirect_title,
             latest_revision_id
         ])
 
