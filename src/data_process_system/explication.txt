@@ -8,17 +8,17 @@ Pour stocker les valeurs on défini les représentation suivante :
 On défini une Racine comme étant la liste de tout les pointeurs des information stocké en mémoire pour une colonne précise de la BDD, au cours du programme, celle-ci est immuable  
 Par exemple, la Racine ("Personne.age") contient les pointeurs vers tout les ages enregistré dans la table Personne de la BDD
 
-On défini une Table comme étant une Liste de Colonne
-Chaque Colone contient les index valide vers une case d'une racine
-Chaque Colonne possède des cases d'une même racine
+On défini une Table comme étant une Liste de Racine, cette table contient aussi les lignes, ce vecteur d'indice est enfaite les positions dans la racine des élément valide
+On défini une MetaTable comme étant la concaténation de plusieurs table.
+remarque: à tout instant, toute les listes d'indices d'une MetaTable ont le même nombre d'élément et son issue d'un Join
 
 Lors du tout début du traitement d'une requête, on vient générer une Racine par colonne (de la bdd) utilisé
 Par exemple si l'on a besoin des colonnes "Nom" et "Age", alors à l'execution, Le programme créera deux Racines une pour "Nom" et une pour "Age"
 Ensuite, si les deux colonne sont utilisé au même moment, par exemple car on a une selection qui vérifie que la premiere lettre du Nom est "a" et l'age est supérieur à 17
-Alors le programme vas créer une Table qui contiendras deux colonne, une pour l'age et une pour le nom.
-Pendant la selection, pour information stocké dans une Colonne (qui est en fait la position dans la Racine du pointeur de l'information), on vérifie si l'information est valide, si elle ne l'est pas, alors on enlève la case de la Colonne,
+Alors le programme vas créer une Table qui contiendras deux Racines, une pour l'age et une pour le nom.
+Et ensuite la MetaTable qui contiendras au début que la Table
 
-Si jamais l'age est utilisé à deux endroit différent, alors il suffit uniquement de creer deux Colonnes qui pointerons vers la même Racine 
+Si jamais l'age est utilisé à deux endroit différent, alors il suffit uniquement de creer deux Table qui pointerons vers la même Racine 
 
 Le but de cette représentation est qu'elle permet d'éviter les problèmes suivants : 
  - stocker dans la RAM toute les information d'une BDD (seuls des pointeurs sont utilisé)

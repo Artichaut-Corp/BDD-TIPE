@@ -53,10 +53,7 @@ public:
         return m_Map[column_name->GetMainName()]->get_value_dans_ptr(m_Indices[pos_ind]);
     }
 
-    int getValDansInd(std::shared_ptr<ColonneNamesSet> column_name, int pos_ind)
-    {
-        return m_Indices[pos_ind];
-    }
+    
 
     bool colonne_exist(std::shared_ptr<ColonneNamesSet> clef_testé)
     {
@@ -67,17 +64,7 @@ public:
         return m_Map[colname->GetMainName()];
     };
 
-    std::vector<std::shared_ptr<Racine>>* get_data_ptr()
-    {
-        auto res = new std::vector<std::shared_ptr<Racine>>();
-
-        res->reserve(m_Map.size());
-        for (auto e : m_Map) {
-            res->emplace_back(e.second);
-        }
-
-        return res;
-    }
+    
     std::vector<std::shared_ptr<Racine>>* GetColumns() { return &m_Colonnes; }
 
     std::shared_ptr<TableNamesSet> get_name() { return m_Name; }

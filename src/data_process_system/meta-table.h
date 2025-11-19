@@ -56,10 +56,7 @@ public:
         return m_MapColNameToTable.contains(clef_testé->GetMainName());
     }
 
-    int getvaldansind(std::shared_ptr<ColonneNamesSet> column_name, int pos_ind)
-    {
-        return m_MapColNameToTable[column_name->GetMainName()]->getValDansInd(column_name, pos_ind);
-    }
+    
 
     std::shared_ptr<Table> GetTableByColName(std::shared_ptr<ColonneNamesSet> colname) { return m_MapColNameToTable[colname->GetMainName()]; }
 
