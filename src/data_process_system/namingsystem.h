@@ -4,6 +4,7 @@
 #include <cmath>
 #include <format>
 #include <iostream>
+#include <memory>
 #include <ostream>
 #include <string>
 #include <unordered_set>
@@ -26,7 +27,7 @@ public:
         m_ListOfName.emplace(m_MainName);
     }
 
-    bool TableEqual(const TableNamesSet* other) const noexcept
+    bool TableEqual(const std::shared_ptr<TableNamesSet> other) const noexcept
     {
         for (const auto& e : m_ListOfName) {
             for (const auto& f : other->m_ListOfName) {
@@ -59,20 +60,20 @@ public:
 
 inline bool operator==(const TableNamesSet& first, const TableNamesSet& second)
 {
-    return first.TableEqual(&second);
+    return first.TableEqual(std::make_shared<TableNamesSet>(second));
 }
 
-class ColonneNamesSet {
+class  ColonneNamesSet {
 private:
     std::unordered_set<std::string> m_ListOfFullName; // tous les noms possibles (Union entre le main name, alias et pour chaque noms de la table, table.(main name ou alias de la colonne))
     std::string m_MainName; // nom principal unique
     std::unordered_set<std::string> Aliases; // alias possibles(sans le main name)
-    TableNamesSet* Table; // pointeur nullable, ownership externe
+    std::shared_ptr<TableNamesSet> Table; // pointeur nullable, ownership externe
     std::string MainAlias;
 
 public:
     // Constructeur avec table
-    ColonneNamesSet(std::string mainName_, std::unordered_set<std::string> aliases, TableNamesSet* table)
+    ColonneNamesSet(std::string mainName_, std::unordered_set<std::string> aliases, std::shared_ptr<TableNamesSet> table)
         : m_ListOfFullName()
         , m_MainName(std::move(mainName_))
         , Aliases(std::move(aliases))
@@ -120,17 +121,17 @@ public:
 
     const std::unordered_set<std::string>& GetAllFullNames() const { return m_ListOfFullName; }
 
-    TableNamesSet* GetTableSet() const { return Table; }
+    std::shared_ptr<TableNamesSet> GetTableSet() const { return Table; }
     bool HaveTableSet() const { return Table != nullptr; }
 
     void AddColumn(const std::string& column) { m_ListOfFullName.insert(column); }
 
-    void FusionColumn(const ColonneNamesSet* other)
+    void FusionColumn(const std::shared_ptr<ColonneNamesSet> other)
     {
         m_ListOfFullName.insert(other->m_ListOfFullName.begin(), other->m_ListOfFullName.end());
     }
 
-    void SetTableSet(TableNamesSet* newTable)
+    void SetTableSet(std::shared_ptr<TableNamesSet> newTable)
     {
         Table = newTable;
         if (Table) {

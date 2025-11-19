@@ -6,6 +6,7 @@
 #include <cctype>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <numeric>
 #include <ostream>
 #include <sstream>
@@ -294,7 +295,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
     std::string output = "";
 
-    Parsing::Parser* parser = new Parsing::Parser(input);
+    std::shared_ptr<Parsing::Parser> parser = std::make_shared<Parsing::Parser>(input);
 
     std::variant<Parsing::Statement, Errors::Error> n = parser->Parse();
 
@@ -312,13 +313,15 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
         auto joins = select->getJoins();
 
-        std::vector<int>* param = new std::vector<int>(4);
+        std::shared_ptr<std::vector<int>> param = std::make_shared<std::vector<int>>(5);
         try {
             auto tbl = toml::parse_file("../Parametre.toml");
             (*param)[0] = tbl["SelectionDescent"].value_or(0); // if SelectionDescent set to 1, We use the Selection Descent optimisation
             (*param)[1] = tbl["PronfMode"].value_or(0); // see Node::Pronf function in tree.cpp in order to understand what each number do, actually defined are 0,1,3
             (*param)[2] = tbl["InsertProj"].value_or(0); // if InserProj set to 1
             (*param)[3] = tbl["OptimizeBinaryExpression"].value_or(0); // if OptimizeBinaryExpression set to 1
+            (*param)[4  ] = tbl["OrderingQueryJoin"].value_or(0); // if OptimizeBinaryExpression set to 1
+
 
         } catch (const toml::parse_error& err) {
             std::cerr << "Error parsing config file: " << err.description() << std::endl;
@@ -405,7 +408,6 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
         throw Errors::Error(Errors::ErrorType::RuntimeError, "Wait this is illegal", 0, 0, Errors::ERROR_WRONG_MEMORY_ACCESS);
     }
 
-    delete parser;
 
     return output;
 }

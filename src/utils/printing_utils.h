@@ -1,6 +1,6 @@
 
+#include "../data_process_system/meta-table.h"
 #include "../data_process_system/namingsystem.h"
-#include "../data_process_system/table.h"
 #include "../operation/agreg.h"
 #include "hashmap.h"
 #include <iostream>
@@ -35,20 +35,13 @@ inline void print_cell(const std::string& s, int width)
 }
 
 // Fonction d’affichage du résultat
-inline void AfficheResultat(QueryPlanning::Table* table, std::vector<QueryPlanning::ReturnType*>* OrdreRetour)
+inline void AfficheResultat(std::shared_ptr<QueryPlanning::MetaTable> table, std::vector<QueryPlanning::ReturnType*>* OrdreRetour)
 {
     if (!table) {
         std::cout << "(table vide)" << std::endl;
         return;
     }
 
-    const auto colonnes_ptr = table->get_data_ptr();
-    if (!colonnes_ptr || colonnes_ptr->empty()) {
-        std::cout << "(table sans colonnes)" << std::endl;
-        return;
-    }
-
-    const auto& mapColonnes = table->GetMap();
     const size_t nb_cols = OrdreRetour->size();
     if (nb_cols == 0) {
         std::cout << "(aucune colonne à afficher)" << std::endl;
@@ -56,31 +49,20 @@ inline void AfficheResultat(QueryPlanning::Table* table, std::vector<QueryPlanni
     }
 
     // --- Prépare les colonnes dans l'ordre de OrdreRetour ---
-    std::vector<const QueryPlanning::ColonneNamesSet*> noms;
+    std::vector< std::shared_ptr<QueryPlanning::ColonneNamesSet>> noms;
     noms.reserve(nb_cols);
-    std::vector<std::shared_ptr<Database::QueryPlanning::Colonne>> colonnes_a_afficher;
+    std::vector<std::shared_ptr<Database::QueryPlanning::Racine>> colonnes_a_afficher;
     colonnes_a_afficher.reserve(nb_cols);
 
     for (const auto* ret : *OrdreRetour) {
-        const QueryPlanning::ColonneNamesSet* colName = ret->GetColonne();
+        std::shared_ptr<QueryPlanning::ColonneNamesSet> colName = ret->GetColonne();
         noms.push_back(colName); // le nom affiché vient de OrdreRetour
-
-        // Recherche d'une colonne équivalente dans la table (même ColonneNamesSet)
-        std::shared_ptr<Database::QueryPlanning::Colonne> col_ptr = nullptr;
-        for (const auto& [nom_col, col] : mapColonnes) {
-            if (nom_col == colName->GetMainName()) { // comparaison sémantique via ColonneNamesSet
-                col_ptr = col;
-                break;
-            }
-        }
-        colonnes_a_afficher.push_back(col_ptr);
+        colonnes_a_afficher.push_back(table->GetTableByColName(colName)->getRacinePtr(colName));
     }
 
     // --- Détermine le nombre de lignes à afficher ---
-    int nb_lignes = 0;
-    for (const auto col : colonnes_a_afficher)
-        if (col)
-            nb_lignes = std::max(nb_lignes, static_cast<int>(col->size()));
+    int nb_lignes = table->Columnsize();
+
 
     // --- Calcule la largeur d'affichage pour chaque colonne ---
     std::vector<int> largeurs(nb_cols);
@@ -89,7 +71,7 @@ inline void AfficheResultat(QueryPlanning::Table* table, std::vector<QueryPlanni
         const auto col = colonnes_a_afficher[i];
 
         if (col) {
-            for (int j = 0;j<(*col).size();j++) {
+            for (int j = 0; j < nb_lignes; j++) {
                 std::string val;
                 std::visit([&val](auto&& elem) {
                     using T = std::decay_t<decltype(elem)>;
@@ -97,7 +79,8 @@ inline void AfficheResultat(QueryPlanning::Table* table, std::vector<QueryPlanni
                         val = Convert::DbStringToString(elem);
                     else
                         val = std::to_string(elem);
-                }, (*col).getValue(j));
+                },
+                    table->get_value(col->get_name(),j));
                 max_width = std::max<int>(max_width, display_width(val));
             }
         } else {
@@ -130,15 +113,16 @@ inline void AfficheResultat(QueryPlanning::Table* table, std::vector<QueryPlanni
             const auto col = colonnes_a_afficher[i];
             std::string val;
 
-            if (col && j < static_cast<int>(col->size())) {
-                const ColumnData& cd = col->getValue(j);
+            if (col) {
+                const ColumnData& cd = table->get_value(col->get_name(),j);
                 std::visit([&val](auto&& elem) {
                     using T = std::decay_t<decltype(elem)>;
                     if constexpr (std::is_same_v<T, DbString>)
                         val = Convert::DbStringToString(elem);
                     else
                         val = std::to_string(elem);
-                }, cd);
+                },
+                    cd);
             } else {
                 val = "NULL";
             }
@@ -152,9 +136,6 @@ inline void AfficheResultat(QueryPlanning::Table* table, std::vector<QueryPlanni
 
     print_sep();
 }
-
-
-
 
 // --- Affichage pour map clé → set de valeurs (après agrégation) ---
 inline void AfficheAgreg(
@@ -173,7 +154,7 @@ inline void AfficheAgreg(
     }
 
     // --- Construire la liste des colonnes et des noms à afficher ---
-    std::vector<QueryPlanning::ColonneNamesSet*> ColumnNameList;
+    std::vector<std::shared_ptr<QueryPlanning::ColonneNamesSet>> ColumnNameList;
     std::vector<std::string> DisplayNames;
     ColumnNameList.reserve(OpArray->size());
     DisplayNames.reserve(OpArray->size());
@@ -220,7 +201,7 @@ inline void AfficheAgreg(
     // --- Calcul des largeurs de colonnes ---
     std::vector<int> colWidths(ColumnNameList.size());
     for (size_t i = 0; i < ColumnNameList.size(); ++i) {
-        const QueryPlanning::ColonneNamesSet* colName = ColumnNameList[i];
+        const std::shared_ptr<QueryPlanning::ColonneNamesSet> colName = ColumnNameList[i];
         colWidths[i] = (int)display_width(DisplayNames[i]);
 
         auto it = ColumnNameToValues->find(colName->GetMainName());
@@ -270,7 +251,7 @@ inline void AfficheAgreg(
     // --- Affiche les lignes selon OrdreIndice ---
     for (int row : ordre) {
         for (size_t i = 0; i < ColumnNameList.size(); ++i) {
-            const QueryPlanning::ColonneNamesSet* colName = ColumnNameList[i];
+            const std::shared_ptr<QueryPlanning::ColonneNamesSet> colName = ColumnNameList[i];
             std::string val;
             auto it = ColumnNameToValues->find(colName->GetMainName());
             if (it != ColumnNameToValues->end() && it->second && row < (int)it->second->size()) {
@@ -308,13 +289,13 @@ inline void AfficheAgregSpan(
     }
 
     // --- Construire la liste des colonnes et des noms à afficher ---
-    std::vector<QueryPlanning::ColonneNamesSet*> ColumnNameList;
+    std::vector<std::shared_ptr<QueryPlanning::ColonneNamesSet>> ColumnNameList;
     std::vector<std::string> DisplayNames;
     ColumnNameList.reserve(OpArray->size());
     DisplayNames.reserve(OpArray->size());
 
     for (auto& ret : *OpArray) {
-        QueryPlanning::ColonneNamesSet* colName = ret->GetColonne();
+        std::shared_ptr<QueryPlanning::ColonneNamesSet> colName = ret->GetColonne();
         ColumnNameList.push_back(colName);
 
         using AF = Parsing::AggrFuncType;
@@ -356,7 +337,7 @@ inline void AfficheAgregSpan(
     // --- Calcul des largeurs de colonnes ---
     std::vector<int> colWidths(ColumnNameList.size());
     for (size_t i = 0; i < ColumnNameList.size(); ++i) {
-        const QueryPlanning::ColonneNamesSet* colName = ColumnNameList[i];
+        const std::shared_ptr<QueryPlanning::ColonneNamesSet> colName = ColumnNameList[i];
         colWidths[i] = (int)display_width(DisplayNames[i]);
 
         auto it = ColumnNameToValues->find(colName->GetMainName());
@@ -407,7 +388,7 @@ inline void AfficheAgregSpan(
     // --- Affiche les lignes selon OrdreIndice ---
     for (int row : ordre) {
         for (size_t i = 0; i < ColumnNameList.size(); ++i) {
-            const QueryPlanning::ColonneNamesSet* colName = ColumnNameList[i];
+            const std::shared_ptr<QueryPlanning::ColonneNamesSet> colName = ColumnNameList[i];
             std::string val;
             auto it = ColumnNameToValues->find(colName->GetMainName());
             if (it != ColumnNameToValues->end() && it->second && row < (int)it->second->size()) {

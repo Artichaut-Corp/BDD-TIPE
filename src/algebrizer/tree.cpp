@@ -1,6 +1,6 @@
 #include "tree.h"
+#include "../data_process_system/meta-table.h"
 #include "../data_process_system/namingsystem.h"
-#include "../data_process_system/table.h"
 #include "../operation/join.h"
 #include "../operation/proj.h"
 #include "../operation/select.h"
@@ -13,12 +13,12 @@
 namespace Database::QueryPlanning {
 using NodeType = std::variant<Join*, Proj*, Select*>; // le type root est censé être la racine de la query et ne jamais parti de là
 
-Table* Node::Pronf(Ikea* Tables, int type_of_join) // parcours en profondeur pour calculer le résultat de l'arbre d'éxécution
+std::shared_ptr<MetaTable> Node::Pronf(Ikea* Tables, int type_of_join) // parcours en profondeur pour calculer le résultat de l'arbre d'éxécution
 {
-    Table* result = nullptr;
+    std::shared_ptr<MetaTable> result = nullptr;
 
-    Table* tFg = nullptr;
-    Table* tFd = nullptr;
+    std::shared_ptr<MetaTable> tFg = nullptr;
+    std::shared_ptr<MetaTable> tFd = nullptr;
 
     if (m_Fg) {
         tFg = m_Fg->Pronf(Tables, type_of_join);
@@ -131,11 +131,11 @@ void Node::printBT(std::ostream& out)
     printBT("", this, false, out);
 }
 
-std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Select* MainSelect)
+std::unordered_set<std::shared_ptr<ColonneNamesSet>>* Node::SelectionDescent(Ikea* Tables, Select* MainSelect)
 {
     if (!std::holds_alternative<std::monostate>(MainSelect->GetCond())) { // si c'est vrai la condition a déjà été descendu et toute descente est inutile
-        std::unordered_set<ColonneNamesSet*>* SFg = nullptr;
-        std::unordered_set<ColonneNamesSet*>* SFd = nullptr;
+        std::unordered_set<std::shared_ptr<ColonneNamesSet>>* SFg = nullptr;
+        std::unordered_set<std::shared_ptr<ColonneNamesSet>>* SFd = nullptr;
         if (m_Fg) {
             SFg = m_Fg->SelectionDescent(Tables, MainSelect); // appelle récursif, voire la suite du code
 
@@ -143,7 +143,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
 
                 auto jointure = std::get<Join*>(m_Type);
 
-                std::unordered_set<ColonneNamesSet*>* ColumnInCond; // identification des colonnes encore existante dans la condition
+                std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnInCond; // identification des colonnes encore existante dans la condition
                 auto MainCond = MainSelect->GetCond();
                 if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                     ColumnInCond = std::get<Parsing::Clause*>(MainCond)->Column();
@@ -154,12 +154,12 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                 if (Utils::is_subset(ColumnInCond, SFg)) { // on peut tout mettre en bas à gauche
                     MainSelect->NullifyCond();
                     auto temp = m_Fg;
-                    m_Fg = new Node(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), MainCond, jointure->GetLTable()));
+                    m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*ColumnInCond), MainCond, jointure->GetLTable()));
                     m_Fg->AddChild(true, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
                     return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                 } else { // on découpe MainCond
                     Parsing::BinaryExpression::Condition RecupGauche;
-                    std::unordered_set<ColonneNamesSet*>* ColumnUsedInCondGauche;
+                    std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnUsedInCondGauche;
                     if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                         RecupGauche = std::monostate {}; // on ne peut pas couper une clause
                         ColumnUsedInCondGauche = {};
@@ -176,7 +176,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
 
                     if (!std::holds_alternative<std::monostate>(RecupGauche)) { // ce qu'on as extrait n'est pas vide
                         auto temp = m_Fg;
-                        m_Fg = new Node(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
+                        m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
                         m_Fg->AddChild(true, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
                     }
                 }
@@ -187,7 +187,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
             if (std::holds_alternative<Join*>(m_Type)) { // si on est sur un noeud join
                 auto jointure = std::get<Join*>(m_Type);
 
-                std::unordered_set<ColonneNamesSet*>* ColumnInCond; // identification des colonnes encore existante dans la condition
+                std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnInCond; // identification des colonnes encore existante dans la condition
                 auto MainCond = MainSelect->GetCond();
                 if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                     ColumnInCond = std::get<Parsing::Clause*>(MainCond)->Column();
@@ -198,12 +198,12 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                 if (Utils::is_subset(ColumnInCond, SFd)) { // on peut tout mettre en bas à droite
                     MainSelect->NullifyCond();
                     auto temp = m_Fd;
-                    m_Fd = new Node(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), MainCond, jointure->GetRTable()));
+                    m_Fd = new Node(new Select(std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*ColumnInCond), MainCond, jointure->GetRTable()));
                     m_Fd->AddChild(false, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
                     return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                 } else { // on découpe MainCond
                     Parsing::BinaryExpression::Condition RecupDroit;
-                    std::unordered_set<ColonneNamesSet*>* ColumnUsedInCondDroit;
+                    std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnUsedInCondDroit;
                     if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                         RecupDroit = std::monostate {}; // on ne peut pas couper une clause
                         ColumnUsedInCondDroit = {};
@@ -220,7 +220,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
 
                     if (!std::holds_alternative<std::monostate>(RecupDroit)) { // ce qu'on as extrait n'est pas vide
                         auto temp = m_Fg;
-                        m_Fg = new Node(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
+                        m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
                         m_Fg->AddChild(true, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
                     }
                 }
@@ -231,10 +231,10 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
             if (std::holds_alternative<Join*>(m_Type)) { // si on est sur un noeud join
                 auto jointure = std::get<Join*>(m_Type);
                 if (!m_Fg) { // si ce join n'as rien à gauche, on essaie de mettre un select en dessous à gauche du join
-                    SFg = new std::unordered_set<ColonneNamesSet*>;
+                    SFg = new std::unordered_set<std::shared_ptr<ColonneNamesSet>>;
                     auto ColonneDispoGauche = Tables->GetTableByName(jointure->GetLTable())->GetColumnNames();
                     SFg->insert(ColonneDispoGauche->begin(), ColonneDispoGauche->end());
-                    std::unordered_set<ColonneNamesSet*>* ColumnInCond; // on récupère les colonnes présente dans la conditions
+                    std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnInCond; // on récupère les colonnes présente dans la conditions
                     auto MainCond = MainSelect->GetCond();
                     if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                         ColumnInCond = std::get<Parsing::Clause*>(MainCond)->Column();
@@ -243,11 +243,11 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                     }
                     if (Utils::is_subset(ColumnInCond, SFg)) { // on peut tout mettre en bas à gauche
                         MainSelect->NullifyCond();
-                        m_Fg = new Node(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), MainCond, jointure->GetLTable()));
+                        m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*ColumnInCond), MainCond, jointure->GetLTable()));
                         return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                     } else { // on découpe MainCond
                         Parsing::BinaryExpression::Condition RecupGauche;
-                        std::unordered_set<ColonneNamesSet*>* ColumnUsedInCondGauche;
+                        std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnUsedInCondGauche;
                         if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                             RecupGauche = std::monostate {}; // on ne peut pas couper une clause
                             ColumnUsedInCondGauche = {};
@@ -263,18 +263,18 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                         }
 
                         if (!std::holds_alternative<std::monostate>(RecupGauche)) { // ce qu'on as extrait n'est pas vide
-                            m_Fg = new Node(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
+                            m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
                         }
                     }
                 }
                 // on fait la même chose à droite
                 if (!m_Fd && !std::holds_alternative<std::monostate>(MainSelect->GetCond())) { // si ce join n'as rien à droite et que la condtion n'est plus vide, on essaie de mettre un select en dessous à droite du join
-                    SFd = new std::unordered_set<ColonneNamesSet*>;
+                    SFd = new std::unordered_set<std::shared_ptr<ColonneNamesSet>>;
 
                     auto ColonneDispoDroite = Tables->GetTableByName(jointure->GetRTable())->GetColumnNames();
                     std::copy(ColonneDispoDroite->begin(), ColonneDispoDroite->end(), std::inserter(*SFd, SFd->end())); // on récupere les colonnes dispo à droite
 
-                    std::unordered_set<ColonneNamesSet*>* ColumnInCond; // on récupère les colonnes présente dans la conditions
+                    std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnInCond; // on récupère les colonnes présente dans la conditions
                     auto MainCond = MainSelect->GetCond();
                     if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                         ColumnInCond = std::get<Parsing::Clause*>(MainCond)->Column();
@@ -284,11 +284,11 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
 
                     if (Utils::is_subset(ColumnInCond, SFd)) { // on peut tout mettre en bas à droite
                         MainSelect->NullifyCond();
-                        m_Fd = new Node(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), MainCond, jointure->GetRTable()));
+                        m_Fd = new Node(new Select(std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*ColumnInCond), MainCond, jointure->GetRTable()));
                         return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                     } else { // on découpe MainCond
                         Parsing::BinaryExpression::Condition RecupDroit;
-                        std::unordered_set<ColonneNamesSet*>* ColumnUsedInCondDroit;
+                        std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnUsedInCondDroit;
                         if (std::holds_alternative<Parsing::Clause*>(MainCond)) {
                             RecupDroit = std::monostate {}; // on ne peut pas couper une clause
                             ColumnUsedInCondDroit = {};
@@ -304,7 +304,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                         }
 
                         if (!std::holds_alternative<std::monostate>(RecupDroit)) { // ce qu'on as extrait n'est pas vide
-                            m_Fg = new Node(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
+                            m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
                         }
                     }
                 }
@@ -333,14 +333,14 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
     }
 }
 
-void Node::InsertProj(std::unordered_set<ColonneNamesSet*>* ColumnToKeep)
+void Node::InsertProj(std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnToKeep)
 {
     if (std::holds_alternative<Join*>(m_Type)) {
         auto op = std::get<Join*>(m_Type);
         ColumnToKeep->insert(op->GetLCol());
         ColumnToKeep->insert(op->GetRCol());
-        std::unordered_set<ColonneNamesSet*> ColumnD = *ColumnToKeep;
-        std::unordered_set<ColonneNamesSet*> ColumnG = *ColumnToKeep;
+        std::unordered_set<std::shared_ptr<ColonneNamesSet>> ColumnD = *ColumnToKeep;
+        std::unordered_set<std::shared_ptr<ColonneNamesSet>> ColumnG = *ColumnToKeep;
 
         if (m_Fg) { // if the left side have something (i.e, is not an "entry point")
             m_Fg->InsertProj(&ColumnG);
@@ -366,7 +366,7 @@ void Node::InsertProj(std::unordered_set<ColonneNamesSet*>* ColumnToKeep)
         auto op = std::get<Select*>(m_Type);
         if (!std::holds_alternative<std::monostate>(op->GetCond())) {
             ColumnToKeep->insert(op->Getm_Cols()->begin(), op->Getm_Cols()->end());
-            std::unordered_set<ColonneNamesSet*> ColumnG = *ColumnToKeep;
+            std::unordered_set<std::shared_ptr<ColonneNamesSet>> ColumnG = *ColumnToKeep;
             if (m_Fg) { // if the left side have something (i.e, is not an "entry point")
                 m_Fg->InsertProj(&ColumnG);
                 Node* Proj_G = new Node(new Proj(ColumnToKeep, op->GetTableName()));
@@ -374,9 +374,8 @@ void Node::InsertProj(std::unordered_set<ColonneNamesSet*>* ColumnToKeep)
                 m_Fg = Proj_G;
                 m_Fg->AddChild(true, TempG);
             }
-        }else {
+        } else {
             m_Fg->InsertProj(ColumnToKeep);
-
         }
     } else {
         throw std::runtime_error("Unknown node type");

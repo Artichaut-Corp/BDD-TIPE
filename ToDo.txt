@@ -13,7 +13,7 @@ idée d'améliorations:
     - le cracking de la mémoire en partie de taille plus petite trié
     - Donner le choix de rendre paresseuse les évaluation dans EstimeSelectivité
     - Mémoiriser l'ordre des join et le calculer et pas prendre celui donner par le user
-
+    - créer un system de JoinIndex
 
 
 

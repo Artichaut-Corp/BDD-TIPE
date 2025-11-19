@@ -112,21 +112,39 @@ public:
     }
 
     static ColumnData intToColumnData(int value)
-    {   
+    {
         return static_cast<DbInt64>(value);
     }
 };
-inline std::ostream& operator<<(std::ostream& out, const ColumnData& cd)
+
+inline std::ostream& operator<<(std::ostream& out, const Database::ColumnData& cd)
 {
     std::visit([&](auto&& elem) {
         using T = std::decay_t<decltype(elem)>;
-        if constexpr (std::is_same_v<T, DbString>) {
-            out<<Convert::DbStringToString(elem);
+
+        if constexpr (std::is_same_v<T, Database::DbString>) {
+            // your custom string type
+            out << Database::Convert::DbStringToString(elem);
+
+        } else if constexpr (std::is_array_v<T> || std::is_same_v<T, std::array<unsigned char, 255>>) {
+            // array of bytes → print as hex or characters
+            for (unsigned char c : elem) {
+                if (c == 0)
+                    break; // optional: stop on null terminator
+                out << c;
+            }
+
+        } else if constexpr (std::is_arithmetic_v<T>) {
+            // unsigned char → print numeric value
+            out << +elem; // unary + promotes char to int
+
         } else {
-            out<< std::to_string(elem);
+            // fallback for anything unexpected
+            out << elem;
         }
     },
         cd);
+
     return out;
 }
 }

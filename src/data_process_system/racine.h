@@ -1,5 +1,6 @@
 #include "../algebrizer_types.h"
 #include "../database.h"
+#include "namingsystem.h"
 
 #include <memory>
 #include <variant>
@@ -13,10 +14,10 @@ namespace Database::QueryPlanning {
 // Racine : contient des pointeurs vers les données brutes (immutable)
 class Racine {
 private:
-    ColonneNamesSet* m_NomColonne;
+    std::shared_ptr<ColonneNamesSet> m_NomColonne;
     std::variant<std::shared_ptr<std::vector<DbString>>, std::shared_ptr<std::vector<DbInt>>, std::shared_ptr<std::vector<DbInt16>>, std::shared_ptr<std::vector<DbInt8>>> m_data; // données immuables
 public:
-    Racine(ColonneNamesSet* NomColonne_, int fd, Storing::DBTableIndex* IndexGet)
+    Racine(std::shared_ptr<ColonneNamesSet> NomColonne_, int fd, Storing::DBTableIndex* IndexGet)
         : m_NomColonne(NomColonne_)
     {
         std::variant<Column, Errors::Error> ValeurRecuper = Storing::Store::GetDBColumn(fd, IndexGet, NomColonne_->GetTableSet()->GetNameInMemory(), NomColonne_->GetMainName().substr(NomColonne_->GetMainName().find(".") + 1));
@@ -50,7 +51,7 @@ public:
         m_data = other.m_data;
     }
 
-    ColumnData getValue(int i) const
+    ColumnData get_value_dans_ptr(int i) const
     {
         if (std::holds_alternative<std::shared_ptr<std::vector<DbString>>>(m_data)) {
             auto temp = std::get<std::shared_ptr<std::vector<DbString>>>(m_data);
@@ -86,6 +87,13 @@ public:
             return vecPtr ? vecPtr->size() : 0;
         },
             m_data);
+    }
+    std::shared_ptr<ColonneNamesSet> get_name(){
+        return m_NomColonne;
+    }
+
+    void addname(std::shared_ptr<ColonneNamesSet> colname){
+        m_NomColonne->FusionColumn(colname);
     }
 };
 

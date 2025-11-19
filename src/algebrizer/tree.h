@@ -1,5 +1,5 @@
+#include "../data_process_system/meta-table.h"
 #include "../data_process_system/namingsystem.h"
-#include "../data_process_system/table.h"
 #include "../operation/join.h"
 #include "../operation/proj.h"
 #include "../operation/select.h"
@@ -7,6 +7,7 @@
 #include "ikea.h"
 #include <unordered_set>
 #include <variant>
+
 
 #ifndef TREE_H
 
@@ -35,13 +36,13 @@ public:
             m_Fd = child;
     }
 
-    Table* Pronf(Ikea* Tables, int type_of_join);
+    std::shared_ptr<MetaTable> Pronf(Ikea* Tables, int type_of_join);
 
     void printBT(const std::string& prefix, const Node* node, bool isLeft, std::ostream& out);
 
     void printBT(std::ostream& out);
 
-    TableNamesSet* GetTableUsedByCurrL()
+    std::shared_ptr<TableNamesSet> GetTableUsedByCurrL()
     {
         if (std::holds_alternative<Join*>(m_Type)) {
             auto op = std::get<Join*>(m_Type);
@@ -56,7 +57,7 @@ public:
             throw std::runtime_error("Unknown node type");
         }
     }
-    TableNamesSet* GetTableUsedByCurrR()
+    std::shared_ptr<TableNamesSet> GetTableUsedByCurrR()
     {
         if (std::holds_alternative<Join*>(m_Type)) {
             auto op = std::get<Join*>(m_Type);
@@ -71,13 +72,13 @@ public:
             throw std::runtime_error("Unknown node type");
         }
     }
-    std::unordered_set<ColonneNamesSet*>* SelectionDescent(Ikea* Tables, Select* MainSelect);
+    std::unordered_set<std::shared_ptr<ColonneNamesSet>>* SelectionDescent(Ikea* Tables, Select* MainSelect);
 
-    void InsertProj(std::unordered_set<ColonneNamesSet*>* ColumnToKeep);
+    void InsertProj(std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnToKeep);
 
-    Node* GetLeftPtr(){return m_Fg;}
+    Node* GetLeftPtr() { return m_Fg; }
 
-    NodeType GetAction(){return m_Type;}
+    NodeType GetAction() { return m_Type; }
 };
 }
 #endif // ! TREE_H

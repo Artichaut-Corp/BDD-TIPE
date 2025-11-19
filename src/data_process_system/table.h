@@ -1,12 +1,12 @@
 #include <cmath>
 #include <memory>
+#include <numeric>
 #include <unordered_map>
 #include <vector>
 
 #include "../algebrizer_types.h"
-#include "colonne.h"
 #include "namingsystem.h"
-
+#include "racine.h"
 #ifndef TABLE_OP
 
 #define TABLE_OP
@@ -15,25 +15,29 @@ namespace Database::QueryPlanning {
 
 class Table {
 private:
-    std::unordered_map<std::string, std::shared_ptr<Colonne>> m_Map; // permet de trouver la position d'une colonne à partir de son nom
-    std::vector<ColonneNamesSet*> m_ColonnesNames; // contient les noms de toute les colonnes présente dans la table (de manière unique) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
-    TableNamesSet* Name;
+    std::unordered_map<std::string, std::shared_ptr<Racine>> m_Map; // permet de trouver la position d'une colonne à partir de son nom
+    std::vector<std::shared_ptr<Racine>> m_Colonnes; // contient les noms de toute les colonnes présente dans la table (de manière unique) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
+    std::vector<int> m_Indices; // indices valides dans racine
+    std::shared_ptr<TableNamesSet> m_Name;
 
 public:
-    Table(std::shared_ptr<std::vector<std::shared_ptr<Colonne>>> data_, TableNamesSet* Name_)
-        : Name(Name_)
+    Table(std::vector<std::shared_ptr<Racine>>* data_, std::shared_ptr<TableNamesSet> name_)
+        : m_Name(std::move(name_))
     {
         for (auto e : *data_) {
             for (auto n : e->get_name()->GetAllFullNames()) {
                 m_Map[n] = e;
             }
             m_Map[e->get_name()->GetMainName()] = e;
-            m_ColonnesNames.push_back(e->get_name());
+            m_Colonnes.push_back(e);
         }
+        std::vector<int> temp;
+        temp.reserve((*data_)[0]->size());
+        for (int i = 0; i < (*data_)[0]->size(); i++) {
+            temp.push_back(i);
+        }
+        m_Indices = temp;
     }
-
-    void Selection(const Parsing::BinaryExpression::Condition pred, const std::shared_ptr<std::unordered_set<ColonneNamesSet*>> nom_colonnes);
-    void Projection(std::unique_ptr<std::unordered_set<ColonneNamesSet*>> ColumnToSave);
 
     int size()
     {
@@ -41,29 +45,31 @@ public:
     }
     int Columnsize()
     {
-        return m_Map[m_ColonnesNames[0]->GetMainName()]->size();
+        return m_Indices.size();
     }
 
-    ColumnData get_value(ColonneNamesSet* column_name, int pos_ind)
+    ColumnData get_value_dans_table(std::shared_ptr<ColonneNamesSet> column_name, int pos_ind)
     {
-        auto temp = m_Map[column_name->GetMainName()];
-        return temp->getValue(pos_ind);
+        return m_Map[column_name->GetMainName()]->get_value_dans_ptr(m_Indices[pos_ind]);
     }
 
-    bool colonne_exist(ColonneNamesSet clef_testé)
+    int getValDansInd(std::shared_ptr<ColonneNamesSet> column_name, int pos_ind)
     {
-        return !(m_Map.end() == m_Map.find(clef_testé.GetMainName())); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
+        return m_Indices[pos_ind];
     }
-    TableNamesSet* Get_name() { return Name; };
 
-    std::unordered_map<std::string, std::shared_ptr<Colonne>> GetMap()
+    bool colonne_exist(std::shared_ptr<ColonneNamesSet> clef_testé)
     {
-        return m_Map;
+        return !(m_Map.end() == m_Map.find(clef_testé->GetMainName())); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
+    }
+    std::shared_ptr<Racine> getRacinePtr(std::shared_ptr<ColonneNamesSet> colname)
+    {
+        return m_Map[colname->GetMainName()];
     };
 
-    std::vector<std::shared_ptr<Colonne>>* get_data_ptr()
+    std::vector<std::shared_ptr<Racine>>* get_data_ptr()
     {
-        auto res = new std::vector<std::shared_ptr<Colonne>>();
+        auto res = new std::vector<std::shared_ptr<Racine>>();
 
         res->reserve(m_Map.size());
         for (auto e : m_Map) {
@@ -72,20 +78,54 @@ public:
 
         return res;
     }
-    std::vector<ColonneNamesSet*>* GetColumnNames() { return &m_ColonnesNames; }
+    std::vector<std::shared_ptr<Racine>>* GetColumns() { return &m_Colonnes; }
 
-    void Sort(ColonneNamesSet* ColonneToSortBy);
+    std::shared_ptr<TableNamesSet> get_name() { return m_Name; }
 
-    std::vector<ColumnData>* GetSample(ColonneNamesSet* ColonneGetValueFrom)
+    std::vector<int>* Sort(std::shared_ptr<ColonneNamesSet> ColonneToSortBy)
     {
-        std::vector<ColumnData>* ValSet = new std::vector<ColumnData>();
-        ValSet->reserve(1000);
-        for (int i = 0; i < 1000 and i < this->Columnsize(); i++) {
-            int pos = int(std::max(i * (this->Columnsize() / 1000), i));
-            auto temp = this->get_value(ColonneGetValueFrom, pos);
-            ValSet->push_back(temp);
+        auto ColonneSorting = m_Map[ColonneToSortBy->GetMainName()];
+
+        std::vector<int>* PosInColonneToSortBy = new std::vector<int>(ColonneSorting->size());
+        std::iota(PosInColonneToSortBy->begin(), PosInColonneToSortBy->end(), 0);
+
+        std::sort(PosInColonneToSortBy->begin(), PosInColonneToSortBy->end(),
+            [&](int a, int b) { return this->get_value_dans_table(ColonneToSortBy, a) < this->get_value_dans_table(ColonneToSortBy, b); });
+        return PosInColonneToSortBy;
+    }
+
+    void AppliqueFiltre(std::vector<int>* new_ind)
+    {
+        std::vector<int> new_indices;
+        new_indices.reserve(new_ind->size());
+        for (auto e : *new_ind) {
+            new_indices.push_back(m_Indices[e]);
         }
-        return ValSet;
+        m_Indices = new_indices;
+    }
+
+    void DeleteCol(std::shared_ptr<ColonneNamesSet> DeletedCol)
+    {
+        for (int i = 0; i < m_Colonnes.size(); i++) {
+            if (*m_Colonnes[i]->get_name() == *DeletedCol) {
+                for (auto s : DeletedCol->GetAllFullNames()) {
+                    m_Map.erase(s);
+                }
+                m_Colonnes.erase(m_Colonnes.begin() + i);
+                break;
+            }
+        }
+        update();
+    }
+    void update()
+    {
+        m_Map.erase(m_Map.begin(), m_Map.end());
+
+        for (auto r : m_Colonnes) {
+            for (auto n : r->get_name()->GetAllFullNames()) {
+                m_Map[n] = r;
+            }
+        }
     }
 };
 

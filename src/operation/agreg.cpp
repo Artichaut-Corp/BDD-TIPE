@@ -1,7 +1,6 @@
 #include "agreg.h"
 #include "../utils/hashmap.h"
 #include "../utils/printing_utils.h"
-#include <gperftools/heap-profiler.h>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -70,7 +69,7 @@ Database::ColumnData ReturnType::AppliqueOperation(std::set<Database::ColumnData
         "Une Agrégation a été tentée alors qu'aucune fonction d'agrégation n'a été définie pour cette colonne");
 }
 
-Database::ColumnData ReturnType::AppliqueOperationOnCol(ColonneNamesSet* ColName, Table* table)
+Database::ColumnData ReturnType::AppliqueOperationOnCol(std::shared_ptr<ColonneNamesSet> ColName, std::shared_ptr<MetaTable> table)
 {
     if (!table)
         throw std::runtime_error("Table invalide");
@@ -128,19 +127,19 @@ Database::ColumnData ReturnType::AppliqueOperationOnCol(ColonneNamesSet* ColName
         "Une Agrégation a été tentée alors qu'aucune fonction d'agrégation n'a été définie pour cette colonne");
 }
 
-void Final::AppliqueAgregateAndPrint(Table* table)
+void Final::AppliqueAgregateAndPrint(std::shared_ptr<MetaTable> table)
 {
     std::unordered_map<std::string, std::vector<ColumnData>*> ColumnNameToValues;
     if (m_ColumnsToGroupBy.has_value()) {
 
-        std::vector<ColonneNamesSet*>* AgregNames = new std::vector<ColonneNamesSet*>();
+        std::vector<std::shared_ptr<ColonneNamesSet>>* AgregNames = new std::vector<std::shared_ptr<ColonneNamesSet>>();
         int pos_in_map_incr = 0;
-        std::unordered_map<ColonneNamesSet*, int> pos_in_map_map;
+        std::unordered_map<std::shared_ptr<ColonneNamesSet>, int> pos_in_map_map;
         Utils::Hash::MultiValueMapDyn AgregMap; // la map en position i est celle de la colonne Agreg[column]
         for (auto x : (*table->GetColumnNames())) {
             bool est_group_by = false;
             for (auto e : *m_ColumnsToGroupBy.value()) {
-                if (e == x) { // la colonne est dans les groupby
+                if (*e == *x) { // la colonne est dans les groupby
                     est_group_by = true;
                 }
             }
@@ -228,14 +227,9 @@ void Final::AppliqueAgregateAndPrint(Table* table)
     }
 
     if (m_Limite.has_value()) {
-
         std::span<int> sub = std::span<int>(*OrdreIndice).subspan(m_Limite->first, m_Limite->second);
-        HeapProfilerDump("Checkpoint");
-        HeapProfilerStop();
         Database::Utils::AfficheAgregSpan(&ColumnNameToValues, &sub, m_ColonneInfo);
     } else {
-        HeapProfilerDump("Checkpoint");
-        HeapProfilerStop();
         Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice, m_ColonneInfo);
     }
 }
