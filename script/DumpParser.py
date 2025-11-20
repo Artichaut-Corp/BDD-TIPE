@@ -1,24 +1,28 @@
-import os
+#!/usr/bin/python3
+
 import csv
-import mwxml
+import os
+import sys
 import time
 from datetime import datetime
+
+import mwxml
 
 # -----------------------------
 # Configuration
 # -----------------------------
-dump_path = "/home/eliott/fichier/WikipediaDump/Fr/frwiktionary-20251101-pages-articles-multistream.xml/frwiktionary-20251101-pages-articles-multistream.xml"
-table_dir = "script/table"
+dump_path = sys.argv[1]
+table_dir = sys.argv[2]
 os.makedirs(table_dir, exist_ok=True)
 
 # -----------------------------
 # CSV setup (sans dbname ni siteinfo)
 # -----------------------------
 csv_files = {
-    "page.csv": ["id", "ns", "title", "redirect", "revision_id"],
+    "page.csv": ["id", "ns", "title", "revision_id"],
     "revision.csv": ["id", "parentid", "timestamp", "contributor_id"],
     "contributor.csv": ["id", "username"],
-    "namespaces.csv": ["key", "name"]
+    "namespaces.csv": ["key", "name"],
 }
 
 files = {}
@@ -33,6 +37,7 @@ for filename, headers in csv_files.items():
 
 contributors_seen = set()
 
+
 # -----------------------------
 # Helper function: convert mwxml.Timestamp to UNIX int
 # -----------------------------
@@ -43,10 +48,12 @@ def timestamp_to_int(ts):
         dt = datetime.strptime(str(ts), "%Y-%m-%dT%H:%M:%SZ")
     return int(time.mktime(dt.timetuple()))
 
+
 # -----------------------------
 # Nombre total de pages (déjà connu)
 # -----------------------------
 total_pages = 7502789  # pour le dump frwiktionary 20251101
+
 
 # -----------------------------
 # Parse the dump
@@ -59,17 +66,27 @@ with open(dump_path, "rb") as f:
     # -------------------------
     si = dump.site_info
     for ns in si.namespaces or []:
-        writers["namespaces.csv"].writerow([
-            getattr(ns, "key", ""),
-            getattr(ns, "name", "")
-        ])
+        writers["namespaces.csv"].writerow(
+            [getattr(ns, "key", ""), getattr(ns, "name", "")]
+        )
 
     # -------------------------
     # Pages, Revisions, Contributors
     # -------------------------
     pages_processed = 0
     for page in dump.pages:
-        redirect_title = page.redirect.title if page.redirect else ""
+        pages_processed += 1
+
+        if pages_processed % 1000 == 0:
+            percent = (pages_processed / total_pages) * 100
+
+            print(
+                f"\rProgress: {pages_processed}/{total_pages} pages ({percent:.2f}%)",
+                end="",
+            )
+
+        if page.redirect is not None:
+            continue
 
         latest_revision_id = ""
         revisions = []
@@ -78,13 +95,9 @@ with open(dump_path, "rb") as f:
             latest_revision_id = rev.id
 
         # Écriture page.csv
-        writers["page.csv"].writerow([
-            page.id,
-            page.namespace,
-            page.title,
-            redirect_title,
-            latest_revision_id
-        ])
+        writers["page.csv"].writerow(
+            [page.id, page.namespace, page.title, latest_revision_id]
+        )
 
         # Écriture revision.csv + contributor.csv
         for rev in revisions:
@@ -93,12 +106,14 @@ with open(dump_path, "rb") as f:
             user_name = getattr(user, "text", "") if user else ""
             if user_id == None:
                 user_id = 0
-            writers["revision.csv"].writerow([
-                rev.id,
-                rev.parent_id if rev.parent_id else "",
-                timestamp_to_int(rev.timestamp),
-                user_id
-            ])
+            writers["revision.csv"].writerow(
+                [
+                    rev.id,
+                    rev.parent_id if rev.parent_id else "",
+                    timestamp_to_int(rev.timestamp),
+                    user_id,
+                ]
+            )
             if timestamp_to_int(rev.timestamp) == 1748727692:
                 print(user_id)
 
@@ -109,14 +124,9 @@ with open(dump_path, "rb") as f:
         # -------------------------
         # Progression
         # -------------------------
-        pages_processed += 1
-        if pages_processed % 1000 == 0:
-            percent = (pages_processed / total_pages) * 100
-            print(f"\rProgress: {pages_processed}/{total_pages} pages ({percent:.2f}%)", end="")
-            if percent>50:
-                break
 
-print("\n✅ CSV files created successfully in the TABLE directory.")
+
+print(f"\n✅ CSV files created successfully in the  {table_dir} directory.")
 
 # -----------------------------
 # Fermeture des fichiers

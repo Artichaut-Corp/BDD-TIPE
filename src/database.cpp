@@ -4,13 +4,16 @@
 #include "data_process_system/racine.h"
 #include "storage/record.h"
 #include <cctype>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <numeric>
 #include <ostream>
+#include <ratio>
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace Database {
@@ -89,7 +92,7 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
         Cursor::MoveOffset(MAX_TABLE * DB_BOOL_SIZE), DB_BOOL_SIZE, false);
 
     ColumnInfo* current_element_nb = new ColumnInfo(
-        Cursor::MoveOffset(MAX_TABLE * DB_INT16_SIZE), DB_INT16_SIZE, false);
+        Cursor::MoveOffset(MAX_TABLE * DB_INT_SIZE), DB_INT_SIZE, false);
 
     ColumnInfo* column_number = new ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * DB_INT8_SIZE), DB_INT8_SIZE, false);
@@ -233,7 +236,7 @@ auto DatabaseEngine::FillIndex() -> void
 
     std::vector<DbString> name = {};
     std::vector<DbBool> is_sys = {};
-    std::vector<DbInt16> current_element_nb = {};
+    std::vector<DbInt> current_element_nb = {};
     std::vector<DbInt8> col_num = {};
     std::vector<DbInt> col_offsets = {};
 
@@ -255,9 +258,9 @@ auto DatabaseEngine::FillIndex() -> void
 
     offset += (MAX_TABLE - table_number) * DB_BOOL_SIZE;
 
-    FileInterface::ReadVec(fd, current_element_nb, &offset, DB_INT16_SIZE, table_number);
+    FileInterface::ReadVec(fd, current_element_nb, &offset, DB_INT_SIZE, table_number);
 
-    offset += (MAX_TABLE - table_number) * DB_INT16_SIZE;
+    offset += (MAX_TABLE - table_number) * DB_INT_SIZE;
 
     FileInterface::ReadVec(fd, col_num, &offset, DB_INT8_SIZE, table_number);
 
@@ -432,6 +435,9 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
         batch.push_back(line.substr(0, line.size() - 1));
 
         if ((int)batch.size() >= MAX_ROWS_PER_TRANSACTION) {
+
+            // std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
             // Process this batch
             std::ostringstream query;
             query << "TRANSACTION " << table << " (";
@@ -481,14 +487,11 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
                 }
             }
             query << " END;";
-            std::cout << query.str() << std::endl;
-            Utils::Repl::Print(DatabaseEngine::Eval(query.str()));
-            batch.clear();
-            if (compteur > 450000) {
-                batch.clear();
 
-                break;
-            }
+            if (compteur > 2000000) break;
+
+            DatabaseEngine::Eval(query.str());
+            batch.clear();
         }
     }
     // Handle the final partial batch
@@ -542,9 +545,8 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
             }
         }
         query << " END;";
-        std::cout << query.str() << std::endl;
 
-        Utils::Repl::Print(DatabaseEngine::Eval(query.str()));
+        DatabaseEngine::Eval(query.str());
         batch.clear();
     }
 }
@@ -553,7 +555,7 @@ void DatabaseEngine::import_all_csv()
 {
     DatabaseEngine::process_csv_streaming("../script/table/contributor.csv", "contributors", { "id", "username" });
     DatabaseEngine::process_csv_streaming("../script/table/revision.csv", "revisions", { "id", "parent_id", "timestamp", "contributor_id" });
-    DatabaseEngine::process_csv_streaming("../script/table/page.csv", "pages", { "id", "ns", "title", "redirect", "revision_id" });
+    DatabaseEngine::process_csv_streaming("../script/table/page.csv", "pages", { "id", "ns", "title", "revision_id" });
 
     // DatabaseEngine::process_csv_streaming("../script/table/namespaces.csv", "namespaces", { "key", "name" });
     //  DatabaseEngine::process_csv_streaming("../script/table/categories_pages.csv", "categories_pages", { "id_cat", "page_id" });

@@ -62,13 +62,13 @@ private:
 
         int table_count = Storing::File::GetTableCount(fd);
 
-        auto tables_element_count = std::vector<DbInt16>();
+        auto tables_element_count = std::vector<DbInt>();
 
         tables_element_count.reserve(table_count);
 
         // Get all element_count from Index
         for (const std::string& table : TableOrder) {
-            uint16_t element_count = Index->at(table).GetElementNumber();
+            uint32_t element_count = Index->at(table).GetElementNumber();
 
             tables_element_count.emplace_back(element_count);
         }
@@ -79,13 +79,13 @@ private:
 
         lseek(fd, offset, SEEK_SET);
 
-        DbInt16 buffer;
+        DbInt buffer;
 
         for (int i = 0; i < table_count; i++) {
 
             buffer = tables_element_count[i];
 
-            int bytes_written = write(fd, &buffer, DB_INT16_SIZE);
+            int bytes_written = write(fd, &buffer, DB_INT_SIZE);
         }
 
         close(fd);
@@ -200,12 +200,10 @@ public:
 
                 auto page_title = ColumnInfo(DB_STRING_SIZE, false);
 
-                auto page_redirect = ColumnInfo(DB_INT_SIZE, false);
-
                 auto page_revision_id = ColumnInfo(DB_INT_SIZE, false);
 
                 auto page_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-                    { "id", page_id }, { "ns", page_ns }, { "title", page_title }, { "redirect", page_redirect }, { "revision_id", page_revision_id }
+                    { "id", page_id }, { "ns", page_ns }, { "title", page_title }, { "revision_id", page_revision_id }
                 };
 
                 auto pages = TableInfo(false, 5, 0, page_columns);
@@ -294,11 +292,12 @@ public:
                 } else if (input == ".insert_data") {
                     std::cout << "Insertion des data\n";
                     import_all_csv();
+                } else if (input == ".print_table_layout") {
+                    PrintIndex(std::cout);
+                } else {
+                    Utils::Repl::Print(Eval(input));
                 }
-
-                Utils::Repl::Print(Eval(input));
             }
-
         } else {
 
             if (Settings.m_Address == "") {

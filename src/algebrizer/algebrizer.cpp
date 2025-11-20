@@ -334,7 +334,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             }
         }
     }
-        
+
     if (where != NULL and descend_select == 1) {
         std::cout << "\n et maintenant en descendant les sélections on a : \n";
         RacineExec.SelectionDescent(Magasin, MainSelect);
@@ -348,11 +348,14 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
     Table* Table_Finale = RacineExec.Pronf(Magasin, type_of_join);
     if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
+
         AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale);
+
     } else {
+        HeapProfilerDump("Checkpoint");
+        HeapProfilerStop();
+
         Utils::AfficheResultat(Table_Finale, &colonnes_de_retour);
     }
-    HeapProfilerDump("Checkpoint");
-    HeapProfilerStop();
 }
 };

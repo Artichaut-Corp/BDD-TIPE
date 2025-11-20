@@ -17,7 +17,7 @@ namespace Database::Storing {
 class TableInfo {
     DbBool m_IsSys;
 
-    DbInt16 m_CurrentElementNb;
+    DbInt m_CurrentElementNb;
 
     DbInt8 m_ColumnNumber;
 

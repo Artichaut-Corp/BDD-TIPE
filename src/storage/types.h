@@ -31,7 +31,7 @@ constexpr uint8_t DB_INT_ARRAY_SIZE = DB_INT_SIZE * MAX_ARRAY_SIZE; // 16 int
 
 // Taille d'un élément de la table système contenant les
 // méta-données des tables
-constexpr uint32_t DB_SCHEMA_TABLE_SIZE = DB_STRING_SIZE + DB_BOOL_SIZE + DB_INT16_SIZE + DB_INT8_SIZE + DB_INT_SIZE;
+constexpr uint32_t DB_SCHEMA_TABLE_SIZE = DB_STRING_SIZE + DB_BOOL_SIZE + DB_INT_SIZE + DB_INT8_SIZE + DB_INT_SIZE;
 
 // Taille d'un élément de la table système contenant les
 // méta-données des colonnes
@@ -112,7 +112,7 @@ public:
     }
 
     static ColumnData intToColumnData(int value)
-    {   
+    {
         return static_cast<DbInt64>(value);
     }
 };

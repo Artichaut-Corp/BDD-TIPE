@@ -4,6 +4,7 @@
 #include "types.h"
 
 #include <memory>
+#include <numbers>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -19,7 +20,7 @@ class Record {
 public:
     template <typename T>
     static std::unique_ptr<std::vector<T>>
-    GetColumn(int fd, const ColumnInfo& info, uint16_t element_number)
+    GetColumn(int fd, const ColumnInfo& info, DbInt element_number)
     {
         // Etapes:
         // - Aller Chercher les informations de la table (peut être les garder)
@@ -114,8 +115,11 @@ public:
     // Does not ensure that the TableInfo provided corresponds to the data
     static void Write(int fd, TableInfo* info, const std::unordered_map<std::string, ColumnData>& data)
     {
-
         int ret = 0;
+
+        DbInt e_numb = info->GetElementNumber();
+
+        std::cout << e_numb << "\n";
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
             ++iter) {
@@ -123,7 +127,7 @@ public:
             uint8_t e_size = iter->second.GetElementSize();
 
             // Ptêtre bound check quand même
-            lseek(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
+            lseek(fd, iter->second.GetOffset() + e_size * e_numb,
                 SEEK_SET);
 
             ret = write(fd, &data.at(iter->first), e_size);
