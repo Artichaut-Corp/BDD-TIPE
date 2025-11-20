@@ -4,6 +4,7 @@
 #include "../utils/unordered_set_utils.h"
 
 #include <cassert>
+#include <memory>
 #include <ostream>
 #include <unordered_set>
 #include <variant>
@@ -391,11 +392,11 @@ std::ostream& operator<<(std::ostream& os, const ColumnName& col)
     return os;
 }
 
-std::pair<ClauseMember, QueryPlanning::ColonneNamesSet*> Clause::ParseClauseMember(Lexing::Tokenizer* t)
+std::pair<ClauseMember, std::shared_ptr<QueryPlanning::ColonneNamesSet>> Clause::ParseClauseMember(Lexing::Tokenizer* t)
 {
     Lexing::Token next = t->peek();
     ClauseMember member;
-    QueryPlanning::ColonneNamesSet* column_used = nullptr; // ✅ important
+    std::shared_ptr<QueryPlanning::ColonneNamesSet> column_used = nullptr; // ✅ important
 
     switch (next.m_Token) {
     case Lexing::STRING_LITT_T: {
@@ -412,15 +413,15 @@ std::pair<ClauseMember, QueryPlanning::ColonneNamesSet*> Clause::ParseClauseMemb
         auto col_parsed_name = ColumnName::ParseColumnName(t);
 
         if (col_parsed_name->HaveTable()) {
-            auto table = new QueryPlanning::TableNamesSet(col_parsed_name->GetTable());
-            column_used = new QueryPlanning::ColonneNamesSet(
+            auto table =  std::make_shared<QueryPlanning::TableNamesSet>(QueryPlanning::TableNamesSet(col_parsed_name->GetTable()));
+            column_used = std::make_shared<QueryPlanning::ColonneNamesSet>(QueryPlanning::ColonneNamesSet(
                 col_parsed_name->getColumnName(),
                 *col_parsed_name->GetAlias(),
-                table);
+                table));
         } else {
-            column_used = new QueryPlanning::ColonneNamesSet(
+            column_used = std::make_shared<QueryPlanning::ColonneNamesSet>(QueryPlanning::ColonneNamesSet(
                 col_parsed_name->getColumnName(),
-                *col_parsed_name->GetAlias());
+                *col_parsed_name->GetAlias()));
         }
 
         member = column_used;
@@ -439,7 +440,7 @@ std::pair<ClauseMember, QueryPlanning::ColonneNamesSet*> Clause::ParseClauseMemb
 
 std::ostream& operator<<(std::ostream& out, const ClauseMember& member)
 {
-    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(member)) {
+    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(member)) {
         out << member;
     } else if (std::holds_alternative<ColumnData>(member)) {
         auto c = std::get<ColumnData>(member);
@@ -462,14 +463,14 @@ void Clause::Print(std::ostream& out)
 {
 
     out << "(";
-    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(Lhs())) {
-        out << *std::get<QueryPlanning::ColonneNamesSet*>(Lhs());
+    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs())) {
+        out << *std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs());
     } else {
         out << Lhs();
     }
     out << " " << m_Op << " ";
-    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(Rhs())) {
-        out << *std::get<QueryPlanning::ColonneNamesSet*>(Rhs());
+    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs())) {
+        out << *std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs());
     } else {
         out << Rhs();
     }
@@ -494,7 +495,7 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
 
     auto [rhs, column_used_r] = ParseClauseMember(t);
 
-    auto col_used = new std::unordered_set<QueryPlanning::ColonneNamesSet*>;
+    auto col_used = new std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>;
 
     col_used->reserve(2);
 
@@ -532,12 +533,12 @@ std::ostream& operator<<(std::ostream& out, const Clause& member)
     return out;
 }
 
-std::unordered_set<QueryPlanning::ColonneNamesSet*>* BinaryExpression::MergeColumns(Condition lhs, Condition rhs)
+std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* BinaryExpression::MergeColumns(Condition lhs, Condition rhs)
 {
-    auto res = new std::unordered_set<QueryPlanning::ColonneNamesSet*>();
+    auto res = new std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>();
 
-    std::unordered_set<QueryPlanning::ColonneNamesSet*>* left;
-    std::unordered_set<QueryPlanning::ColonneNamesSet*>* right;
+    std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* left;
+    std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* right;
 
     if (std::holds_alternative<BinaryExpression*>(lhs)) {
 
@@ -680,11 +681,11 @@ void BinaryExpression::PrintCondition(std::ostream& out)
     this->PrintConditionalt(out);
     out << std::endl;
 }
-BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire)
+BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* ColonnesAExtraire)
 {
     if (BinaryExpression::Op() == LogicalOperator::AND) { // on ne peut pas couper un OR
 
-        std::unordered_set<QueryPlanning::ColonneNamesSet*>* LeftColumn;
+        std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* LeftColumn;
         auto left = Lhs();
         if (std::holds_alternative<std::monostate>(left)) {
             LeftColumn = {};
@@ -693,7 +694,7 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<Qu
         } else {
             LeftColumn = std::get<BinaryExpression*>(left)->Column();
         }
-        std::unordered_set<QueryPlanning::ColonneNamesSet*>* RightColumn;
+        std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* RightColumn;
         auto right = Rhs();
         if (std::holds_alternative<std::monostate>(right)) {
             RightColumn = {};
@@ -803,8 +804,8 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<Qu
 bool Clause::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester)
 {
     ColumnData LeftVal;
-    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(Lhs())) {
-        auto temp = std::get<QueryPlanning::ColonneNamesSet*>(Lhs());
+    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs())) {
+        auto temp = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs());
         LeftVal = *(*CombinaisonATester)[temp->GetMainName()];
 
     } else if (std::holds_alternative<ColumnData>(Lhs())) {
@@ -816,8 +817,8 @@ bool Clause::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATest
     }
 
     ColumnData RightVal;
-    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(Rhs())) {
-        auto temp = std::get<QueryPlanning::ColonneNamesSet*>(Rhs());
+    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs())) {
+        auto temp = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs());
         RightVal = *(*CombinaisonATester)[temp->GetMainName()];
 
     } else if (std::holds_alternative<ColumnData>(Rhs())) {
@@ -881,12 +882,12 @@ bool BinaryExpression::Eval(std::unordered_map<std::string, ColumnData*>* Combin
     }
 }
 
-void Clause::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
+void Clause::FormatColumnName(std::shared_ptr<QueryPlanning::TableNamesSet> NomTablePrincipale)
 {
     m_ColumnUsed->clear();
     auto left = Lhs();
-    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(left)) {
-        auto LeftColumn = std::get<QueryPlanning::ColonneNamesSet*>(left);
+    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(left)) {
+        auto LeftColumn = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(left);
         if (!LeftColumn->HaveTableSet()) {
             LeftColumn->SetTableSet(NomTablePrincipale);
         }
@@ -895,8 +896,8 @@ void Clause::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
     }
 
     auto right = Rhs();
-    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(right)) {
-        auto RightColumn = std::get<QueryPlanning::ColonneNamesSet*>(right);
+    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(right)) {
+        auto RightColumn = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(right);
         if (!RightColumn->HaveTableSet()) {
             RightColumn->SetTableSet(NomTablePrincipale);
         }
@@ -905,7 +906,7 @@ void Clause::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
     }
 }
 
-void BinaryExpression::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
+void BinaryExpression::FormatColumnName(std::shared_ptr<QueryPlanning::TableNamesSet> NomTablePrincipale)
 {
     m_ColumnUsedBelow->clear();
     auto left = Lhs();
@@ -970,8 +971,8 @@ bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* Comb
     m_InfoSelectivité.first++;
     bool resultat_eval;
     ColumnData LeftVal;
-    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(Lhs())) {
-        auto temp = std::get<QueryPlanning::ColonneNamesSet*>(Lhs());
+    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs())) {
+        auto temp = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs());
         LeftVal = (*CombinaisonATester)[temp->GetMainName()];
 
     } else if (std::holds_alternative<ColumnData>(Lhs())) {
@@ -983,8 +984,8 @@ bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* Comb
     }
 
     ColumnData RightVal;
-    if (std::holds_alternative<QueryPlanning::ColonneNamesSet*>(Rhs())) {
-        auto temp = std::get<QueryPlanning::ColonneNamesSet*>(Rhs());
+    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs())) {
+        auto temp = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs());
         RightVal = (*CombinaisonATester)[temp->GetMainName()];
 
     } else if (std::holds_alternative<ColumnData>(Rhs())) {

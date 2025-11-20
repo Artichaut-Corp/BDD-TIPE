@@ -10,16 +10,10 @@ limitation de l'implémentation actuelle comparé à un SGBD classique :
     - les alias dans le selection ne sont pas ceux affiché dans le tableau de renvoie
 
 idée d'améliorations:
-    - un Join n'est qu'un group by sur une colonne avec deux table différente, une implémentation d'un join utilisant les outils créer pour les group-by pourrait être pertinente et est à tester
-    - avant un join, trier les colonnes, cela d'éviter de comparer tout les couples de lignes existant, transformant la complexité de O(n²) à O(n) pour le join, point négatif, il faut trier les deux tables, ce qui entraine deux O(nlogn)
-    - lors de join entre deux table dite "vierge de jointure" c'est à dire n'ayant subit que des tris,projections ou selections. Une idée d'implémentation des joins serait de stocker en mémoire les tables trié en fonction de chaque colonnes, permettant alors de récuper l'ordre trié de manière linéaire au lieu de trier, passant la jointure entre deux table vierge de O(nlogn) à O(n)
-    - la création d'une relation d'ordre sur les BinaryExpression, permetterait de créer des projection plus efficace. En effet, lors d'un And la première condition est vérifié d'abord et si elle est vrai et seulement dans ce cas là, on vérifie la seconde (notre évaluation est dite paresseuse), Ainsi en mettant la condition la plus "stricte" c'est à dire celle qui a le moins de chance d'être vérifier en premier, on diminue le nombre d'opération, exemple : "select identifiant,mot_de_passe from clients where (age<100) and (nom="pierre") ", il est évident qu'il y as bien plus de gens de moins de 100 ans que de genre qui s'appelle pierre, notre optimisation serait alors de transformet la BinaryExpression qui vérifierait d'abord si un client à moins de 100 ans et seulement ensuite si son prénom est pierre, en inversant l'ordre des deux opération, on vérifierait d'abord si le prénom d'un client est pierre et seulement ensuite si son age est inférieur à 100. cela peut diviser par deux (de manière asymptotique) le nombre de comparaison effectué. Il pourrait être fait de même avec un Or, dans ce cas si, la clause la moins séléctive serait favorisé. Limite: la comparaison d'une string avec un int ne prend pas le même temps, comparé des string étant plus long, il faudrait, en fonction du jeux de donnée, estimé laquelle de ces deux opération passer en premier, en prenant en compte le côté stricte d'une comparaison mais aussi son temps de calcul en moyenne. Exemple : dans le cas précédent si la moitié des clients s'appelle pierre, la comparaison d'un nom prend |pierre| = 6 opération alors que la comparaison de l'âge prend 1 opération, si en plus l'age limite est choisi à la médiane des ages de la BDD, notre optimisation n'est pas la plus optimiser des deux
     - le cracking de la mémoire en partie de taille plus petite trié
-    - le tri des BinaryExpression dans leurs arbres permet de traiter un select plus rapidement
     - Donner le choix de rendre paresseuse les évaluation dans EstimeSelectivité
-
-TODO : 
-    dans algebrize.cpp, insérer la fonction permettant de calculer et d'ordonné chaque BinaryExpr et clause
+    - Mémoiriser l'ordre des join et le calculer et pas prendre celui donner par le user
+    - créer un system de JoinIndex
 
 
 

@@ -1,5 +1,5 @@
 #include "../algebrizer_types.h"
-#include "../data_process_system/table.h"
+#include "../data_process_system/meta-table.h"
 #include "../parser/expression.h"
 #include "pred.h"
 
@@ -12,12 +12,12 @@
 namespace Database::QueryPlanning {
 class Select {
 private:
-    std::shared_ptr<std::unordered_set<ColonneNamesSet*>> m_Cols; // set of all the column who are being checked
+    std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> m_Cols; // set of all the column who are being checked
     Parsing::BinaryExpression::Condition m_Conds; // the condition those column are being test on
-    TableNamesSet* TableNameToExec;
+    std::shared_ptr<TableNamesSet> TableNameToExec;
 
 public:
-    Select(std::shared_ptr<std::unordered_set<ColonneNamesSet*>> cols, Parsing::BinaryExpression::Condition cond, TableNamesSet* Table)
+    Select(std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> cols, Parsing::BinaryExpression::Condition cond, std::shared_ptr<TableNamesSet> Table)
         : TableNameToExec(Table)
         , m_Cols(std::move(cols))
         , m_Conds(cond)
@@ -26,15 +26,15 @@ public:
     };
     Parsing::BinaryExpression::Condition GetCond() { return m_Conds; }
 
-    Table* Exec(Table* table)
+    std::shared_ptr<MetaTable> Exec(std::shared_ptr<MetaTable> table)
     {
         if (std::holds_alternative<std::monostate>(m_Conds)) {
             return table; // pas besoin dans le reflechir la comparaison est nulle
         }
-        table->Selection(m_Conds,m_Cols);
+        table->Selection(m_Conds, m_Cols);
         return table;
     }
-    TableNamesSet* GetTableName()
+    std::shared_ptr<TableNamesSet> GetTableName()
     {
         return TableNameToExec;
     }
@@ -44,7 +44,8 @@ public:
         m_Cols = nullptr;
         m_Conds = std::monostate {};
     }
-    std::shared_ptr<std::unordered_set<ColonneNamesSet*>> Getm_Cols(){
+    std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> Getm_Cols()
+    {
         return m_Cols;
     }
 };

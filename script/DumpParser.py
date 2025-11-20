@@ -75,19 +75,8 @@ with open(dump_path, "rb") as f:
     # -------------------------
     pages_processed = 0
     for page in dump.pages:
-        pages_processed += 1
-
-        if pages_processed % 1000 == 0:
-            percent = (pages_processed / total_pages) * 100
-
-            print(
-                f"\rProgress: {pages_processed}/{total_pages} pages ({percent:.2f}%)",
-                end="",
-            )
-
         if page.redirect is not None:
             continue
-
         latest_revision_id = ""
         revisions = []
         for rev in page:
