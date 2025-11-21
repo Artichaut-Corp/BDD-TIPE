@@ -339,12 +339,8 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
     std::shared_ptr<MetaTable> Table_Finale = RacineExec.Pronf(Magasin, type_of_join);
     if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
-
         AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale);
-
     } else {
-        HeapProfilerDump("Checkpoint");
-        HeapProfilerStop();
 
         Utils::AfficheResultat(Table_Finale, &colonnes_de_retour);
     }

@@ -59,20 +59,19 @@ public:
                 throw std::out_of_range("Index hors limites");
             }
             return (*temp)[i];
-        }else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt>>>(m_data)) {
+        } else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt>>>(m_data)) {
             auto temp = std::get<std::shared_ptr<std::vector<DbInt>>>(m_data);
             if (!temp || i >= temp->size()) {
                 throw std::out_of_range("Index hors limites");
             }
             return (*temp)[i];
-        }else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt16>>>(m_data)) {
+        } else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt16>>>(m_data)) {
             auto temp = std::get<std::shared_ptr<std::vector<DbInt16>>>(m_data);
             if (!temp || i >= temp->size()) {
                 throw std::out_of_range("Index hors limites");
             }
             return (*temp)[i];
-        }
-        else {
+        } else {
             auto temp = std::get<std::shared_ptr<std::vector<DbInt8>>>(m_data);
             if (!temp || i >= temp->size()) {
                 throw std::out_of_range("Index hors limites");
@@ -88,11 +87,13 @@ public:
         },
             m_data);
     }
-    std::shared_ptr<ColonneNamesSet> get_name(){
+    std::shared_ptr<ColonneNamesSet> get_name()
+    {
         return m_NomColonne;
     }
 
-    void addname(std::shared_ptr<ColonneNamesSet> colname){
+    void addname(std::shared_ptr<ColonneNamesSet> colname)
+    {
         m_NomColonne->FusionColumn(colname);
     }
 };

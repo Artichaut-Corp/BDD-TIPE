@@ -46,7 +46,7 @@ SELECT president.first_name FROM president JOIN country on country.name = presid
 SELECT first_name,last_name,Sum(city.pop) FROM president JOIN country ON country.name = president.country JOIN city ON city.country = president.country group by country.name order by first_name Limit 5 offset 5;
 
 
-SELECT  first_name AS prenom_du_president, last_name AS nom_du_president, SUM(city.pop)  From president AS dirigeant JOIN country AS pays ON pays.name = dirigeant.country JOIN city AS ville ON ville.country = dirigeant.country GROUP BY pays.name, first_name, last_name ORDER BY first_name;
+SELECT first_name AS prenom_du_president, last_name AS nom_du_president, SUM(city.pop)  From president AS dirigeant JOIN country AS pays ON pays.name = dirigeant.country JOIN city AS ville ON ville.country = dirigeant.country GROUP BY pays.name, first_name, last_name ORDER BY first_name;
 
 SELECT first_name As truc ,last_name,Sum(city.pop) FROM president JOIN country ON country.name = president.country JOIN city ON city.country = president.country group by president.first_name,president.last_name,country.name order by first_name ;
 

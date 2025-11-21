@@ -4,7 +4,6 @@
 #include "types.h"
 
 #include <memory>
-#include <numbers>
 #include <stdexcept>
 #include <string>
 #include <vector>

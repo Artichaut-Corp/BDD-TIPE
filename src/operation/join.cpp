@@ -92,8 +92,8 @@ std::shared_ptr<MetaTable> Join::ExecGrouByStyle(std::shared_ptr<MetaTable> tabl
     }
     for (int i = 0; i < table2->Columnsize(); i++) {
         for (auto j : map_col[table2->get_value(m_ColumnName2, i)]) {
-            couple_valides.first.push_back(i);
-            couple_valides.second.push_back(j);
+            couple_valides.first.push_back(j);
+            couple_valides.second.push_back(i);
         }
     }
     table1->AppliqueOrdre(&(couple_valides.first));

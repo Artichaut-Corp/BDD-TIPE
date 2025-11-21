@@ -4,17 +4,14 @@
 #include "data_process_system/racine.h"
 #include "storage/record.h"
 #include <cctype>
-#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <numeric>
 #include <ostream>
-#include <ratio>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace Database {
