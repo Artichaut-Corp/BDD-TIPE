@@ -5,6 +5,8 @@
 #include "../parser.h"
 #include "../storage.h"
 #include "../utils/printing_utils.h"
+
+#include <gperftools/heap-profiler.h>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>

@@ -40,7 +40,7 @@ public:
         m_Columns.insert(columns.begin(), columns.end());
     }
 
-    TableInfo(bool sys, uint16_t current_element_number, uint8_t column_number,
+    TableInfo(bool sys, uint32_t current_element_number, uint8_t column_number,
         uint32_t first_offset,
         std::vector<std::pair<std::string, ColumnInfo>> columns)
         : m_IsSys(sys)

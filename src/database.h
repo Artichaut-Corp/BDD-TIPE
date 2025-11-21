@@ -131,68 +131,66 @@ public:
                 // Write System Tables
                 InitializeSystemTables(fd);
 
-                /*
-                        // -- Country Table --
-                        // Text name
-                        // Int pop
+                // -- Country Table --
+                // Text name
+                // Int pop
 
-                        ColumnInfo country_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo country_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
 
-                        ColumnInfo country_pop = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-                            DB_INT_SIZE, false);
+                ColumnInfo country_pop = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
+                    DB_INT_SIZE, false);
 
-                        auto country_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-                            { "name", country_name }, { "pop", country_pop }
-                        };
+                auto country_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+                    { "name", country_name }, { "pop", country_pop }
+                };
 
-                        auto country = TableInfo(false, 2, 0, country_columns);
+                auto country = TableInfo(false, 2, 0, country_columns);
 
-                        CreateTable(fd, "country", country);
+                CreateTable(fd, "country", country);
 
-                        // -- City Table --
-                        // Text name
-                        // Int pop
-                        // Text country
+                // -- City Table --
+                // Text name
+                // Int pop
+                // Text country
 
-                        ColumnInfo city_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo city_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
 
-                        ColumnInfo city_pop = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-                            DB_INT_SIZE, false);
+                ColumnInfo city_pop = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
+                    DB_INT_SIZE, false);
 
-                        ColumnInfo city_country = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE),
-                            DB_STRING_SIZE, false);
+                ColumnInfo city_country = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE),
+                    DB_STRING_SIZE, false);
 
-                        auto city_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-                            { "name", city_name }, { "pop", city_pop }, { "country", city_country }
-                        };
+                auto city_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+                    { "name", city_name }, { "pop", city_pop }, { "country", city_country }
+                };
 
-                        auto city = TableInfo(false, 3, 0, city_columns);
+                auto city = TableInfo(false, 3, 0, city_columns);
 
-                        CreateTable(fd, "city", city);
+                CreateTable(fd, "city", city);
 
-                        // -- President Table --
-                        // Text first_name
-                        // Text last_name
-                        // Text country
-                        // Int mandate_beginning
+                // -- President Table --
+                // Text first_name
+                // Text last_name
+                // Text country
+                // Int mandate_beginning
 
-                        ColumnInfo pres_first_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo pres_first_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
 
-                        ColumnInfo pres_last_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo pres_last_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
 
-                        ColumnInfo pres_mandate_beg = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-                            DB_INT_SIZE, false);
+                ColumnInfo pres_mandate_beg = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
+                    DB_INT_SIZE, false);
 
-                        ColumnInfo pres_country = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo pres_country = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
 
-                        auto pres_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-                            { "first_name", pres_first_name }, { "last_name", pres_last_name }, { "country", pres_country }, { "mandate_beginning", pres_mandate_beg }
-                        };
+                auto pres_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+                    { "first_name", pres_first_name }, { "last_name", pres_last_name }, { "country", pres_country }, { "mandate_beginning", pres_mandate_beg }
+                };
 
-                        auto president = TableInfo(false, 4, 0, pres_columns);
+                auto president = TableInfo(false, 4, 0, pres_columns);
 
-                        CreateTable(fd, "president", president);
-        */
+                CreateTable(fd, "president", president);
 
                 auto page_id = ColumnInfo(DB_INT_SIZE, false);
 
@@ -206,7 +204,7 @@ public:
                     { "id", page_id }, { "ns", page_ns }, { "title", page_title }, { "revision_id", page_revision_id }
                 };
 
-                auto pages = TableInfo(false, 5, 0, page_columns);
+                auto pages = TableInfo(false, 4, 0, page_columns);
 
                 CreateTable(fd, "pages", pages);
 
@@ -255,45 +253,6 @@ public:
 
                 CreateTable(fd, "namespaces", ns);
 
-                auto country_name = ColumnInfo(DB_STRING_SIZE, false);
-
-                auto country_pop = ColumnInfo(DB_INT_SIZE, false);
-
-                auto country_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-                    { "name", country_name }, { "pop", country_pop }};
-
-                auto country = TableInfo(false, 2, 0, country_columns);
-
-                CreateTable(fd, "country", country);
-
-                auto city_country = ColumnInfo(DB_STRING_SIZE, false);
-
-                auto city_pop = ColumnInfo(DB_INT_SIZE, false);
-
-                auto city_name = ColumnInfo(DB_STRING_SIZE, false);
-
-
-                auto city_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-                    { "country", city_country }, { "pop", city_pop }, { "name", city_name }};
-
-                auto city = TableInfo(false, 3, 0, city_columns);
-
-                CreateTable(fd, "city", city);
-
-                auto president_country = ColumnInfo(DB_STRING_SIZE, false);
-
-                auto president_first_name = ColumnInfo(DB_STRING_SIZE, false);
-
-                auto president_last_name = ColumnInfo(DB_STRING_SIZE, false);
-
-                auto president_mandate_beginning = ColumnInfo(DB_INT64_SIZE, false);
-
-                auto president_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-                    { "first_name", president_first_name }, { "last_name", president_last_name }, { "country",  president_country }, { "mandate_beginning",  president_mandate_beginning }  };
-
-                auto president = TableInfo(false, 4, 0, president_columns);
-
-                CreateTable(fd, "president", president);
 
                 // Clean up and close
                 close(fd);

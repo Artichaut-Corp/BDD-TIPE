@@ -490,7 +490,7 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
             }
             query << " END;";
 
-            if (compteur > 2000000) break;
+            if (compteur > 500000) break;
 
             DatabaseEngine::Eval(query.str());
             batch.clear();
