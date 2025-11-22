@@ -8,7 +8,6 @@
 #include <unordered_set>
 #include <variant>
 
-
 #ifndef TREE_H
 
 #define TREE_H

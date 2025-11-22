@@ -9,11 +9,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 enable_testing()
 
-add_subdirectory(src)
-add_subdirectory(test)
+
+add_subdirectory(lib/tomlplusplus)
 add_subdirectory(lib/googletest)
 
+add_subdirectory(src)
+add_subdirectory(test)
+
+
 add_custom_target(memcheck
-    COMMAND valgrind --leak-check=full --track-origins=yes ./src/TIPE-BDD_run
+    COMMAND valgrind --leak-check=full --track-origins=yes ./src/bdd_tipe
     DEPENDS ${PROJECT_NAME}
 )

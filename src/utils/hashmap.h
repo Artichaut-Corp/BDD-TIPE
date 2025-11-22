@@ -1,6 +1,8 @@
-#include "../../lib/tsl/robin_map.h"
 #include "../algebrizer_types.h"
+
+#include "../../lib/tsl/robin_map.h"
 #include "../storage/types.h"
+
 #include <cstdint>
 #include <set>
 

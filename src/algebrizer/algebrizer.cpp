@@ -5,10 +5,12 @@
 #include "../parser.h"
 #include "../storage.h"
 #include "../utils/printing_utils.h"
+
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <toml++/toml.hpp>
 #include <unordered_set>
 #include <utility>
 #include <variant>
@@ -22,16 +24,16 @@ std::shared_ptr<ColonneNamesSet> ConvertToStandardColumnName(std::shared_ptr<Tab
     if (Colonne->HaveTable()) {
         std::shared_ptr<TableNamesSet> table = (*variation_of_tablename_to_main_table_name)[Colonne->GetTable()];
         auto FullName = Colonne->getColumnName();
-        StandardName = std::make_shared<ColonneNamesSet>( ColonneNamesSet(FullName, *Colonne->GetAlias(), table)); // récupere le nom de cette colonne
+        StandardName = std::make_shared<ColonneNamesSet>(ColonneNamesSet(FullName, *Colonne->GetAlias(), table)); // récupere le nom de cette colonne
     } else { // la colonne n'as pas de nom de table, on en conclu que c'est une colonne de la table principale, il faut donc rajouter le nom de cette table à son identifiant
-        StandardName = std::make_shared<ColonneNamesSet>( ColonneNamesSet(Colonne->getColumnName(), *Colonne->GetAlias(), NomTablePrincipale));
+        StandardName = std::make_shared<ColonneNamesSet>(ColonneNamesSet(Colonne->getColumnName(), *Colonne->GetAlias(), NomTablePrincipale));
     }
 
     return StandardName;
 }
 std::shared_ptr<TableNamesSet> ConvertToStandardTableName(Database::Parsing::TableName* Table, std::unordered_map<std::string, std::shared_ptr<TableNamesSet>>* variation_of_tablename_to_main_table_name)
 {
-    std::shared_ptr<TableNamesSet> StandardName =  std::make_shared<TableNamesSet>(TableNamesSet(Table->getTableName()));
+    std::shared_ptr<TableNamesSet> StandardName = std::make_shared<TableNamesSet>(TableNamesSet(Table->getTableName()));
     (*variation_of_tablename_to_main_table_name)[StandardName->GetMainName()] = StandardName;
     for (auto e : *Table->GetAlias()) {
         StandardName->AddAlias(e);
@@ -260,7 +262,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 }
             }
             // Maintenant que l'on as tout pour la table Principale on la créer
-            std::shared_ptr<MetaTable> table_secondaire = std::make_shared<MetaTable>( MetaTable(std::make_shared<Table>(Table(&Racines, tables_secondaires[i]))));
+            std::shared_ptr<MetaTable> table_secondaire = std::make_shared<MetaTable>(MetaTable(std::make_shared<Table>(Table(&Racines, tables_secondaires[i]))));
             Tables.push_back(*table_secondaire);
 
             std::shared_ptr<TableNamesSet> TableDéjàAjouter = nullptr; // dans chaque création de jointure,il y a déjà une table présente dans l'arbre d'éxécution
