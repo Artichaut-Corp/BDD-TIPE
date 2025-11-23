@@ -25,7 +25,8 @@ public:
 
     std::shared_ptr<MetaTable> Exec(std::shared_ptr<MetaTable> table)
     {
-        table->Projection(std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*m_Cols));
+        auto temp = std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*m_Cols);
+        table->Projection(std::move(temp));
 
         return table;
     }

@@ -5,7 +5,6 @@
 #include "pred.h"
 #include <memory>
 
-
 #ifndef JOIN_H
 
 #define JOIN_H
@@ -47,6 +46,10 @@ public:
     std::shared_ptr<ColonneNamesSet> GetRCol() { return m_ColumnName2; }
 
     Comparateur GetComp() { return m_Comps; }
+    float calculeRC(std::shared_ptr<MetaTable> MetaTableL, std::shared_ptr<MetaTable> MetaTableR, int type_of_join);
+    int CardExecNaif(std::shared_ptr<MetaTable> table1, std::shared_ptr<MetaTable> table2);
+    int CardExecTrier(std::shared_ptr<MetaTable> table1, std::shared_ptr<MetaTable> table2);
+    int CardExecGrouByStyle(std::shared_ptr<MetaTable> table1, std::shared_ptr<MetaTable> table2);
 };
 
 } // Database::QueryPlanning
