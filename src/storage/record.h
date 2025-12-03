@@ -19,8 +19,10 @@ class Record {
 
 public:
     template <typename T>
-    static std::unique_ptr<std::vector<T>>
-    GetColumn(int fd, const ColumnInfo& info, uint16_t element_number)
+    static std::unique_ptr<std::vector<std::pair<DbKey, T>>> GetRange(int fd, const ColumnInfo& info, const Parsing::BinaryExpression& predicate);
+
+    template <typename T>
+    static std::unique_ptr<std::vector<T>> GetColumn(int fd, const ColumnInfo& info, DbKey element_number)
     {
         // Etapes:
         // - Aller Chercher les informations de la table (peut être les garder)

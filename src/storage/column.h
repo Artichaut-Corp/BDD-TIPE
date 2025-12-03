@@ -20,9 +20,13 @@ class ColumnInfo {
 
     DbBool m_IsSorted;
 
+    DbInt64 m_SortedColumnOffset;
+
     DbBool m_Compressable;
 
     DbBool m_IsCompressed;
+
+    DbInt64 m_CompressedColumnOffset;
 
 public:
     ColumnInfo() = default;

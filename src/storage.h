@@ -25,12 +25,18 @@ using DBTableOrder = std::vector<std::string>;
 class Store {
 
 public:
-    static std::variant<Column, Errors::Error> GetDBColumn(int fd, DBTableIndex* Index, const std::string& table_name, const std::string& column_name);
+    static std::variant<Column, Errors::Error> DB_GetColumn(int fd, DBTableIndex* Index, const std::string& table_name, const std::string& column_name);
+
+    static std::variant<IndexedColumn, Errors::Error> DB_GetRange(int fd, DBTableIndex* Index, const std::string& table_name, const Parsing::BinaryExpression& predicate);
+
+    static std::variant<std::vector<DbKey>, Errors::Error> DB_GetColOrder(int fd, DBTableIndex* Index, const std::string& table_name, const std::string& col_name);
+
+    static std::variant<std::vector<DbKey>, Errors::Error> GetValuesIndices(int fd, DBTableIndex* Index, const std::string& table_name, const std::string& column_name, Column values);
 
     template <typename R>
-    [[nodiscard]] static std::optional<Errors::Error> SetRecord(int fd, DBTableIndex* Index, const std::string& table_name, R* record);
+    [[nodiscard]] static std::optional<Errors::Error> DB_SetRecord(int fd, DBTableIndex* Index, const std::string& table_name, R* record);
 
-    [[nodiscard]] static std::optional<Errors::Error> SetData(int fd, DBTableIndex* Index, const std::string& table_name, const std::unordered_map<std::string, ColumnData>& data);
+    [[nodiscard]] static std::optional<Errors::Error> DB_SetData(int fd, DBTableIndex* Index, const std::string& table_name, const std::unordered_map<std::string, ColumnData>& data);
 };
 
 class CountryRecord {

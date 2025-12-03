@@ -99,6 +99,10 @@ private:
 public:
     bool m_Quit = false;
 
+    void process_csv_streaming(const std::string& path, const std::string& table, const std::vector<std::string>& columns);
+
+    void import_all_csv();
+
     // Options:
     // --serve address / -s address
     // --repl / -r

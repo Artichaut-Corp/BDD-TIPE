@@ -15,6 +15,7 @@
 
 namespace Database {
 
+#define MAX_DBINT 0xFFFFFFFF
 #define MAX_TABLE 64
 #define MAX_COLUMN_PER_TABLE 16
 #define MAX_ELEMENT_PER_COLUMN 4096
@@ -29,6 +30,14 @@ constexpr uint8_t DB_INT64_SIZE = 8; // 64 bits
 constexpr uint8_t DB_CHAR_SIZE = 1; // 8 bits
 constexpr uint8_t DB_STRING_SIZE = MAX_STRING_LENGTH * DB_CHAR_SIZE; // 256 chars
 constexpr uint8_t DB_INT_ARRAY_SIZE = DB_INT_SIZE * MAX_ARRAY_SIZE; // 16 int
+
+#if MAX_ELEMENT_PER_COLUMN > MAX_DBINT
+#define DB_COL_ELMT_INT_SIZE DB_INT64_SIZE
+using DbKey = uint64_t;
+#else
+#define DB_COL_ELMT_INT_SIZE DB_INT32_SIZE
+using DbKey = uint32_t;
+#endif
 
 // Taille d'un élément de la table système contenant les
 // méta-données des tables
@@ -71,6 +80,10 @@ using ColumnData = std::variant<DbInt8, DbInt16, DbInt, DbInt64, DbString>;
 
 using Column = std::variant<
     std::unique_ptr<std::vector<DbInt8>>, std::unique_ptr<std::vector<DbInt16>>, std::unique_ptr<std::vector<DbInt>>, std::unique_ptr<std::vector<DbInt64>>, std::unique_ptr<std::vector<DbString>>>;
+
+using IndexedColumn = std::pair<std::variant<
+                                    std::unique_ptr<std::vector<DbInt8>>, std::unique_ptr<std::vector<DbInt16>>, std::unique_ptr<std::vector<DbInt>>, std::unique_ptr<std::vector<DbInt64>>>,
+    std::unique_ptr<std::vector<DbString>>>;
 
 class Convert {
 public:
@@ -126,9 +139,9 @@ inline std::ostream& operator<<(std::ostream& out, const ColumnData& cd)
     std::visit([&](auto&& elem) {
         using T = std::decay_t<decltype(elem)>;
         if constexpr (std::is_same_v<T, DbString>) {
-            out<<Convert::DbStringToString(elem);
+            out << Convert::DbStringToString(elem);
         } else {
-            out<< std::to_string(elem);
+            out << std::to_string(elem);
         }
     },
         cd);

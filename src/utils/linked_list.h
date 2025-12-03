@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef LINKED_LISTS_H
+#define LINKED_LISTS_H
 
 #include <iostream>
 #include <optional>

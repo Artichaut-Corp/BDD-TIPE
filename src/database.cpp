@@ -2,6 +2,8 @@
 #include "algebrizer/algebrizer.h"
 #include "data_process_system/racine.h"
 #include "storage/record.h"
+
+#include <fstream>
 #include <numeric>
 #include <ostream>
 
@@ -418,74 +420,6 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
         QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get());
 
-        // auto fields = select->getFields()->getField();
-
-        // if (fields.size() != 1) {
-        //     throw std::runtime_error("Erreur provisoire, pour l'instant une colonne à la fois pour tester.");
-        // }
-
-        // auto column = std::holds_alternative<Parsing::SelectField>(fields[0]) ? std::get<Parsing::SelectField>(fields[0]) : throw std::runtime_error("Erreur provisoire, on ne teste pas encore les fonctions d'aggrégation.");
-
-        // auto read_result = Storing::Store::GetDBColumn(File->Fd(), Index.get(), select->getTable()->getTableName(), column.m_Field.value().getColumnName());
-
-        // if (std::holds_alternative<Errors::Error>(read_result)) {
-        //     Errors::Error e = std::get<Errors::Error>(read_result);
-
-        //     throw e;
-        // }
-
-        // auto column_data = std::get<Column>(std::move(read_result));
-
-        // // Probablement une fonction qui affichera un joli tableau du résultat
-        // std::ostringstream oss;
-
-        // if (std::holds_alternative<std::unique_ptr<std::vector<DbString>>>(column_data)) {
-
-        //     auto result = std::get<std::unique_ptr<std::vector<DbString>>>(std::move(column_data));
-
-        //     for (size_t i = 0; i < result->size(); i++) {
-        //         oss << Convert::DbStringToString(result->at(i));
-
-        //         if (i < result->size() - 1) {
-        //             oss << ", ";
-        //         }
-        //     }
-        // } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt>>>(column_data)) {
-        //     auto result = std::get<std::unique_ptr<std::vector<DbInt>>>(std::move(column_data));
-
-        //     for (size_t i = 0; i < result->size(); i++) {
-        //         oss << result->at(i);
-
-        //         if (i < result->size() - 1) {
-        //             oss << ", ";
-        //         }
-        //     }
-        // } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt16>>>(column_data)) {
-        //     auto result = std::get<std::unique_ptr<std::vector<DbInt16>>>(std::move(column_data));
-
-        //     for (size_t i = 0; i < result->size(); i++) {
-        //         oss << result->at(i);
-
-        //         if (i < result->size() - 1) {
-        //             oss << ", ";
-        //         }
-        //     }
-
-        // } else {
-        //     auto result = std::get<std::unique_ptr<std::vector<DbInt8>>>(std::move(column_data));
-
-        //     for (size_t i = 0; i < result->size(); i++) {
-        //         oss << result->at(i);
-
-        //         if (i < result->size() - 1) {
-        //             oss << ", ";
-        //         }
-        //     }
-        // }
-
-        // output = oss.str();
-
-        // delete select;
     } else if (std::holds_alternative<Parsing::UpdateStmt*>(stmt)) {
         auto update = std::get<Parsing::UpdateStmt*>(stmt);
 
@@ -504,7 +438,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
             std::unordered_map<std::string, ColumnData>* data = Storing::Record::GetMapFromData(insert->getData()->get(), insert->getOrder()->get());
 
-            auto err = Storing::Store::SetData(File->Fd(), Index.get(), name, *data);
+            auto err = Storing::Store::DB_SetData(File->Fd(), Index.get(), name, *data);
 
             delete data;
 
@@ -542,7 +476,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
                 std::span(col_data->begin() + col_number * i, col_data->begin() + (col_number * i + col_number)),
                 col_order);
 
-            auto err = Storing::Store::SetData(File->Fd(), Index.get(), name, *data);
+            auto err = Storing::Store::DB_SetData(File->Fd(), Index.get(), name, *data);
 
             if (err.has_value()) {
                 throw err;
@@ -569,6 +503,156 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
     delete parser;
 
     return output;
+}
+
+void DatabaseEngine::process_csv_streaming(const std::string& path, const std::string& table, const std::vector<std::string>& columns)
+{
+    constexpr int MAX_ROWS_PER_TRANSACTION = 100;
+    const size_t ncols = columns.size();
+    int compteur = 0;
+
+    std::ifstream in(path);
+    if (!in.is_open())
+        throw std::runtime_error("Cannot open file: " + path);
+
+    std::string header;
+    std::getline(in, header); // skip header
+
+    std::vector<std::string> batch;
+    batch.reserve(MAX_ROWS_PER_TRANSACTION);
+
+    std::string line;
+    while (std::getline(in, line)) {
+        compteur++;
+        batch.push_back(line.substr(0, line.size() - 1));
+
+        if ((int)batch.size() >= MAX_ROWS_PER_TRANSACTION) {
+
+            // std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+            // Process this batch
+            std::ostringstream query;
+            query << "TRANSACTION " << table << " (";
+            for (size_t i = 0; i < ncols; ++i) {
+                if (i)
+                    query << ", ";
+                query << columns[i];
+            }
+            query << ") VALUES ";
+            bool peut_ajouter_virgule = false;
+            for (size_t j = 0; j < batch.size(); j++) {
+
+                std::stringstream ss(batch[j]);
+                std::string cell;
+                std::vector<std::string> vals;
+                size_t pos = ss.str().find("\"");
+
+                if (pos == std::string::npos) {
+                    if (j != 0 && peut_ajouter_virgule)
+                        query << ",";
+                    peut_ajouter_virgule = true;
+                    while (std::getline(ss, cell, ','))
+                        vals.push_back(cell);
+
+                    query << "(";
+                    for (size_t k = 0; k < vals.size(); ++k) {
+                        if (k)
+                            query << ", ";
+                        auto& v = vals[k];
+                        if (v.empty() || v == "NULL")
+                            query << "0";
+                        else {
+                            bool numeric = true;
+                            for (char c : v)
+                                if (!std::isdigit(c)) {
+                                    numeric = false;
+                                    break;
+                                }
+                            if (numeric)
+                                query << v;
+                            else {
+                                query << "\"" << v << "\"";
+                            }
+                        }
+                    }
+                    query << ")";
+                }
+            }
+            query << " END;";
+
+            if (compteur > 2000000)
+                break;
+
+            DatabaseEngine::Eval(query.str());
+            batch.clear();
+        }
+    }
+    // Handle the final partial batch
+    if (!batch.empty()) {
+        // Process this batch
+        std::ostringstream query;
+        query << "TRANSACTION " << table << " (";
+        for (size_t i = 0; i < ncols; ++i) {
+            if (i)
+                query << ", ";
+            query << columns[i];
+        }
+        query << ") VALUES ";
+        bool peut_ajouter_virgule = false;
+        for (size_t j = 0; j < batch.size(); j++) {
+
+            std::stringstream ss(batch[j]);
+            std::string cell;
+            std::vector<std::string> vals;
+            size_t pos = ss.str().find("\"");
+
+            if (pos == std::string::npos) {
+                if (j != 0 && peut_ajouter_virgule)
+                    query << ",";
+                peut_ajouter_virgule = true;
+                while (std::getline(ss, cell, ','))
+                    vals.push_back(cell);
+
+                query << "(";
+                for (size_t k = 0; k < vals.size(); ++k) {
+                    if (k)
+                        query << ", ";
+                    auto& v = vals[k];
+                    if (v.empty() || v == "NULL")
+                        query << "0";
+                    else {
+                        bool numeric = true;
+                        for (char c : v)
+                            if (!std::isdigit(c)) {
+                                numeric = false;
+                                break;
+                            }
+                        if (numeric)
+                            query << v;
+                        else {
+                            query << "\"" << v << "\"";
+                        }
+                    }
+                }
+                query << ")";
+            }
+        }
+        query << " END;";
+
+        DatabaseEngine::Eval(query.str());
+        batch.clear();
+    }
+}
+
+void DatabaseEngine::import_all_csv()
+{
+    DatabaseEngine::process_csv_streaming("../script/table/contributor.csv", "contributors", { "id", "username" });
+    DatabaseEngine::process_csv_streaming("../script/table/revision.csv", "revisions", { "id", "parent_id", "timestamp", "contributor_id" });
+    DatabaseEngine::process_csv_streaming("../script/table/page.csv", "pages", { "id", "ns", "title", "revision_id" });
+
+    // DatabaseEngine::process_csv_streaming("../script/table/namespaces.csv", "namespaces", { "key", "name" });
+    //  DatabaseEngine::process_csv_streaming("../script/table/categories_pages.csv", "categories_pages", { "id_cat", "page_id" });
+    //  DatabaseEngine::process_csv_streaming("../script/table/categories.csv", "categories", { "id", "name" });
 }
 
 auto DatabaseEngine::PrintIndex(std::ostream& out) -> void
