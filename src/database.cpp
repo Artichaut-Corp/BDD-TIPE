@@ -1,10 +1,8 @@
 #include "database.h"
-
-#include "../lib/TOML/toml.hpp"
 #include "algebrizer/algebrizer.h"
 #include "data_process_system/racine.h"
 #include "storage/record.h"
-#include <cctype>
+
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -14,6 +12,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <toml++/toml.h>
 
 namespace Database {
 
@@ -321,8 +320,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
             (*param)[1] = tbl["PronfMode"].value_or(0); // see Node::Pronf function in tree.cpp in order to understand what each number do, actually defined are 0,1,3
             (*param)[2] = tbl["InsertProj"].value_or(0); // if InserProj set to 1
             (*param)[3] = tbl["OptimizeBinaryExpression"].value_or(0); // if OptimizeBinaryExpression set to 1
-            (*param)[4  ] = tbl["OrderingQueryJoin"].value_or(0); // if OptimizeBinaryExpression set to 1
-
+            (*param)[4] = tbl["OrderingQueryJoin"].value_or(0); // if OptimizeBinaryExpression set to 1
 
         } catch (const toml::parse_error& err) {
             std::cerr << "Error parsing config file: " << err.description() << std::endl;
@@ -409,7 +407,6 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
         throw Errors::Error(Errors::ErrorType::RuntimeError, "Wait this is illegal", 0, 0, Errors::ERROR_WRONG_MEMORY_ACCESS);
     }
 
-
     return output;
 }
 
@@ -488,7 +485,8 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
             }
             query << " END;";
 
-            if (compteur > 2000000) break;
+            if (compteur > 2000000)
+                break;
 
             DatabaseEngine::Eval(query.str());
             batch.clear();

@@ -8,6 +8,7 @@
 #include <format>
 #include <memory>
 #include <ostream>
+#include <replxx.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -277,13 +278,17 @@ public:
         std::string input;
 
         if (Settings.m_Repl) {
+            Replxx* rx = replxx_init();
+
+            // replxx_set_completion_callback(rx, Utils::Repl::completion_callback, nullptr);
+            // replxx_set_highlighter_callback(rx, Utils::Repl::highlighter_callback);
+
+            std::string prompt = "bdd-tipe> ";
 
             for (;;) {
-                std::cout << "SQL>>" << std::endl;
+                input = replxx_input(rx, prompt.c_str());
 
-                input = Utils::Repl::Read();
-
-                if (input == "\0") {
+                if (input.empty()) {
                     std::cout << "Exiting...\n";
                     m_Quit = true;
 
@@ -296,6 +301,9 @@ public:
                 } else {
                     Utils::Repl::Print(Eval(input));
                 }
+
+                // Add to history
+                replxx_history_add(rx, input.c_str());
             }
         } else {
 

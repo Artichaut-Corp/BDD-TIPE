@@ -5,10 +5,11 @@
 #include "../parser.h"
 #include "../storage.h"
 #include "../utils/printing_utils.h"
+#include "../utils/union_find.h"
 
 #include <chrono>
-#include <gperftools/heap-profiler.h>
 #include <cstddef>
+#include <gperftools/heap-profiler.h>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -25,16 +26,16 @@ std::shared_ptr<ColonneNamesSet> ConvertToStandardColumnName(std::shared_ptr<Tab
     if (Colonne->HaveTable()) {
         std::shared_ptr<TableNamesSet> table = (*variation_of_tablename_to_main_table_name)[Colonne->GetTable()];
         auto FullName = Colonne->getColumnName();
-        StandardName = std::make_shared<ColonneNamesSet>( ColonneNamesSet(FullName, *Colonne->GetAlias(), table)); // récupere le nom de cette colonne
+        StandardName = std::make_shared<ColonneNamesSet>(ColonneNamesSet(FullName, *Colonne->GetAlias(), table)); // récupere le nom de cette colonne
     } else { // la colonne n'as pas de nom de table, on en conclu que c'est une colonne de la table principale, il faut donc rajouter le nom de cette table à son identifiant
-        StandardName = std::make_shared<ColonneNamesSet>( ColonneNamesSet(Colonne->getColumnName(), *Colonne->GetAlias(), NomTablePrincipale));
+        StandardName = std::make_shared<ColonneNamesSet>(ColonneNamesSet(Colonne->getColumnName(), *Colonne->GetAlias(), NomTablePrincipale));
     }
 
     return StandardName;
 }
 std::shared_ptr<TableNamesSet> ConvertToStandardTableName(Database::Parsing::TableName* Table, std::unordered_map<std::string, std::shared_ptr<TableNamesSet>>* variation_of_tablename_to_main_table_name)
 {
-    std::shared_ptr<TableNamesSet> StandardName =  std::make_shared<TableNamesSet>(TableNamesSet(Table->getTableName()));
+    std::shared_ptr<TableNamesSet> StandardName = std::make_shared<TableNamesSet>(TableNamesSet(Table->getTableName()));
     (*variation_of_tablename_to_main_table_name)[StandardName->GetMainName()] = StandardName;
     for (auto e : *Table->GetAlias()) {
         StandardName->AddAlias(e);
@@ -46,12 +47,12 @@ std::shared_ptr<TableNamesSet> ConvertToStandardTableName(Database::Parsing::Tab
 void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo>* IndexGet, std::shared_ptr<std::vector<int>> param)
 {
 
-
-
     int descend_select = (*param)[0];
     int type_of_join = (*param)[1];
     int InserProj = (*param)[2];
     int optimize_BinaryExpr = (*param)[3];
+    int Ordering_Join = (*param)[4];
+
     // Implémentation d'une conversion en arbre d'une query simple
     std::unordered_map<std::string, std::shared_ptr<TableNamesSet>> variation_of_tablename_to_main_table_name;
     std::shared_ptr<TableNamesSet> TablePrincipaleNom = ConvertToStandardTableName(Selection->getTable(), &variation_of_tablename_to_main_table_name); // ne peut pas être nullptr
@@ -229,6 +230,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     Node RacineExec = Node(new Proj(&UsefullColumnForAggrAndOutput, TablePrincipaleNom)); // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
     std::vector<MetaTable> Tables;
     Tables.push_back(*table_principale); // on enregiste la table principale
+    auto RacineMainTable = &RacineExec;
 
     std::unordered_map<std::string, std::pair<Node*, bool>> TableToRootOfTableMap; // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
     TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>((&RacineExec), true);
@@ -239,6 +241,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         Node* Node_Select = new Node(MainSelect);
         RacineExec.AddChild(true, Node_Select);
         TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>(Node_Select, true);
+        RacineMainTable = Node_Select;
     }
 
     if (!tables_secondaires.empty()) { // si il y as des join
@@ -266,14 +269,13 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 }
             }
             // Maintenant que l'on as tout pour la table Principale on la créer
-            std::shared_ptr<MetaTable> table_secondaire = std::make_shared<MetaTable>( MetaTable(std::make_shared<Table>(Table(&Racines, tables_secondaires[i]))));
+            std::shared_ptr<MetaTable> table_secondaire = std::make_shared<MetaTable>(MetaTable(std::make_shared<Table>(Table(&Racines, tables_secondaires[i]))));
             Tables.push_back(*table_secondaire);
-
             std::shared_ptr<TableNamesSet> TableDéjàAjouter = nullptr; // dans chaque création de jointure,il y a déjà une table présente dans l'arbre d'éxécution
             std::shared_ptr<TableNamesSet> TableGauche = join_list[i]->GetLTable();
             std::shared_ptr<TableNamesSet> TableDroite = join_list[i]->GetRTable();
             if (TableToRootOfTableMap.contains(TableGauche->GetMainName())) {
-                TableDéjàAjouter = TableDroite;
+                TableDéjàAjouter = TableGauche;
             } else {
                 TableDéjàAjouter = TableDroite;
             }
@@ -331,14 +333,34 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             }
         }
     }
+    if (Ordering_Join == 1 and join_list.size() >= 2) { // no need to optimize if there is just one join of no join at all
 
+        std::vector<std::pair<Join*, float>> JoinAndRCs = std::vector<std::pair<Join*, float>>();
+        for (auto Join : join_list) {
+            JoinAndRCs.push_back(std::make_pair(Join, Join->calculeRC(Magasin->GetTableByName(Join->GetLTable()), Magasin->GetTableByName(Join->GetRTable()), type_of_join)));
+        }
+        std::sort(JoinAndRCs.begin(), JoinAndRCs.end(),
+            [&](std::pair<Join*, float> a, std::pair<Join*, float> b) { return a.second < b.second; });
+
+        Node* last;
+        Utils::UnionFind uf = Utils::UnionFind();
+        for (auto joinandrc : JoinAndRCs) {
+            std::cout << "Le Join entre " << joinandrc.first->GetLTable()->GetMainName() << " et " << joinandrc.first->GetRTable()->GetMainName() << " a une RC de :" << joinandrc.second << "\n";
+
+            last = uf.AddElem(joinandrc.first);
+        }
+
+        RacineMainTable->AddChild(true, last);
+        std::cout << "\n en Optimisant le plan en fonction des RC on a : \n";
+        RacineExec.printBT(std::cout);
+    }
     if (where != NULL and descend_select == 1) {
-        std::cout << "\n et maintenant en descendant les sélections on a : \n";
+        std::cout << "\n en descendant les sélections on a : \n";
         RacineExec.SelectionDescent(Magasin, MainSelect);
         RacineExec.printBT(std::cout);
     }
     if (InserProj == 1) {
-        std::cout << "\n et maintenant en insérant des Projections là où il faut : \n";
+        std::cout << "\n en insérant des Projections là où il faut : \n";
         std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnToKeep = new std::unordered_set<std::shared_ptr<ColonneNamesSet>>;
         RacineExec.InsertProj(ColumnToKeep);
         RacineExec.printBT(std::cout);
@@ -357,6 +379,5 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
 
     std::cout << endTime - currentTime << "\n";
-
 }
 };

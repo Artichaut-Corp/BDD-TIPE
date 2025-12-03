@@ -4,6 +4,7 @@
 #include "../data_process_system/racine.h"
 #include "../utils/printing_utils.h"
 #include "pred.h"
+#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -107,4 +108,92 @@ std::shared_ptr<MetaTable> Join::ExecGrouByStyle(std::shared_ptr<MetaTable> tabl
 
     return table1;
 }
+
+int Join::CardExecNaif(std::shared_ptr<MetaTable> table1, std::shared_ptr<MetaTable> table2)
+{
+    auto Sample1 = table1->GetSample(m_ColumnName1);
+    auto Sample2 = table2->GetSample(m_ColumnName2);
+    int nbr_match = 0;
+    for (int i = 0; i < Sample1->size(); i++) {
+        auto val1 = (*Sample1)[i];
+        for (int j = 0; j < Sample2->size(); j++) {
+            auto val2 = (*Sample2)[j];
+            if (m_Comps.Eval(val1, val2)) {
+                nbr_match++;
+            }
+        }
+    }
+    return nbr_match;
+}
+int Join::CardExecTrier(std::shared_ptr<MetaTable> table1, std::shared_ptr<MetaTable> table2)
+{
+    auto Sample1 = table1->GetSample(m_ColumnName1);
+    auto Sample2 = table2->GetSample(m_ColumnName2);
+    sort(Sample1->begin(), Sample1->end());
+    sort(Sample2->begin(), Sample2->end());
+    int nbr_match = 0;
+
+    int pos1 = 0;
+    int pos2 = 0;
+    while (pos1 < Sample1->size() && pos2 < Sample2->size()) {
+        auto val1 = (*Sample1)[pos1];
+        auto val2 = (*Sample2)[pos2];
+
+        if (val1 < val2) {
+            ++pos1;
+        } else if (val1 > val2) {
+            ++pos2;
+        } else {
+            auto mainval = val1;
+            int pos1deb = pos1;
+            int pos2deb = pos2;
+
+            while (pos1 < Sample1->size() && (*Sample1)[pos1] == mainval)
+                ++pos1;
+            while (pos2 < Sample2->size() && (*Sample2)[pos2] == mainval)
+                ++pos2;
+            nbr_match += (pos1 - pos1deb) * (pos2 - pos2deb);
+        }
+    }
+    return nbr_match;
+}
+int Join::CardExecGrouByStyle(std::shared_ptr<MetaTable> table1, std::shared_ptr<MetaTable> table2)
+{
+    auto Sample1 = table1->GetSample(m_ColumnName1);
+    auto Sample2 = table2->GetSample(m_ColumnName2);
+    int nbr_match = 0;
+
+    std::unordered_map<ColumnData, std::vector<int>> map_col;
+    for (int i = 0; i < Sample1->size(); i++) {
+        map_col[(*Sample1)[i]].push_back(i);
+    }
+    for (int i = 0; i < Sample2->size(); i++) {
+        nbr_match += map_col[(*Sample2)[i]].size();
+    }
+    return nbr_match;
+}
+
+float Join::calculeRC(std::shared_ptr<MetaTable> MetaTableL, std::shared_ptr<MetaTable> MetaTableR, int type_of_join)
+{
+    float CardResult;
+    if (type_of_join == 0) {
+        CardResult = CardExecNaif(MetaTableL, MetaTableR);
+    } else if (type_of_join == 1) {
+        CardResult = CardExecTrier(MetaTableL, MetaTableR);
+    } // else if (JoinParam == 2    ) {
+    //    CardResult = CardExecTrierStockerMemoire(MetaTableL, MetaTableR);
+    //}
+    else if (type_of_join == 3) {
+        CardResult = CardExecGrouByStyle(MetaTableL, MetaTableR);
+    } else {
+        throw std::runtime_error("Type de Join Inconnu");
+    }
+    int max_meta = std::max(MetaTableL->Columnsize(), MetaTableR->Columnsize());
+    if (max_meta > 1000) {
+        return (CardResult / 1000);
+    } else {
+        return (CardResult / max_meta);
+    }
+}
+
 };
