@@ -6,6 +6,7 @@
 #include "../storage.h"
 #include "../utils/printing_utils.h"
 
+#include <chrono>
 #include <gperftools/heap-profiler.h>
 #include <cstddef>
 #include <memory>
@@ -44,6 +45,9 @@ std::shared_ptr<TableNamesSet> ConvertToStandardTableName(Database::Parsing::Tab
 
 void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo>* IndexGet, std::shared_ptr<std::vector<int>> param)
 {
+
+
+
     int descend_select = (*param)[0];
     int type_of_join = (*param)[1];
     int InserProj = (*param)[2];
@@ -339,16 +343,20 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         RacineExec.InsertProj(ColumnToKeep);
         RacineExec.printBT(std::cout);
     }
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
     std::shared_ptr<MetaTable> Table_Finale = RacineExec.Pronf(Magasin, type_of_join);
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+
     if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
-
         AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale);
-
     } else {
-        HeapProfilerDump("Checkpoint");
-        HeapProfilerStop();
 
         Utils::AfficheResultat(Table_Finale, &colonnes_de_retour);
     }
+
+    std::cout << endTime - currentTime << "\n";
+
 }
 };

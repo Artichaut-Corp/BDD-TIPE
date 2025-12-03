@@ -1,20 +1,18 @@
 #include "database.h"
+
 #include "../lib/TOML/toml.hpp"
 #include "algebrizer/algebrizer.h"
 #include "data_process_system/racine.h"
 #include "storage/record.h"
 #include <cctype>
-#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <memory>
 #include <numeric>
 #include <ostream>
-#include <ratio>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace Database {
@@ -490,7 +488,7 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
             }
             query << " END;";
 
-            if (compteur > 500000) break;
+            if (compteur > 2000000) break;
 
             DatabaseEngine::Eval(query.str());
             batch.clear();

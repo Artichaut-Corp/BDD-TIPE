@@ -12,23 +12,18 @@ void MetaTable::Selection(const Parsing::BinaryExpression::Condition pred, const
     // Pour faire une selection, d'abord, il faut garder que les indices qui vérifient toute les conditions
     int taille = Columnsize();
     std::vector<int> indices_valides;
-    std::unordered_map<std::string, ColumnData> valeurs;
     std::unordered_map<std::string, ColumnData*> CoupleTesté;
     for (auto e : *nom_colonnes) {
-        valeurs[e->GetMainName()] = ColumnData {};
+        auto temp = new ColumnData {};
         for (auto f : e->GetAllFullNames()) {
-            CoupleTesté[f] = &valeurs[e->GetMainName()];
+            CoupleTesté[f] = temp;
         }
     }
 
     for (int i = 0; i < taille; i++) {
         for (auto e : *nom_colonnes) {
             const std::string& nom = e->GetMainName();
-            auto itC = CoupleTesté.find(nom);
-            auto itM = m_MapColNameToTable.find(nom);
-            if (itC != CoupleTesté.end() && itM != m_MapColNameToTable.end() && itC->second != nullptr) {
-                *(itC->second) = itM->second->get_value_dans_table(e, i);
-            }
+            *(CoupleTesté[nom]) = this->get_value(e,i);
         }
         bool eval = false;
         if (std::holds_alternative<Parsing::Clause*>(pred)) {

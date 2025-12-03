@@ -231,13 +231,10 @@ void Final::AppliqueAgregateAndPrint(std::shared_ptr<MetaTable> table)
     if (m_Limite.has_value()) {
         std::span<int> sub = std::span<int>(*OrdreIndice).subspan(m_Limite->first, m_Limite->second);
 
-        HeapProfilerDump("Checkpoint");
-        HeapProfilerStop();
 
         Database::Utils::AfficheAgregSpan(&ColumnNameToValues, &sub, m_ColonneInfo);
     } else {
-        HeapProfilerDump("Checkpoint");
-        HeapProfilerStop();
+        
 
         Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice, m_ColonneInfo);
     }
