@@ -31,6 +31,8 @@ constexpr uint8_t DB_CHAR_SIZE = 1; // 8 bits
 constexpr uint8_t DB_STRING_SIZE = MAX_STRING_LENGTH * DB_CHAR_SIZE; // 256 chars
 constexpr uint8_t DB_INT_ARRAY_SIZE = DB_INT_SIZE * MAX_ARRAY_SIZE; // 16 int
 
+constexpr uint8_t TREE_ORDER = 10;
+
 #if MAX_ELEMENT_PER_COLUMN > MAX_DBINT
 #define DB_COL_ELMT_INT_SIZE DB_INT64_SIZE
 using DbKey = uint64_t;

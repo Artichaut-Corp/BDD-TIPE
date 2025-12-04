@@ -1,10 +1,12 @@
 #include "../errors.h"
 #include "../parser.h"
+#include "b+tree.h"
 #include "table.h"
 #include "types.h"
 
-#include <cstring>
+#include <cstdint>
 #include <memory>
+#include <numbers>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -29,7 +31,7 @@ public:
         // - Lire à partir de l'offset n tous les n + |e|
         // - Remplir et retourner un vecteur
 
-        auto result = std::make_unique<std::vector<T>>();
+        std::vector<T> result = std::make_unique<std::vector<T>>();
 
         uint32_t offset = info.GetOffset();
 
@@ -41,17 +43,13 @@ public:
 
         T buffer;
 
-        for (int i = 0; i < element_number; i++) {
-            int bytes_read = read(fd, &buffer, element_size);
+        int bytes_read = read(fd, &buffer, element_size * element_number);
 
-            offset += bytes_read;
-
-            if (bytes_read != element_size) {
-                throw std::runtime_error("failed to read");
-            }
-
-            result->emplace_back(buffer);
+        if (bytes_read != element_size * element_number) {
+            throw std::runtime_error("failed to read");
         }
+
+        result->data() = buffer;
 
         return result;
     }
@@ -70,7 +68,7 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
@@ -99,12 +97,12 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
             // Ptêtre bound check quand même
-            lseek(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
+            lseek64(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
                 SEEK_SET);
 
             ret = write(fd, &data.at(iter->first), e_size);
@@ -121,12 +119,12 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
             // Ptêtre bound check quand même
-            lseek(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
+            lseek64(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
                 SEEK_SET);
 
             ret = write(fd, &data.at(iter->first), e_size);
@@ -135,6 +133,24 @@ public:
         info->IncrMaxRecord();
     }
 
+    static void WriteIndex(int fd, TableInfo* info, const std::unordered_map<std::string, ColumnData>& data)
+    {
+        for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
+             ++iter) {
+
+            if (iter->second.IsSorted()) {
+                DbInt64 offset = iter->second.GetIndexOffset();
+
+                // const DbInt8 e_size = iter->second.GetElementSize();
+
+                BPlusTree<TREE_ORDER, e_size>::Node root = BPlusTree<TREE_ORDER>::FindRoot(fd, offset);
+
+                BPlusTree<TREE_ORDER>::Insert(fd, root, data.at(iter->first));
+            }
+        }
+    }
+
+    // Utility function mapping key and values from vectors into a map
     static std::unordered_map<std::string, ColumnData>* GetMapFromData(std::vector<Parsing::LitteralValue<std::string>>* column_data, std::vector<Parsing::ColumnName>* column_order)
     {
 
@@ -143,7 +159,7 @@ public:
         // Assuming the vectors have the same length
         // I will certainly need some types to cast in
         //
-        // TODO: Not functionnal till types are not casted rigth
+        // Solution not optimal -> would not make any difference between signed and unsigned ints
         for (int i = 0; i < column_order->size(); i++) {
 
             if (column_data->at(i).getColumnType() == Parsing::ColumnType::INTEGER_C) {

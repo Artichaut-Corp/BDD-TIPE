@@ -2,7 +2,7 @@
 
 namespace Database::Storing {
 
-std::variant<Column, Errors::Error> Store::GetDBColumn(int fd, DBTableIndex* Index, const std::string& table_name, const std::string& column_name)
+std::variant<Column, Errors::Error> Store::DB_GetColumn(int fd, DBTableIndex* Index, const std::string& table_name, const std::string& column_name)
 {
 
     TableInfo* t;
@@ -42,7 +42,7 @@ std::variant<Column, Errors::Error> Store::GetDBColumn(int fd, DBTableIndex* Ind
 }
 
 template <typename R>
-std::optional<Errors::Error> Store::SetRecord(int fd, DBTableIndex* Index, const std::string& table_name, R* record)
+std::optional<Errors::Error> Store::DB_SetRecord(int fd, DBTableIndex* Index, const std::string& table_name, R* record)
 {
     TableInfo* t;
 
@@ -57,7 +57,7 @@ std::optional<Errors::Error> Store::SetRecord(int fd, DBTableIndex* Index, const
     return std::nullopt;
 }
 
-std::optional<Errors::Error> Store::SetData(int fd, DBTableIndex* Index, const std::string& table_name, const std::unordered_map<std::string, ColumnData>& data)
+std::optional<Errors::Error> Store::DB_SetData(int fd, DBTableIndex* Index, const std::string& table_name, const std::unordered_map<std::string, ColumnData>& data)
 {
     TableInfo* t;
 

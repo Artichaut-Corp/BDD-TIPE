@@ -345,13 +345,7 @@ auto DatabaseEngine::FillIndex() -> void
 
     std::cout << "Allocating index memory...\n";
 
-    name.reserve(table_number);
-    is_sys.reserve(table_number);
-    current_element_nb.reserve(table_number);
-    col_num.reserve(table_number);
-    col_offsets.reserve(table_number);
-
-    int offset = SCHEMA_TABLE_OFFSET;
+    DbInt64 offset = SCHEMA_TABLE_OFFSET;
 
     FileInterface::ReadVec(fd, name, &offset, DB_STRING_SIZE, table_number);
 

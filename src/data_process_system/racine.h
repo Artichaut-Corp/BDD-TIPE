@@ -18,7 +18,7 @@ public:
     Racine(std::string NomColonne_, int fd, Storing::DBTableIndex* IndexGet)
         : NomColonne(NomColonne_)
     {
-        std::variant<Column, Errors::Error> ValeurRecuper = Storing::Store::GetDBColumn(fd, IndexGet, NomColonne_.substr(0, NomColonne_.find(".")), NomColonne_.substr( NomColonne_.find(".")+1));
+        std::variant<Column, Errors::Error> ValeurRecuper = Storing::Store::DB_GetColumn(fd, IndexGet, NomColonne_.substr(0, NomColonne_.find(".")), NomColonne_.substr( NomColonne_.find(".")+1));
         if (std::holds_alternative<Errors::Error>(ValeurRecuper)) {
             Errors::Error e = std::get<Errors::Error>(ValeurRecuper);
             throw e;

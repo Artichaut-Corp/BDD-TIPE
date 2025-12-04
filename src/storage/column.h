@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 
 #include "types.h"
@@ -16,22 +17,23 @@ class ColumnInfo {
 
     DbInt8 m_ElementSize;
 
-    DbBool m_Sortable;
+    DbBool m_Sortable = false;
 
-    DbBool m_IsSorted;
+    DbBool m_IsSorted = false;
 
     DbInt64 m_SortedColumnOffset;
 
-    DbBool m_Compressable;
+    DbBool m_Compressable = false;
 
-    DbBool m_IsCompressed;
-
-    DbInt64 m_CompressedColumnOffset;
+    DbBool m_IsCompressed = false;
 
 public:
+    using ColumnInfoTuple = std::tuple<DbString, DbInt, DbInt8, DbBool, DbBool, DbInt64, DbBool, DbBool>;
+
     ColumnInfo() = default;
 
-    ColumnInfo(int offset, uint8_t e_size, bool opt)
+    // Simplest contructor for unsorted and uncompressed
+    ColumnInfo(DbInt offset, DbInt8 e_size, DbBool opt)
         : m_Offset(offset)
         , m_ElementSize(e_size)
         , m_Sortable(opt)
@@ -41,8 +43,18 @@ public:
     {
     }
 
-    ColumnInfo(int offset, uint8_t e_size, bool sortable, bool sorted,
-        bool compressable, bool compressed)
+    // Contructor for indexed column
+    ColumnInfo(DbInt offset, DbInt8 e_size, DbBool sortable, DbBool sorted, DbInt64 sorted_offset)
+        : m_Offset(offset)
+        , m_ElementSize(e_size)
+        , m_Sortable(sortable)
+        , m_IsSorted(sorted)
+        , m_SortedColumnOffset(sorted_offset)
+    {
+    }
+
+    ColumnInfo(DbInt offset, DbInt8 e_size, DbBool sortable, DbBool sorted, DbInt64 sorted_offset,
+        DbBool compressable, DbBool compressed)
         : m_Offset(offset)
         , m_ElementSize(e_size)
         , m_Sortable(sortable)
@@ -52,12 +64,17 @@ public:
     {
     }
 
-    uint64_t GetOffset() const { return m_Offset; }
+    DbInt64 GetOffset() const { return m_Offset; }
 
-    uint8_t GetElementSize() const { return m_ElementSize; }
+    DbInt64 GetIndexOffset() const { return m_SortedColumnOffset; }
 
-    static std::unique_ptr<std::vector<
-        std::tuple<DbString, DbInt, DbInt8, DbBool, DbBool, DbBool, DbBool>>>
+    DbInt8 GetElementSize() const { return m_ElementSize; }
+
+    DbBool IsSorted() const { return m_IsSorted; }
+
+    DbBool IsCompressed() const { return m_IsCompressed; }
+
+    static std::unique_ptr<std::vector<ColumnInfoTuple>>
     GetColumnsData(int fd, int total_column_number);
 
     std::unordered_map<std::string, ColumnData> Map(const std::string& name)

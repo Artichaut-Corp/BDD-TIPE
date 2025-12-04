@@ -6,7 +6,7 @@ std::unique_ptr<std::vector<std::pair<std::string, ColumnInfo>>>
 TableInfo::GetTableColumns(
     int fd, uint8_t column_number, int column_number_beginning,
     const std::unique_ptr<std::vector<
-        std::tuple<DbString, DbInt, DbInt8, DbBool, DbBool, DbBool, DbBool>>>& data)
+        ColumnInfo::ColumnInfoTuple>>& data)
 {
 
     std::unique_ptr<std::vector<std::pair<std::string, ColumnInfo>>> res = std::make_unique<std::vector<std::pair<std::string, ColumnInfo>>>();
@@ -16,13 +16,13 @@ TableInfo::GetTableColumns(
     for (int i = column_number_beginning;
         i < column_number_beginning + column_number; i++) {
 
-        const auto [name, offset, size, sortable, sorted, compressable,
+        const auto [name, offset, size, sortable, sorted, sorted_offset, compressable,
             compressed]
             = data->at(i);
 
         std::pair<std::string, ColumnInfo> e = {
             Convert::DbStringToString(name),
-            ColumnInfo(offset, size, sortable, sorted, compressable, compressed)
+            ColumnInfo(offset, size, sortable, sorted, sorted_offset, compressable, compressed)
         };
 
         res->emplace_back(e);

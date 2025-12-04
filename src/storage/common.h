@@ -12,14 +12,12 @@
 
 namespace Database::Storing {
 
-
-
 class FileInterface {
 public:
     template <typename T>
-    static void ReadField(int fd, T* buffer, int* offset, int size)
+    static void ReadField(int fd, T* buffer, DbInt64* offset, int size)
     {
-        lseek(fd, *offset, SEEK_SET);
+        lseek64(fd, *offset, SEEK_SET);
 
         int bytes_read = read(fd, &buffer, size);
 
@@ -27,10 +25,12 @@ public:
     }
 
     template <typename T>
-    static void ReadVec(int fd, std::vector<T>& vec, int* offset,
+    static void ReadVec(int fd, std::vector<T>& vec, DbInt64* offset,
         const uint8_t element_size, int element_count)
     {
-        lseek(fd, *offset, SEEK_SET);
+        vec.reserve(element_count);
+
+        lseek64(fd, *offset, SEEK_SET);
 
         T buffer;
 

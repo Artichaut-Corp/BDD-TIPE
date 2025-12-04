@@ -2,7 +2,6 @@
 
 #define TABLE_H
 
-#include <cmath>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -82,7 +81,7 @@ public:
     GetTableColumns(
         int fd, uint8_t column_number, int column_number_beginning,
         const std::unique_ptr<std::vector<
-            std::tuple<DbString, DbInt, DbInt8, DbBool, DbBool, DbBool, DbBool>>>& data);
+            ColumnInfo::ColumnInfoTuple>>& data);
 
     std::unordered_map<std::string, ColumnData> Map(const std::string& name,
         DbInt offset)
