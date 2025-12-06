@@ -73,11 +73,11 @@ public:
     {
         auto ColonneSorting = m_Map[ColonneToSortBy->GetMainName()];
 
-        std::vector<int>* PosInColonneToSortBy = new std::vector<int>(ColonneSorting->size());
+        std::vector<int>* PosInColonneToSortBy = new std::vector<int>(m_Indices.size());
         std::iota(PosInColonneToSortBy->begin(), PosInColonneToSortBy->end(), 0);
 
         std::sort(PosInColonneToSortBy->begin(), PosInColonneToSortBy->end(),
-            [&](int a, int b) { return this->get_value_dans_table(ColonneToSortBy, a) < this->get_value_dans_table(ColonneToSortBy, b); });
+            [&](int a, int b) { return this->get_value_dans_table(ColonneToSortBy,m_Indices[a] ) < this->get_value_dans_table(ColonneToSortBy, m_Indices[b]); });
         return PosInColonneToSortBy;
     }
 

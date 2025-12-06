@@ -63,7 +63,7 @@ inline bool operator==(const TableNamesSet& first, const TableNamesSet& second)
     return first.TableEqual(std::make_shared<TableNamesSet>(second));
 }
 
-class  ColonneNamesSet {
+class ColonneNamesSet {
 private:
     std::unordered_set<std::string> m_ListOfFullName; // tous les noms possibles (Union entre le main name, alias et pour chaque noms de la table, table.(main name ou alias de la colonne))
     std::string m_MainName; // nom principal unique
@@ -108,7 +108,7 @@ public:
         }
     }
     const std::unordered_set<std::string>& GetAlias() const { return Aliases; }
-    
+
     std::string GetMainName() const
     {
         if (Table != nullptr) {
@@ -152,7 +152,7 @@ public:
             } else {
                 return m_MainName;
             }
-        }else {
+        } else {
             return GetMainName();
         }
     }
@@ -161,8 +161,15 @@ public:
 inline bool operator==(const ColonneNamesSet& first, const ColonneNamesSet& second) noexcept
 {
     for (const auto& n1 : first.GetAllFullNames()) {
-        if (second.GetAllFullNames().count(n1))
-            return true;
+        if (second.GetAllFullNames().count(n1)) {
+            if (first.HaveTableSet() && second.HaveTableSet()&& n1.find(".") == std::string::npos) { // if the column are the same but the name test doesn't include the table, we need to be sure they have the same table name
+                if (first.GetTableSet() == second.GetTableSet() ) {
+                    return true;
+                }
+            } else {
+                return true;
+            }
+        }
     }
     return false;
 }

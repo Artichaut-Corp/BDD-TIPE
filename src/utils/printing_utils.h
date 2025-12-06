@@ -35,7 +35,7 @@ inline void print_cell(const std::string& s, int width)
 }
 
 // Fonction d’affichage du résultat
-inline void AfficheResultat(std::shared_ptr<QueryPlanning::MetaTable> table, std::vector<QueryPlanning::ReturnType*>* OrdreRetour)
+inline void AfficheResultat(std::shared_ptr<QueryPlanning::MetaTable> table, std::vector<std::shared_ptr<QueryPlanning::ReturnType>>* OrdreRetour)
 {
     if (!table) {
         std::cout << "(table vide)" << std::endl;
@@ -54,7 +54,7 @@ inline void AfficheResultat(std::shared_ptr<QueryPlanning::MetaTable> table, std
     std::vector<std::shared_ptr<Database::QueryPlanning::Racine>> colonnes_a_afficher;
     colonnes_a_afficher.reserve(nb_cols);
 
-    for (const auto* ret : *OrdreRetour) {
+    for (const auto ret : *OrdreRetour) {
         std::shared_ptr<QueryPlanning::ColonneNamesSet> colName = ret->GetColonne();
         noms.push_back(colName); // le nom affiché vient de OrdreRetour
         colonnes_a_afficher.push_back(table->GetTableByColName(colName)->getRacinePtr(colName));
@@ -141,7 +141,7 @@ inline void AfficheResultat(std::shared_ptr<QueryPlanning::MetaTable> table, std
 inline void AfficheAgreg(
     std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues,
     std::vector<int>* OrdreIndice,
-    std::vector<QueryPlanning::ReturnType*>* OpArray)
+    std::vector<std::shared_ptr<QueryPlanning::ReturnType>>* OpArray)
 {
     if (!ColumnNameToValues || ColumnNameToValues->empty()) {
         std::cout << "(table vide)" << std::endl;
@@ -276,7 +276,7 @@ inline void AfficheAgreg(
 inline void AfficheAgregSpan(
     std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues,
     std::span<int>* OrdreIndice,
-    std::vector<QueryPlanning::ReturnType*>* OpArray)
+    std::vector<std::shared_ptr<QueryPlanning::ReturnType>>* OpArray)
 {
     if (!ColumnNameToValues || ColumnNameToValues->empty()) {
         std::cout << "(table vide)" << std::endl;

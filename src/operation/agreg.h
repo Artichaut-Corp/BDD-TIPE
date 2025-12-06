@@ -1,4 +1,5 @@
 
+#include <memory>
 #include <optional>
 #include <set>
 
@@ -8,7 +9,6 @@
 #include "../storage/types.h"
 #include <utility>
 #include <vector>
-
 
 #ifndef agreg_H
 
@@ -36,29 +36,29 @@ public:
 
 class Final {
 private:
-    std::vector<ReturnType*>* m_ColonneInfo;
+    std::vector<std::shared_ptr<ReturnType>>* m_ColonneInfo;
     std::optional<std::vector<std::shared_ptr<ColonneNamesSet>>*> m_ColumnsToGroupBy;
     std::optional<std::vector<std::pair<std::shared_ptr<ColonneNamesSet>, bool>>> m_OrderByCol; // liste des m_Colonne par lesquelles trié, le booléen est vrai si on doit triér dans l'ordre décroissant
     std::optional<std::pair<int, int>> m_Limite;
 
 public:
-    Final(std::vector<ReturnType*>* m_ColonneInfo_)
+    Final(std::vector<std::shared_ptr<ReturnType>>* m_ColonneInfo_)
         : m_ColonneInfo(m_ColonneInfo_)
         , m_ColumnsToGroupBy(std::nullopt)
     {
     }
 
-    Final(std::vector<ReturnType*>* m_ColonneInfo_, std::vector<std::shared_ptr<ColonneNamesSet>>* GroupByInfo_)
+    Final(std::vector<std::shared_ptr<ReturnType>>* m_ColonneInfo_, std::vector<std::shared_ptr<ColonneNamesSet>>* GroupByInfo_)
         : m_ColonneInfo(m_ColonneInfo_)
         , m_ColumnsToGroupBy(GroupByInfo_) {
         };
 
-    Final(std::vector<ReturnType*>* m_ColonneInfo_, std::vector<std::shared_ptr<ColonneNamesSet>>* GroupByInfo_, std::vector<std::pair<std::shared_ptr<ColonneNamesSet>, bool>> m_OrderByCol_)
+    Final(std::vector<std::shared_ptr<ReturnType>>* m_ColonneInfo_, std::vector<std::shared_ptr<ColonneNamesSet>>* GroupByInfo_, std::vector<std::pair<std::shared_ptr<ColonneNamesSet>, bool>> m_OrderByCol_)
         : m_ColonneInfo(m_ColonneInfo_)
         , m_ColumnsToGroupBy(GroupByInfo_)
         , m_OrderByCol(m_OrderByCol_) {
         };
-    Final(std::vector<ReturnType*>* m_ColonneInfo_, std::vector<std::shared_ptr<ColonneNamesSet>>* GroupByInfo_, std::vector<std::pair<std::shared_ptr<ColonneNamesSet>, bool>> m_OrderByCol_, std::pair<int, int> limite_)
+    Final(std::vector<std::shared_ptr<ReturnType>>* m_ColonneInfo_, std::vector<std::shared_ptr<ColonneNamesSet>>* GroupByInfo_, std::vector<std::pair<std::shared_ptr<ColonneNamesSet>, bool>> m_OrderByCol_, std::pair<int, int> limite_)
         : m_ColonneInfo(m_ColonneInfo_)
         , m_ColumnsToGroupBy(GroupByInfo_)
         , m_OrderByCol(m_OrderByCol_)
@@ -71,7 +71,7 @@ public:
 
     int GetTailleClef() { return (*m_ColumnsToGroupBy)->size(); }
 
-    void AppliqueAgregateAndPrint(std::shared_ptr<MetaTable> table);
+    std::chrono::high_resolution_clock::time_point  AppliqueAgregateAndPrint(std::shared_ptr<MetaTable> table,int benchmarking_INFO);
     void TrierListe(std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues, std::vector<int>* IndicesVierge);
 
     bool CompareDeuxIndices(std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues, int ind1, int ind2);

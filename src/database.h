@@ -6,12 +6,14 @@
 
 #include <filesystem>
 #include <format>
+#include <iostream>
 #include <memory>
 #include <ostream>
 #include <replxx.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
 
 #ifndef DATABASE_H
 
@@ -298,6 +300,7 @@ public:
                 } else if (input == ".print_table_layout") {
                     PrintIndex(std::cout);
                 } else {
+
                     Utils::Repl::Print(Eval(input));
                 }
 

@@ -84,16 +84,17 @@ public:
         m_MapTableNameToTable.erase(m_MapTableNameToTable.begin(), m_MapTableNameToTable.end());
         m_MapColNameToTable.erase(m_MapColNameToTable.begin(), m_MapColNameToTable.end());
 
-        for (auto e : m_Tables) {
-            e->update();
-            if (e->size() == 0) {
+        for (int i =0;i<m_Tables.size();i++) {
+            m_Tables[i]->update();
+            if (m_Tables[i]->size() == 0) {
+                m_Tables.erase(m_Tables.begin()+i);
             } else {
-                for (auto n : e->get_name()->GetAllNames()) {
-                    m_MapTableNameToTable[n] = e;
+                for (auto n : m_Tables[i]->get_name()->GetAllNames()) {
+                    m_MapTableNameToTable[n] = m_Tables[i];
                 }
-                for (auto r : *e->GetColumns()) {
+                for (auto r : *m_Tables[i]->GetColumns()) {
                     for (auto s : r->get_name()->GetAllFullNames()) {
-                        m_MapColNameToTable[s] = e;
+                        m_MapColNameToTable[s] = m_Tables[i];
                     }
                 }
             }

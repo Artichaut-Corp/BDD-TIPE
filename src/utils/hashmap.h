@@ -33,6 +33,7 @@ public:
                 return false;
         return true;
     }
+    ColumnData GetValAt(int i){return keys[i];}
 };
 
 struct MultiKeyDynHash {

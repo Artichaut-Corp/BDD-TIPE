@@ -7,6 +7,8 @@
 #include "../utils/printing_utils.h"
 #include "../utils/union_find.h"
 #include <cstddef>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -43,17 +45,19 @@ std::shared_ptr<TableNamesSet> ConvertToStandardTableName(Database::Parsing::Tab
 
 void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo>* IndexGet, std::shared_ptr<std::vector<int>> param)
 {
+    auto deb = std::chrono::high_resolution_clock::now();
     int descend_select = (*param)[0];
     int type_of_join = (*param)[1];
     int InserProj = (*param)[2];
     int optimize_BinaryExpr = (*param)[3];
     int Ordering_Join = (*param)[4];
+    int benchmarking = (*param)[5];
 
     // Implémentation d'une conversion en arbre d'une query simple
     std::unordered_map<std::string, std::shared_ptr<TableNamesSet>> variation_of_tablename_to_main_table_name;
     std::shared_ptr<TableNamesSet> TablePrincipaleNom = ConvertToStandardTableName(Selection->getTable(), &variation_of_tablename_to_main_table_name); // ne peut pas être nullptr
     // récupérer la liste des colonne de retour,
-    std::vector<ReturnType*> colonnes_de_retour;
+    std::vector<std::shared_ptr<ReturnType>> colonnes_de_retour;
     std::unordered_map<std::string, std::unordered_set<std::shared_ptr<ColonneNamesSet>>> TableNameToColumnList;
     std::unordered_set<std::shared_ptr<ColonneNamesSet>> UsefullColumnForAggrAndOutput;
     bool IsAgregate = false;
@@ -101,7 +105,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                     auto NomColonne = (ConvertToStandardColumnName(TablePrincipaleNom, &(arg.m_Field.value()), &variation_of_tablename_to_main_table_name));
                     UsefullColumnForAggrAndOutput.emplace(NomColonne);
                     TableNameToColumnList[NomColonne->GetTableSet()->GetMainName()].emplace(NomColonne);
-                    colonnes_de_retour.push_back(new ReturnType(NomColonne, Parsing::AggrFuncType::NOTHING_F));
+                    colonnes_de_retour.push_back(std::make_shared<ReturnType>(ReturnType(NomColonne, Parsing::AggrFuncType::NOTHING_F)));
 
                 } else {
                     // bizare, c'est normalement impossible
@@ -113,7 +117,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 // on vérifie que y'as bien une valeur, c'est un type optinal
                 std::shared_ptr<ColonneNamesSet> NomColonne = ConvertToStandardColumnName(TablePrincipaleNom, arg.getColumnName(), &variation_of_tablename_to_main_table_name);
                 TableNameToColumnList[NomColonne->GetTableSet()->GetMainName()].emplace(NomColonne);
-                colonnes_de_retour.push_back(new ReturnType(NomColonne, arg.getType()));
+                colonnes_de_retour.push_back(std::make_shared<ReturnType>( ReturnType(NomColonne, arg.getType())));
                 IsAgregate = true;
                 UsefullColumnForAggrAndOutput.emplace(NomColonne);
 
@@ -284,7 +288,9 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         }
     }
     Ikea* Magasin = new Ikea(Tables);
-    RacineExec.printBT(std::cout);
+    if (benchmarking == 0) {
+        RacineExec.printBT(std::cout);
+    }
     if (where != NULL and optimize_BinaryExpr == 1) {
         auto SelectNode = RacineExec.GetLeftPtr();
         if (SelectNode == nullptr) {
@@ -314,18 +320,25 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                         }
                         auto temp = cond->EstimeSelectivite(CombinaisonATester);
                     }
+                    if (benchmarking == 0) {
 
-                    std::cout << "\n Voici la condition brute : \n";
+                        std::cout << "\n Voici la condition brute : \n";
 
-                    cond->PrintCondition(std::cout);
+                        cond->PrintCondition(std::cout);
 
-                    std::cout << "\n et maintenant optimisant la condition : \n";
+                        std::cout << "\n et maintenant optimisant la condition : \n";
+                    }
                     cond->OptimiseBinaryExpression();
-                    cond->PrintCondition(std::cout);
+                    if (benchmarking == 0) {
+
+                        cond->PrintCondition(std::cout);
+                    }
                 }
             } else {
-                std::cout << "Il y as where mais aucun select après le projecteur principal\n"
-                          << std::endl; // erreur
+                if (benchmarking == 0) {
+                    std::cout << "Il y as where mais aucun select après le projecteur principal\n"
+                              << std::endl; // erreur
+                }
             }
         }
     }
@@ -341,32 +354,56 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         Node* last;
         Utils::UnionFind uf = Utils::UnionFind();
         for (auto joinandrc : JoinAndRCs) {
-            std::cout << "Le Join entre " << joinandrc.first->GetLTable()->GetMainName() << " et " << joinandrc.first->GetRTable()->GetMainName() << " a une RC de :" << joinandrc.second << "\n";
+            if (benchmarking == 0) {
 
+                std::cout << "Le Join entre " << joinandrc.first->GetLTable()->GetMainName() << " et " << joinandrc.first->GetRTable()->GetMainName() << " a une RC de :" << joinandrc.second << "\n";
+            }
             last = uf.AddElem(joinandrc.first);
         }
 
         RacineMainTable->AddChild(true, last);
-        std::cout << "\n en Optimisant le plan en fonction des RC on a : \n";
-        RacineExec.printBT(std::cout);
+        if (benchmarking == 0) {
+            std::cout << "\n en Optimisant le plan en fonction des RC on a : \n";
+
+            RacineExec.printBT(std::cout);
+        }
     }
     if (where != NULL and descend_select == 1) {
-        std::cout << "\n en descendant les sélections on a : \n";
         RacineExec.SelectionDescent(Magasin, MainSelect);
-        RacineExec.printBT(std::cout);
+        if (benchmarking == 0) {
+            std::cout << "\n en descendant les sélections on a : \n";
+
+            RacineExec.printBT(std::cout);
+        }
     }
     if (InserProj == 1) {
-        std::cout << "\n en insérant des Projections là où il faut : \n";
         std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnToKeep = new std::unordered_set<std::shared_ptr<ColonneNamesSet>>;
         RacineExec.InsertProj(ColumnToKeep);
-        RacineExec.printBT(std::cout);
+        if (benchmarking == 0) {
+            std::cout << "\n en insérant des Projections là où il faut : \n";
+            RacineExec.printBT(std::cout);
+        }
     }
+    std::chrono::high_resolution_clock::time_point fin;
     std::shared_ptr<MetaTable> Table_Finale = RacineExec.Pronf(Magasin, type_of_join);
     if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
-        AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale);
+        fin = AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale, benchmarking);
     } else {
-
-        Utils::AfficheResultat(Table_Finale, &colonnes_de_retour);
+        fin = std::chrono::high_resolution_clock::now();
+        if (benchmarking == 0) {
+            Utils::AfficheResultat(Table_Finale, &colonnes_de_retour);
+        }
+    }
+    if (benchmarking == 1) {
+        std::ofstream file;
+        file.open("../script/data.csv", std::ios::app);
+        if (!file.is_open()) {
+            std::cout << "Error: File not found or could not be opened." << std::endl;
+        } else {
+            file << descend_select << ";" << type_of_join << ";" << InserProj << ";" << optimize_BinaryExpr << ";" << Ordering_Join << ";" << std::chrono::duration_cast<std::chrono::microseconds>(fin - deb).count() << ";" << tables_secondaires.size()<<"\n";
+            std::cout<< "Requête parfaitement executée";
+        }
+        file.close();
     }
 }
 };

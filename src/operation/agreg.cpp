@@ -2,13 +2,13 @@
 #include "../utils/hashmap.h"
 #include "../utils/printing_utils.h"
 
+#include <gperftools/heap-profiler.h>
 #include <span>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include <gperftools/heap-profiler.h>
 
 // AVG_F,
 // COUNT_F,
@@ -129,44 +129,58 @@ Database::ColumnData ReturnType::AppliqueOperationOnCol(std::shared_ptr<ColonneN
         "Une Agrégation a été tentée alors qu'aucune fonction d'agrégation n'a été définie pour cette colonne");
 }
 
-void Final::AppliqueAgregateAndPrint(std::shared_ptr<MetaTable> table)
+std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(std::shared_ptr<MetaTable> table, int benchmarking_INFO)
 {
     std::unordered_map<std::string, std::vector<ColumnData>*> ColumnNameToValues;
+    std::vector<std::shared_ptr<ReturnType>>* PrintableColumnAndOrderByColumn = new std::vector<std::shared_ptr<ReturnType>>();
+    for (auto Return : *m_ColonneInfo) {
+        PrintableColumnAndOrderByColumn->push_back(Return);
+    }
+    if (m_OrderByCol.has_value()) {
+        for (auto f : *m_OrderByCol) {
+            bool est_deja_ajoute = false;
+            for (auto e : *PrintableColumnAndOrderByColumn) { // faire gaffe au doublons
+                if (*(f.first) == *(e->GetColonne())) {
+                    est_deja_ajoute = true;
+                }
+            }
+            if (!est_deja_ajoute) {
+                PrintableColumnAndOrderByColumn->push_back(std::make_shared<ReturnType>( ReturnType(f.first, Parsing::AggrFuncType::NOTHING_F)));
+            }
+        }
+    }
     if (m_ColumnsToGroupBy.has_value()) {
 
-        std::vector<std::shared_ptr<ColonneNamesSet>>* AgregNames = new std::vector<std::shared_ptr<ColonneNamesSet>>();
-        int pos_in_map_incr = 0;
-        std::unordered_map<std::shared_ptr<ColonneNamesSet>, int> pos_in_map_map;
-        Utils::Hash::MultiValueMapDyn AgregMap; // la map en position i est celle de la colonne Agreg[column]
-        for (auto x : (*table->GetColumnNames())) {
+        // les colonne à garder sont celle qui ne sont pas group by et celle qui sont dans le group by mais dont ce sert après
+
+        // on récupère les colonnes dont on doit garder les valeurs pour après donc celle qu'on affiche et celle qu'on order by
+
+        std::vector<std::shared_ptr<ReturnType>>* UsefullColNotInGroup = new std::vector<std::shared_ptr<ReturnType>>();
+
+        std::vector<std::shared_ptr<ReturnType>>* UsefullColInGroup = new std::vector<std::shared_ptr<ReturnType>>();
+
+        std::unordered_map<std::shared_ptr<ReturnType>, int> ColInfoToKeyOrValueAndPos;
+
+        int PosInValue = 0;
+        for (auto Pc : *PrintableColumnAndOrderByColumn) {
+            int PosInkey = 0;
             bool est_group_by = false;
-            for (auto e : *m_ColumnsToGroupBy.value()) {
-                if (*e == *x) { // la colonne est dans les groupby
+            for (auto Gb : *m_ColumnsToGroupBy.value()) {
+                if (*Gb == *Pc->GetColonne()) {
                     est_group_by = true;
+                    UsefullColInGroup->push_back(Pc);
+                    ColInfoToKeyOrValueAndPos[Pc] = PosInkey;
                 }
+                PosInkey++;
             }
             if (!est_group_by) {
-                AgregNames->push_back(x);
-                pos_in_map_map[x] = pos_in_map_incr;
-                pos_in_map_incr++;
+                UsefullColNotInGroup->push_back(Pc);
+                ColInfoToKeyOrValueAndPos[Pc] = PosInValue;
+                PosInValue++;
             }
         }
 
-        int posInKeyVec = 0;
-        std::unordered_map<std::string, int> PosInKeyVecToPrint; // les élément dont la position est dans ce vecteur correspondent aux élement qui seront à afficher
-
-        for (auto e : *m_ColumnsToGroupBy.value()) {
-            bool est_retourné = false;
-            for (auto f : *m_ColonneInfo) {
-                if (*f->GetColonne() == *e) {
-                    est_retourné = true;
-                }
-            }
-            if (est_retourné) {
-                PosInKeyVecToPrint[e->GetMainName()] = posInKeyVec;
-            }
-            posInKeyVec++;
-        }
+        Utils::Hash::MultiValueMapDyn AgregMap;
 
         // pour chaque ligne
         for (int i = 0; i < table->Columnsize(); i++) {
@@ -176,35 +190,39 @@ void Final::AppliqueAgregateAndPrint(std::shared_ptr<MetaTable> table)
                 auto temp = table->get_value(e, i);
                 KeyVec.keys.push_back(temp);
             } // pour chaque colonne on l'ajoute dans la map associé
-            for (auto e : *AgregNames) {
-                auto temp = table->get_value(e, i);
-                Utils::Hash::addValue(AgregMap, KeyVec, temp, pos_in_map_map[e]);
+            for (auto e : *UsefullColNotInGroup) {
+                auto temp = table->get_value(e->GetColonne(), i);
+                Utils::Hash::addValue(AgregMap, KeyVec, temp, ColInfoToKeyOrValueAndPos[e]);
             }
         }
 
-        for (auto& Return : *m_ColonneInfo) {
-            auto ColName = Return->GetColonne();
-            ColumnNameToValues[ColName->GetMainName()] = new std::vector<ColumnData>;
+        for (auto ColName : *PrintableColumnAndOrderByColumn) { // creer l'endoit ou seront stocké les valeur utile après
+            ColumnNameToValues[ColName->GetColonne()->GetMainName()] = new std::vector<ColumnData>;
         }
 
         for (auto it = AgregMap.begin(); it != AgregMap.end(); ++it) { // pour toute les combi de clef possible
             auto values = it->second; // récupère les valeur associé
-            auto& keys = it->first;
-            for (auto& Return : *m_ColonneInfo) { // on applique les agrégat
+            auto keys = it->first;
+            for (auto Return : *UsefullColNotInGroup) { // on applique les agrégat
                 auto ColName = Return->GetColonne();
 
                 if (Return->GetType() != Parsing::AggrFuncType::NOTHING_F) { // dans colonneinfo il y a aussi les colonne qu'on retourne sans rien faire
-                    ColumnData temp = Return->AppliqueOperation(values[pos_in_map_map[ColName]]); // performe l'm_Opération
+                    ColumnData temp = Return->AppliqueOperation(values[ColInfoToKeyOrValueAndPos[Return]]); // performe l'm_Opération
                     ColumnNameToValues[ColName->GetMainName()]->push_back(temp);
                 } else {
-                    auto PosInKeys = PosInKeyVecToPrint[ColName->GetMainName()];
-                    ColumnNameToValues[ColName->GetMainName()]->push_back(keys.keys[PosInKeys]);
+                    auto PosInValue = ColInfoToKeyOrValueAndPos[Return];
+                    ColumnNameToValues[ColName->GetMainName()]->push_back(*values[PosInValue].begin());
                 }
+            }
+            for (auto Return : *UsefullColInGroup) { // on applique les agrégat
+                auto ColName = Return->GetColonne();
+                auto PosInValue = ColInfoToKeyOrValueAndPos[Return];
+                ColumnNameToValues[ColName->GetMainName()]->push_back(keys.GetValAt(PosInValue));
             }
         }
 
     } else {
-        for (auto e : *m_ColonneInfo) {
+        for (auto e : *PrintableColumnAndOrderByColumn) {
             std::vector<ColumnData>* ResultVector = new std::vector<ColumnData>;
             auto ColName = e->GetColonne();
             ColumnNameToValues[ColName->GetMainName()] = ResultVector;
@@ -231,12 +249,18 @@ void Final::AppliqueAgregateAndPrint(std::shared_ptr<MetaTable> table)
     if (m_Limite.has_value()) {
         std::span<int> sub = std::span<int>(*OrdreIndice).subspan(m_Limite->first, m_Limite->second);
 
+        auto fin = std::chrono::high_resolution_clock::now();
+        if (benchmarking_INFO == 0) {
+            Database::Utils::AfficheAgregSpan(&ColumnNameToValues, &sub, PrintableColumnAndOrderByColumn);
+        }
+        return fin;
 
-        Database::Utils::AfficheAgregSpan(&ColumnNameToValues, &sub, m_ColonneInfo);
     } else {
-        
-
-        Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice, m_ColonneInfo);
+        auto fin = std::chrono::high_resolution_clock::now();
+        if (benchmarking_INFO == 0) {
+            Database::Utils::AfficheAgreg(&ColumnNameToValues, OrdreIndice, PrintableColumnAndOrderByColumn);
+        }
+        return fin;
     }
 }
 
