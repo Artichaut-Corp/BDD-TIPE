@@ -6,6 +6,8 @@
 #include "../storage.h"
 #include "../utils/printing_utils.h"
 #include "../utils/union_find.h"
+
+#include <chrono>
 #include <cstddef>
 #include <fstream>
 #include <iostream>
@@ -386,6 +388,9 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
     std::chrono::high_resolution_clock::time_point fin;
     std::shared_ptr<MetaTable> Table_Finale = RacineExec.Pronf(Magasin, type_of_join);
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+
     if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
         fin = AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale, benchmarking);
     } else {

@@ -256,6 +256,7 @@ public:
 
                 CreateTable(fd, "namespaces", ns);
 
+
                 // Clean up and close
                 close(fd);
             }

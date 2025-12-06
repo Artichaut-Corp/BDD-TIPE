@@ -3,7 +3,6 @@
 #include "data_process_system/racine.h"
 #include "storage/record.h"
 
-#include <cctype>
 #include <fstream>
 #include <iostream>
 #include <memory>

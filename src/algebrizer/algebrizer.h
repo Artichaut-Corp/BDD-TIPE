@@ -6,6 +6,7 @@
 #include "../operation/join.h"
 #include "../operation/pred.h"
 #include "../parser/dml.h"
+
 #include <vector>
 
 #ifndef ALGEBRIZER_H
