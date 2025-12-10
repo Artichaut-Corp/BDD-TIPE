@@ -75,7 +75,7 @@ public:
     }
     std::unordered_set<std::shared_ptr<ColonneNamesSet>>* SelectionDescent(Ikea* Tables, Select* MainSelect);
 
-    void InsertProj(std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnToKeep);
+    void InsertProj(std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> ColumnToKeep);
 
     Node* GetLeftPtr() { return m_Fg; }
 

@@ -12,11 +12,11 @@ namespace Database::QueryPlanning {
 
 class Proj {
 private:
-    std::unordered_set<std::shared_ptr<ColonneNamesSet>>* m_Cols; // all the column who stays once they got there
+    std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> m_Cols; // all the column who stays once they got there
     std::shared_ptr<TableNamesSet> TableNameToExec;
 
 public:
-    Proj(std::unordered_set<std::shared_ptr<ColonneNamesSet>>* cols, std::shared_ptr<TableNamesSet> Table)
+    Proj(std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> cols, std::shared_ptr<TableNamesSet> Table)
         : TableNameToExec(Table)
         , m_Cols(cols)
 
@@ -32,7 +32,7 @@ public:
     }
     std::shared_ptr<TableNamesSet> GetTableName() { return TableNameToExec; }
 
-    std::unordered_set<std::shared_ptr<ColonneNamesSet>>* Getm_Cols() { return m_Cols; }
+    std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> Getm_Cols() { return m_Cols; }
 };
 
 } // Database::QueryPlanning

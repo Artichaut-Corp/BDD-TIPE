@@ -229,7 +229,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
     // Maintenant que l'on as tout pour la table Principale on la créer
     std::shared_ptr<MetaTable> table_principale = std::make_shared<MetaTable>(MetaTable(std::make_shared<Table>(Table(&Racines, TablePrincipaleNom))));
-    Node RacineExec = Node(new Proj(&UsefullColumnForAggrAndOutput, TablePrincipaleNom)); // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
+    Node RacineExec = Node(new Proj(std::make_shared<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(UsefullColumnForAggrAndOutput), TablePrincipaleNom)); // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
     std::vector<MetaTable> Tables;
     Tables.push_back(*table_principale); // on enregiste la table principale
     auto RacineMainTable = &RacineExec;
@@ -379,7 +379,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         }
     }
     if (InserProj == 1) {
-        std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnToKeep = new std::unordered_set<std::shared_ptr<ColonneNamesSet>>;
+        std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> ColumnToKeep = std::make_shared<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(std::unordered_set<std::shared_ptr<ColonneNamesSet>>());
         RacineExec.InsertProj(ColumnToKeep);
         if (benchmarking == 0) {
             std::cout << "\n en insérant des Projections là où il faut : \n";

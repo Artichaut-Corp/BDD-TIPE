@@ -334,24 +334,24 @@ std::unordered_set<std::shared_ptr<ColonneNamesSet>>* Node::SelectionDescent(Ike
     }
 }
 
-void Node::InsertProj(std::unordered_set<std::shared_ptr<ColonneNamesSet>>* ColumnToKeep)
+void Node::InsertProj(std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> ColumnToKeep)
 {
     if (std::holds_alternative<Join*>(m_Type)) {
         auto op = std::get<Join*>(m_Type);
         ColumnToKeep->insert(op->GetLCol());
         ColumnToKeep->insert(op->GetRCol());
-        std::unordered_set<std::shared_ptr<ColonneNamesSet>> ColumnD = *ColumnToKeep;
-        std::unordered_set<std::shared_ptr<ColonneNamesSet>> ColumnG = *ColumnToKeep;
+        std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> ColumnD = ColumnToKeep;
+        std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> ColumnG = ColumnToKeep;
 
         if (m_Fg) { // if the left side have something (i.e, is not an "entry point")
-            m_Fg->InsertProj(&ColumnG);
+            m_Fg->InsertProj(ColumnG);
             Node* Proj_G = new Node(new Proj(ColumnToKeep, op->GetLTable()));
             auto TempG = m_Fg;
             m_Fg = Proj_G;
             m_Fg->AddChild(true, TempG);
         }
         if (m_Fd) {
-            m_Fd->InsertProj(&ColumnD);
+            m_Fd->InsertProj(ColumnD);
             Node* Proj_D = new Node(new Proj(ColumnToKeep, op->GetRTable()));
             auto TempD = m_Fd;
             m_Fd = Proj_D;
@@ -367,16 +367,17 @@ void Node::InsertProj(std::unordered_set<std::shared_ptr<ColonneNamesSet>>* Colu
         auto op = std::get<Select*>(m_Type);
         if (!std::holds_alternative<std::monostate>(op->GetCond())) {
             ColumnToKeep->insert(op->Getm_Cols()->begin(), op->Getm_Cols()->end());
-            std::unordered_set<std::shared_ptr<ColonneNamesSet>> ColumnG = *ColumnToKeep;
             if (m_Fg) { // if the left side have something (i.e, is not an "entry point")
-                m_Fg->InsertProj(&ColumnG);
+                m_Fg->InsertProj(ColumnToKeep);
                 Node* Proj_G = new Node(new Proj(ColumnToKeep, op->GetTableName()));
                 auto TempG = m_Fg;
                 m_Fg = Proj_G;
                 m_Fg->AddChild(true, TempG);
             }
         } else {
+            if (m_Fg) {
             m_Fg->InsertProj(ColumnToKeep);
+        }
         }
     } else {
         throw std::runtime_error("Unknown node type");

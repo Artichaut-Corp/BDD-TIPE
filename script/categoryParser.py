@@ -25,7 +25,6 @@ def decode_sql_string(s):
 
 with open(sql_file, "r", encoding="utf8") as f_sql, \
      open(csv_file, "w", newline="", encoding="utf8") as f_csv:
-sq
     writer = csv.writer(f_csv)
 
     # 🔥 AJOUT DE LA LIGNE D'EN-TÊTE
