@@ -1088,4 +1088,11 @@ dkms.conf
 *.dis
 /script/TABLE
 /script/table
+*.gz
+*.toc
 
+/pres/eliott/ressource
+/pres/antoine/ressource
+/.vscode
+*.csv
+*.vrb
