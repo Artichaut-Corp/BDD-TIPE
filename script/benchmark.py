@@ -17,7 +17,7 @@ import unicodedata
 # CONFIGURATION
 # ========================
 REPL_PATH = "../build/src/bdd_tipe"
-PARAM_FILE = "../../../bdd-tipe/Parametre.toml"
+PARAM_FILE = "bdd-tipe/Parametre.toml"
 
 CSV_PATH = "../script/data.csv"
 NB_QUERY_PER_PARAM = 10000
@@ -249,9 +249,26 @@ def run_queries(sel, pmode, iproj, optbin, ordjoin):
 if __name__ == "__main__":
     random.seed(0)
 
+    print("=== BASELINE CONFIG ===")
+    run_queries(0, 0, 0, 0, 0)
+
+    print("=== SelectionDescent ===")
+    run_queries(1, 0, 0, 0, 0)
+
+    print("=== PronfMode = 1 ===")
+    run_queries(0, 1, 0, 0, 0)
+
+    print("=== PronfMode = 3 ===")
+    run_queries(0, 3, 0, 0, 0)
+
     print("=== InsertProj ===")
     run_queries(0, 0, 1, 0, 0)
 
+    print("=== OptimizeBinaryExpression ===")
+    run_queries(0, 0, 0, 1, 0)
+
+    print("=== OrderingQueryJoin ===")
+    run_queries(0, 0, 0, 0, 1)
 
     print("=== FULL OPTIMIZATION ===")
     run_queries(1, 3, 1, 1, 1)

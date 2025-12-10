@@ -103,8 +103,6 @@ with open(dump_path, "rb") as f:
                     user_id,
                 ]
             )
-            if timestamp_to_int(rev.timestamp) == 1748727692:
-                print(user_id)
 
             if user and user_id not in contributors_seen:
                 writers["contributor.csv"].writerow([user_id, user_name])
