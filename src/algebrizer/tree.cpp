@@ -139,7 +139,9 @@ std::unordered_set<std::shared_ptr<ColonneNamesSet>>* Node::SelectionDescent(Ike
         std::unordered_set<std::shared_ptr<ColonneNamesSet>>* SFd = nullptr;
         if (m_Fg) {
             SFg = m_Fg->SelectionDescent(Tables, MainSelect); // appelle récursif, voire la suite du code
-
+            if (std::holds_alternative<std::monostate>(MainSelect->GetCond())){
+                return nullptr;
+            }
             if (std::holds_alternative<Join*>(m_Type)) { // si on est sur un noeud join
 
                 auto jointure = std::get<Join*>(m_Type);
@@ -185,6 +187,9 @@ std::unordered_set<std::shared_ptr<ColonneNamesSet>>* Node::SelectionDescent(Ike
         }
         if (m_Fd && !std::holds_alternative<std::monostate>(MainSelect->GetCond())) { // si l'appel récursif à gauche ne l'as pas vidé
             SFd = m_Fd->SelectionDescent(Tables, MainSelect);
+            if (std::holds_alternative<std::monostate>(MainSelect->GetCond())){
+                return nullptr;
+            }
             if (std::holds_alternative<Join*>(m_Type)) { // si on est sur un noeud join
                 auto jointure = std::get<Join*>(m_Type);
 
