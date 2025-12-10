@@ -15,7 +15,7 @@ namespace Database::QueryPlanning {
 class Racine {
 private:
     std::shared_ptr<ColonneNamesSet> m_NomColonne;
-    std::variant<std::shared_ptr<std::vector<DbString>>, std::shared_ptr<std::vector<DbInt>>, std::shared_ptr<std::vector<DbInt16>>, std::shared_ptr<std::vector<DbInt8>>> m_data; // données immuables
+    ColumnR m_data;
 public:
     Racine(std::shared_ptr<ColonneNamesSet> NomColonne_, int fd, Storing::DBTableIndex* IndexGet)
         : m_NomColonne(NomColonne_)
@@ -30,6 +30,10 @@ public:
 
         if (std::holds_alternative<std::unique_ptr<std::vector<DbString>>>(column_data)) {
             auto temp = std::get<std::unique_ptr<std::vector<DbString>>>(std::move(column_data));
+            m_data = std::move(temp);
+
+        } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt64>>>(column_data)) {
+            auto temp = std::get<std::unique_ptr<std::vector<DbInt64>>>(std::move(column_data));
             m_data = std::move(temp);
 
         } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt>>>(column_data)) {
@@ -59,6 +63,12 @@ public:
                 throw std::out_of_range("Index hors limites");
             }
             return (*temp)[i];
+        } else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt64>>>(m_data)) {
+                    auto temp = std::get<std::shared_ptr<std::vector<DbInt64>>>(m_data);
+                    if (!temp || i >= temp->size()) {
+                        throw std::out_of_range("Index hors limites");
+                    }
+                    return (*temp)[i];
         } else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt>>>(m_data)) {
             auto temp = std::get<std::shared_ptr<std::vector<DbInt>>>(m_data);
             if (!temp || i >= temp->size()) {

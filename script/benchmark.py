@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python
 """
 Benchmark runner pour bdd-tipe REPL.
 
@@ -7,17 +7,17 @@ Benchmark runner pour bdd-tipe REPL.
 - Attente de 0.5 seconde après la réussite avant d'envoyer la prochaine query.
 """
 
+import os
+import random
 import subprocess
 import time
-import random
-import os
 import unicodedata
 
 # ========================
 # CONFIGURATION
 # ========================
-REPL_PATH = "../build/src/bdd_tipe"
-PARAM_FILE = "bdd-tipe/Parametre.toml"
+REPL_PATH = "./src/bdd_tipe"
+PARAM_FILE = "/home/artichaut/bdd-tipe/Parametre.toml"
 
 CSV_PATH = "../script/data.csv"
 NB_QUERY_PER_PARAM = 10000
@@ -27,7 +27,7 @@ csv_header = [
     "SelectionDescent",
     "PronfMode",
     "InsertProj",
-    "OptimizeBinaryExpression", 
+    "OptimizeBinaryExpression",
     "OrderingQueryJoin",
     "temps",
     "nbr_join",
@@ -37,95 +37,95 @@ csv_header = [
 with open(CSV_PATH, "w") as f:
     f.write(";".join(csv_header) + "\n")
 QUERIES = [
-    'SELECT contributors.username, pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE contributors.username = "KhingArthur";',
-    'SELECT contributors.username, revisions.timestamp, pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;',
-    'SELECT contributors.username, pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE contributors.username = "Z484z";',
-    'SELECT contributors.username, revisions.timestamp, pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;',
-    'SELECT contributors.username, pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE contributors.username = "Robotinator1994" AND revisions.timestamp > 1388435335;',
-    'SELECT contributors.username FROM contributors WHERE contributors.username = "Renardeau.arctique";',
-    'SELECT contributors.username, SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username LIMIT 5 OFFSET 5;',
-    'SELECT contributors.username, SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username;',
-    'SELECT contributors.username, SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username;',
-    'SELECT contributors.username, AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY AVG(revisions.timestamp);',
-    'SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id GROUP BY contributors.username;',
-    'SELECT contributors.username, COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username;',
-    'SELECT contributors.username, COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username ASC;',
-    'SELECT contributors.username FROM contributors;',
-    'SELECT pages.title, revisions.timestamp FROM pages WHERE pages.title = "didine";',
+    'SELECT contributors.username, pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE (contributors.username = "KhingArthur");',
+    "SELECT contributors.username, revisions.timestamp, pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;",
+    'SELECT contributors.username, pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE (contributors.username = "Z484z");',
+    "SELECT contributors.username, revisions.timestamp, pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;",
+    "SELECT contributors.username, pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;",
+    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE ((contributors.username = "Robotinator1994") AND (revisions.timestamp > 1388435335));',
+    'SELECT contributors.username FROM contributors WHERE (contributors.username = "Renardeau.arctique");',
+    "SELECT contributors.username, SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username LIMIT 5 OFFSET 5;",
+    "SELECT contributors.username, SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username;",
+    "SELECT contributors.username, SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username;",
+    "SELECT contributors.username, AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY AVG(revisions.timestamp);",
+    "SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id GROUP BY contributors.username;",
+    "SELECT contributors.username, COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username;",
+    "SELECT contributors.username, COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username ASC;",
+    "SELECT contributors.username FROM contributors;",
+    'SELECT pages.title, revisions.timestamp FROM pages WHERE (pages.title = "didine");',
+    'SELECT contributors.username FROM contributors WHERE (contributors.username = "MPF");',
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1754975932) ORDER BY revisions.timestamp DESC LIMIT 5;",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1761949678);",
+    "SELECT pages.title, revisions.timestamp, contributors.username FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;",
+    'SELECT COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE ((contributors.username = "Z484z" )AND (revisions.timestamp > 1388435335));',
+    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE ((contributors.username = "Renardeau.arctique" )AND (revisions.timestamp > 1753511075));',
+    "SELECT contributors.username FROM contributors ORDER BY contributors.username DESC LIMIT 10 OFFSET 5;",
+    "SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1388434111) ORDER BY revisions.timestamp ASC;",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1762038459);",
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id;",
+    'SELECT COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE (contributors.username = "MPF");',
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id ORDER BY revisions.timestamp DESC LIMIT 3;",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1762035389);",
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id;",
+    "SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1754975932);",
+    "SELECT MIN(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp < 1388433468);",
+    "SELECT contributors.username FROM contributors ORDER BY contributors.username ASC LIMIT 5;",
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1753511075);",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1762003866);",
+    "SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1761929470);",
+    "SELECT COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1753511075);",
+    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE ((contributors.username = "Robotinator1994" )AND (revisions.timestamp > 1761949678));',
+    'SELECT contributors.username FROM contributors WHERE (contributors.username = "Z484z");',
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1753511075) ORDER BY revisions.timestamp DESC LIMIT 8;",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1360000000);",
+    "SELECT pages.title, revisions.timestamp, contributors.username FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;",
+    "SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1761778384);",
+    "SELECT MIN(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp < 1388433468);",
+    "SELECT contributors.username FROM contributors ORDER BY contributors.username DESC LIMIT 10;",
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1753511075);",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1670000000);",
+    "SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1761941381);",
+    "SELECT COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1761941541);",
+    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE ((contributors.username = "Renardeau.arctique" )AND (revisions.timestamp > 1388434111));',
     'SELECT contributors.username FROM contributors WHERE contributors.username = "MPF";',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1754975932 ORDER BY revisions.timestamp DESC LIMIT 5;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1761949678;',
-    'SELECT pages.title, revisions.timestamp, contributors.username FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;',
-    'SELECT COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE contributors.username = "Z484z" AND revisions.timestamp > 1388435335;',
-    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE contributors.username = "Renardeau.arctique" AND revisions.timestamp > 1753511075;',
-    'SELECT contributors.username FROM contributors ORDER BY contributors.username DESC LIMIT 10 OFFSET 5;',
-    'SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1388434111 ORDER BY revisions.timestamp ASC;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1762038459;',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id;',
-    'SELECT COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE contributors.username = "MPF";',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id ORDER BY revisions.timestamp DESC LIMIT 3;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1762035389;',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id;',
-    'SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1754975932;',
-    'SELECT MIN(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp < 1388433468;',
-    'SELECT contributors.username FROM contributors ORDER BY contributors.username ASC LIMIT 5;',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1753511075;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1762003866;',
-    'SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1761929470;',
-    'SELECT COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1753511075;',
-    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE contributors.username = "Robotinator1994" AND revisions.timestamp > 1761949678;',
-    'SELECT contributors.username FROM contributors WHERE contributors.username = "Z484z";',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1753511075 ORDER BY revisions.timestamp DESC LIMIT 8;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1360000000;',
-    'SELECT pages.title, revisions.timestamp, contributors.username FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;',
-    'SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1761778384;',
-    'SELECT MIN(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp < 1388433468;',
-    'SELECT contributors.username FROM contributors ORDER BY contributors.username DESC LIMIT 10;',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1753511075;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1670000000;',
-    'SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1761941381;',
-    'SELECT COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1761941541;',
-    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE contributors.username = "Renardeau.arctique" AND revisions.timestamp > 1388434111;',
-    'SELECT contributors.username FROM contributors WHERE contributors.username = "MPF";',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1753511075 ORDER BY revisions.timestamp DESC LIMIT 10;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1400000000;',
-    'SELECT pages.title, revisions.timestamp, contributors.username FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;',
-    'SELECT SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1000000;',
-    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE contributors.username = "Robotinator1994" AND revisions.timestamp > 500000;',
-    'SELECT contributors.username FROM contributors ORDER BY contributors.username ASC LIMIT 7 OFFSET 3;',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1000000;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1490000000;',
-    'SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 40000000;',
-    'SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 2000000;',
-    'SELECT MIN(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp < 1388435335;',
-    'SELECT contributors.username FROM contributors ORDER BY contributors.username DESC LIMIT 10;',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 500000;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1670000000;',
-    'SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 20000000;',
-    'SELECT COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1000000;',
-    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE contributors.username = "Z484z" AND revisions.timestamp < 5000000;',
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1753511075) ORDER BY revisions.timestamp DESC LIMIT 10;",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1400000000);",
+    "SELECT pages.title, revisions.timestamp, contributors.username FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;",
+    "SELECT SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1000000);",
+    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE ((contributors.username = "Robotinator1994" )AND (revisions.timestamp > 500000));',
+    "SELECT contributors.username FROM contributors ORDER BY contributors.username ASC LIMIT 7 OFFSET 3;",
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1000000);",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1490000000);",
+    "SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 40000000);",
+    "SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 2000000);",
+    "SELECT MIN(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp < 1388435335);",
+    "SELECT contributors.username FROM contributors ORDER BY contributors.username DESC LIMIT 10;",
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 500000);",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1670000000);",
+    "SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 20000000);",
+    "SELECT COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1000000);",
+    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE ((contributors.username = "Z484z" )AND (revisions.timestamp < 5000000));',
     'SELECT contributors.username FROM contributors WHERE contributors.username = "Robotinator1994";',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1000000 ORDER BY revisions.timestamp ASC LIMIT 10;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1400000000;',
-    'SELECT pages.title, revisions.timestamp, contributors.username FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;',
-    'SELECT SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1000000;',
-    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE contributors.username = "Renardeau.arctique" AND revisions.timestamp > 5000000;',
-    'SELECT contributors.username FROM contributors ORDER BY contributors.username ASC LIMIT 7 OFFSET 3;',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 500000;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1490000000;',
-    'SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 40000000;',
-    'SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 2000000;',
-    'SELECT MIN(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp < 20000000;',
-    'SELECT contributors.username FROM contributors WHERE contributors.username = "Z484z";',
-    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE revisions.timestamp > 1000000 ORDER BY revisions.timestamp ASC LIMIT 5;',
-    'SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 1330000000;',
-    'SELECT pages.title, revisions.timestamp, contributors.username FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE revisions.timestamp > 20000000;'
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1000000) ORDER BY revisions.timestamp ASC LIMIT 10;",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1400000000);",
+    "SELECT pages.title, revisions.timestamp, contributors.username FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;",
+    "SELECT SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1000000);",
+    'SELECT AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE ((contributors.username = "Renardeau.arctique" )AND (revisions.timestamp > 5000000));',
+    "SELECT contributors.username FROM contributors ORDER BY contributors.username ASC LIMIT 7 OFFSET 3;",
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 500000);",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1490000000);",
+    "SELECT pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 40000000);",
+    "SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 2000000);",
+    "SELECT MIN(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp < 20000000);",
+    'SELECT contributors.username FROM contributors WHERE (contributors.username = "Z484z");',
+    "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1000000) ORDER BY revisions.timestamp ASC LIMIT 5;",
+    "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1330000000);",
+    "SELECT pages.title, revisions.timestamp, contributors.username FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 20000000);",
 ]
 
-    
 
 SUCCESS_TEXT = "Requête parfaitement executée"
+
 
 # ========================
 # NORMALISATION
@@ -138,6 +138,7 @@ def norm(s: str) -> str:
     s = s.lower()
     s = " ".join(s.split())
     return s
+
 
 # ========================
 # ÉCRITURE PARAMÈTRES
@@ -152,6 +153,7 @@ def write_params(sel, pmode, iproj, optbin, ordjoin):
         f.write(f"OrderingQueryJoin = {int(bool(ordjoin))}\n")
         f.write("Benchmarking = 1\n")
     print(f"[INFO] Wrote parameters to {PARAM_FILE}")
+
 
 # ========================
 # LECTURE JUSQU'AU SUCCÈS
@@ -172,6 +174,7 @@ def read_until_success(process, success_text=SUCCESS_TEXT, timeout=30.0):
             break
     return trouvé
 
+
 # ========================
 # DÉMARRER REPL
 # ========================
@@ -185,18 +188,21 @@ def start_repl():
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        bufsize=1  # line buffered
+        bufsize=1,  # line buffered
     )
 
     print("[INFO] Waiting 2 seconds for REPL to startup...")
     time.sleep(2)
     return process
 
+
 # ========================
 # EXECUTION DES QUERIES
 # ========================
 def run_queries(sel, pmode, iproj, optbin, ordjoin):
-    print(f"\n===== Config sel={sel} pmode={pmode} iproj={iproj} optbin={optbin} ordjoin={ordjoin} =====")
+    print(
+        f"\n===== Config sel={sel} pmode={pmode} iproj={iproj} optbin={optbin} ordjoin={ordjoin} ====="
+    )
     write_params(sel, pmode, iproj, optbin, ordjoin)
 
     try:
@@ -208,7 +214,7 @@ def run_queries(sel, pmode, iproj, optbin, ordjoin):
     try:
         for i in range(NB_QUERY_PER_PARAM):
             query = random.choice(QUERIES)
-            print(f"\n>>> Query {i+1}: {query}")
+            print(f"\n>>> Query {i + 1}: {query}")
 
             # envoyer la query
             process.stdin.write(query + "\n")
@@ -218,10 +224,12 @@ def run_queries(sel, pmode, iproj, optbin, ordjoin):
             out = read_until_success(process, SUCCESS_TEXT, timeout=15)
             time.sleep(0.5)  # attendre 0.5 seconde après succès
 
-            if (not out):
-                print(f"\n===== Config sel={sel} pmode={pmode} iproj={iproj} optbin={optbin} ordjoin={ordjoin} =====")
+            if not out:
+                print(
+                    f"\n===== Config sel={sel} pmode={pmode} iproj={iproj} optbin={optbin} ordjoin={ordjoin} ====="
+                )
 
-                print(f"\n>>> Query {i+1}: {query}")
+                print(f"\n>>> Query {i + 1}: {query}")
 
                 print("❌ Query failed: success message not found")
                 break
@@ -242,6 +250,7 @@ def run_queries(sel, pmode, iproj, optbin, ordjoin):
                 process.kill()
         except:
             pass
+
 
 # ========================
 # SEQUENCE COMPLETE DE BENCHMARK

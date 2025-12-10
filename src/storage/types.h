@@ -71,6 +71,9 @@ using ColumnData = std::variant<DbInt8, DbInt16, DbInt, DbInt64, DbString>;
 using Column = std::variant<
     std::unique_ptr<std::vector<DbInt8>>, std::unique_ptr<std::vector<DbInt16>>, std::unique_ptr<std::vector<DbInt>>, std::unique_ptr<std::vector<DbInt64>>, std::unique_ptr<std::vector<DbString>>>;
 
+using ColumnR = std::variant<
+    std::shared_ptr<std::vector<DbInt8>>, std::shared_ptr<std::vector<DbInt16>>, std::shared_ptr<std::vector<DbInt>>, std::shared_ptr<std::vector<DbInt64>>, std::shared_ptr<std::vector<DbString>>>;
+
 class Convert {
 public:
     static DbIntArray VectorToDbIntArray(std::vector<DbInt> v)
