@@ -88,6 +88,7 @@ public:
             m_Tables[i]->update();
             if (m_Tables[i]->size() == 0) {
                 m_Tables.erase(m_Tables.begin()+i);
+                i--;// if we delete a Table, we change the size and move all the vector to the left by 1 there fore we need to compensate it
             } else {
                 for (auto n : m_Tables[i]->get_name()->GetAllNames()) {
                     m_MapTableNameToTable[n] = m_Tables[i];
