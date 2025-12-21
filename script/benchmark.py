@@ -17,10 +17,10 @@ import unicodedata
 # CONFIGURATION
 # ========================
 REPL_PATH = "./src/bdd_tipe"
-PARAM_FILE = "/home/artichaut/bdd-tipe/Parametre.toml"
+PARAM_FILE = "/home/eliott/bdd-tipe/Parametre.toml"
 
 CSV_PATH = "../script/data.csv"
-NB_QUERY_PER_PARAM = 10000
+NB_QUERY_PER_PARAM = 82
 os.makedirs("script", exist_ok=True)
 
 csv_header = [
@@ -36,6 +36,7 @@ csv_header = [
 # Overwrite file with header
 with open(CSV_PATH, "w") as f:
     f.write(";".join(csv_header) + "\n")
+    
 QUERIES = [
     'SELECT contributors.username, pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id WHERE (contributors.username = "KhingArthur");',
     "SELECT contributors.username, revisions.timestamp, pages.title FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id;",
@@ -47,12 +48,12 @@ QUERIES = [
     "SELECT contributors.username, SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username LIMIT 5 OFFSET 5;",
     "SELECT contributors.username, SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username;",
     "SELECT contributors.username, SUM(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username;",
-    "SELECT contributors.username, AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY AVG(revisions.timestamp);",
-    "SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id GROUP BY contributors.username;",
+    "SELECT contributors.username, AVG(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY revisions.timestamp;",
+    "SELECT MAX(revisions.timestamp) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username;",
     "SELECT contributors.username, COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username;",
     "SELECT contributors.username, COUNT(pages.id) FROM pages JOIN revisions ON pages.revision_id = revisions.id JOIN contributors ON revisions.contributor_id = contributors.id GROUP BY contributors.username ORDER BY contributors.username ASC;",
     "SELECT contributors.username FROM contributors;",
-    'SELECT pages.title, revisions.timestamp FROM pages WHERE (pages.title = "didine");',
+    'SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (pages.title = "didine");',
     'SELECT contributors.username FROM contributors WHERE (contributors.username = "MPF");',
     "SELECT pages.title, revisions.timestamp FROM pages JOIN revisions ON pages.revision_id = revisions.id WHERE (revisions.timestamp > 1754975932) ORDER BY revisions.timestamp DESC LIMIT 5;",
     "SELECT contributors.username FROM contributors JOIN revisions ON revisions.contributor_id = contributors.id WHERE (revisions.timestamp > 1761949678);",
@@ -213,7 +214,7 @@ def run_queries(sel, pmode, iproj, optbin, ordjoin):
 
     try:
         for i in range(NB_QUERY_PER_PARAM):
-            query = random.choice(QUERIES)
+            query = QUERIES[i]
             print(f"\n>>> Query {i + 1}: {query}")
 
             # envoyer la query
@@ -258,11 +259,9 @@ def run_queries(sel, pmode, iproj, optbin, ordjoin):
 if __name__ == "__main__":
     random.seed(0)
 
-    print("=== BASELINE CONFIG ===")
-    run_queries(0, 0, 0, 0, 0)
 
     print("=== SelectionDescent ===")
-    run_queries(1, 0, 0, 0, 0)
+    run_queries(1, 1, 0, 0, 0)
 
     print("=== PronfMode = 1 ===")
     run_queries(0, 1, 0, 0, 0)
@@ -271,13 +270,13 @@ if __name__ == "__main__":
     run_queries(0, 3, 0, 0, 0)
 
     print("=== InsertProj ===")
-    run_queries(0, 0, 1, 0, 0)
+    run_queries(0, 1, 1, 0, 0)
 
     print("=== OptimizeBinaryExpression ===")
-    run_queries(0, 0, 0, 1, 0)
+    run_queries(0, 1, 0, 1, 0)
 
     print("=== OrderingQueryJoin ===")
-    run_queries(0, 0, 0, 0, 1)
+    run_queries(0, 1, 0, 0, 1)
 
     print("=== FULL OPTIMIZATION ===")
     run_queries(1, 3, 1, 1, 1)

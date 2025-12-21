@@ -77,7 +77,8 @@ public:
         std::iota(PosInColonneToSortBy->begin(), PosInColonneToSortBy->end(), 0);
 
         std::sort(PosInColonneToSortBy->begin(), PosInColonneToSortBy->end(),
-            [&](int a, int b) { return this->get_value_dans_table(ColonneToSortBy,m_Indices[a] ) < this->get_value_dans_table(ColonneToSortBy, m_Indices[b]); });
+            [&](int a, int b) {
+                return this->get_value_dans_table(ColonneToSortBy,a ) < this->get_value_dans_table(ColonneToSortBy, b); });
         return PosInColonneToSortBy;
     }
 

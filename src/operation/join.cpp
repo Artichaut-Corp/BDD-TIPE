@@ -40,7 +40,6 @@ std::shared_ptr<MetaTable> Join::ExecTrier(std::shared_ptr<MetaTable> table1, st
     std::pair<std::vector<int>, std::vector<int>> couple_valides; // stocke tout les couple de ligne valide
 
     // --- Étape 0 : Trier chacune des MetaTable en fonction de la colonne---
-    auto taille = table2->size();
     table1->Sort(m_ColumnName1);
     table2->Sort(m_ColumnName2);
     int pos1 = 0;
