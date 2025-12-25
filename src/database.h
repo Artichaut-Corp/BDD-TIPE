@@ -18,18 +18,26 @@
 
 namespace Database {
 
+struct DatabaseSetting {
+public:
+    bool m_Repl = true;
+    std::string m_Address;
+    std::string m_FileName;
+
+    DatabaseSetting() = default;
+
+    DatabaseSetting(const std::string& fname)
+        : m_Repl(false)
+        , m_FileName(fname)
+    {
+    }
+
+    DatabaseSetting(const std::string& addr, const std::string& fname);
+};
+
 class DatabaseEngine {
 
 private:
-    class DatabaseSetting {
-    public:
-        bool m_Repl = true;
-        std::string m_Address;
-        std::string m_FileName;
-
-        DatabaseSetting() = default;
-    };
-
     std::unique_ptr<Storing::DBTableIndex> Index;
 
     Storing::DBTableOrder TableOrder = {};
@@ -162,6 +170,20 @@ public:
 #ifdef _GLIBCXX_DEBUG_ONLY
         PrintIndex(std::cout);
 #endif
+    }
+
+    auto Exec(const std::string& req) -> std::string
+    {
+        // Should sanitize input
+        std::string result;
+
+        try {
+            result = Eval(req);
+        } catch (const Errors::Error& e) {
+            result = e.formatErrorInfo();
+        }
+
+        return result;    
     }
 
     auto Run() -> void

@@ -1,3 +1,4 @@
+#include <format>
 #include <iostream>
 #include <ostream>
 #include <string>
@@ -86,6 +87,11 @@ public:
         out << "ERROR "
             << "[[ " << m_ErrorCode.first << " ]] - " << m_ErrorCode.second << ":\n";
         out << m_Message << std::endl;
+    }
+
+    std::string formatErrorInfo() const
+    {
+        return std::format("ERROR [[ {} ]] - {}:\n {}\n", m_ErrorCode.first, m_ErrorCode.second, m_Message);
     }
 }; // class Error
 

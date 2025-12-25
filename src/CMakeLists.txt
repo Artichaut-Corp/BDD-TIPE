@@ -4,6 +4,11 @@ file(GLOB_RECURSE SOURCES LIST_DIRECTORIES true *.h *.cpp)
 
 set(SOURCES ${SOURCES})
 
+add_library(${BINARY}_lib STATIC ${SOURCES})
+
 add_executable(${BINARY}_run ${SOURCES})
 
-add_library(${BINARY}_lib STATIC ${SOURCES})
+target_include_directories(${BINARY}_lib 
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
