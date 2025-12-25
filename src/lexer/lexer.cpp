@@ -150,7 +150,6 @@ std::optional<Errors::Error> Lexer::identifyFirst()
     // Operators, either mathematical or logical
     case '*':
     case '+':
-    case '-':
         t.createToken(MATH_OP_T, std::string { *it });
         m_CurrToken++;
         break;
@@ -178,17 +177,57 @@ std::optional<Errors::Error> Lexer::identifyFirst()
         t.createToken(DOT_T);
         m_CurrToken++;
         break;
-    // Numbers from 0 to 9. FLOATS NOT IMPLEMENTED
-    case 49 ... 57: {
+
+        // Negative numbers
+    case '-': {
         std::string num = "";
+        bool already_seen_dot = false;
+
         do {
+            if (*it == '.') {
+                if (already_seen_dot) {
+                    return Error(ErrorType::SyntaxError,
+                        "Found 2 dots in float expression.", m_Line,
+                        m_CurrToken, ERROR_UNEXPECTED_IDENTIFIER);
+                } else {
+                    already_seen_dot = true;
+                }
+            }
+
             num.push_back(*it);
             std::advance(it, 1);
             m_CurrToken++;
 
         } while (
-            std::isdigit(*it)); // OR is . if I implement floating point numbers
-        t.createToken(NUM_LITT_T, num);
+            std::isdigit(*it) || *it == '.');
+
+        already_seen_dot ? t.createToken(FLOAT_LITT_T, num) : t.createToken(NUM_LITT_T, num);
+    } break;
+        // Numbers from 0 to 9.
+    case 48 ... 57: {
+        std::string num = "";
+        bool already_seen_dot = false;
+
+        do {
+            if (*it == '.') {
+                if (already_seen_dot) {
+                    return Error(ErrorType::SyntaxError,
+                        "Found 2 dots in float expression.", m_Line,
+                        m_CurrToken, ERROR_UNEXPECTED_IDENTIFIER);
+                } else {
+                    already_seen_dot = true;
+                }
+            }
+
+            num.push_back(*it);
+            std::advance(it, 1);
+            m_CurrToken++;
+
+        } while (
+            std::isdigit(*it) || *it == '.');
+
+        already_seen_dot ? t.createToken(FLOAT_LITT_T, num) : t.createToken(NUM_LITT_T, num);
+
     } break;
     // Letters, ignoring character's case
     case 65 ... 90:

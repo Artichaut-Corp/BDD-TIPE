@@ -35,10 +35,11 @@ const ErrorCode ERROR_UNGIVEN_ARGUMENT = std::pair(19, "Passed command without r
 const ErrorCode ERROR_UNRECOGNIZED_STMT = std::pair(20, "Used unrecognized statement");
 const ErrorCode ERROR_NETWORK_FAILURE = std::pair(21, "Networking capabilities have failed");
 const ErrorCode ERROR_TABLE_EMPTY = std::pair(22, "Requested an empty table");
-const ErrorCode ERROR_UNKNOW_TYPE_BINARYEXPR = std::pair(23, "Uknown type in the BinaryExpression Tree");
-const ErrorCode ERROR_UNKNOW_LOGICAL_OPERATOR = std::pair(24, "Uknown operator Type in Evaluation of a BinaryExpression");
-
-
+const ErrorCode ERROR_UNKNOWN_TYPE_BINARYEXPR = std::pair(23, "Unknown type in the BinaryExpression Tree");
+const ErrorCode ERROR_UNKNOWN_LOGICAL_OPERATOR = std::pair(24, "Unknown operator Type in Evaluation of a BinaryExpression");
+const ErrorCode ERROR_UNKNOWN_TYPE = std::pair(25, "Found Unexpected Type");
+const ErrorCode ERROR_UNMATCHED_ARG_NUMBER = std::pair(26, "Found different argument number");
+const ErrorCode ERROR_FAILED_IO = std::pair(27, "Failed to proceed on file");
 
 enum class ErrorType { CLIArgument,
     ParserError,

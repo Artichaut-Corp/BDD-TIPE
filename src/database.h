@@ -67,7 +67,7 @@ private:
 
         int table_count = Storing::File::GetTableCount(fd);
 
-        auto tables_element_count = std::vector<DbInt16>();
+        auto tables_element_count = std::vector<DbUInt16>();
 
         tables_element_count.reserve(table_count);
 
@@ -84,13 +84,13 @@ private:
 
         lseek(fd, offset, SEEK_SET);
 
-        DbInt16 buffer;
+        DbUInt16 buffer;
 
         for (int i = 0; i < table_count; i++) {
 
             buffer = tables_element_count[i];
 
-            int bytes_written = write(fd, &buffer, DB_INT16_SIZE);
+            int bytes_written = write(fd, &buffer, DB_UINT16_SIZE);
         }
 
         close(fd);

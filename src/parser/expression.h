@@ -3,6 +3,7 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <variant>
 
@@ -42,7 +43,7 @@ enum class AggrFuncType {
 
 enum class ColumnType { NULL_C,
     INTEGER_C,
-    REAL_C,
+    FLOAT_C,
     TEXT_C };
 
 class Expr {
@@ -258,11 +259,17 @@ public:
     }
 
     auto Lhs() const -> ClauseMember { return m_Lhs; }
+
     auto Rhs() const -> ClauseMember { return m_Rhs; }
+
     auto Op() const -> LogicalOperator { return m_Op; }
+
     auto Column() -> std::unordered_set<std::string>* { return &m_ColumnUsed; }
+
     auto EditLhs(ClauseMember NewClause) { m_Lhs = NewClause; }
+
     auto EditRhs(ClauseMember NewClause) { m_Rhs = NewClause; }
+
     void Print(std::ostream& out);
 
     static std::pair<ClauseMember, std::string> ParseClauseMember(Lexing::Tokenizer* t);
@@ -271,7 +278,7 @@ public:
 
     void FormatColumnName(std::string NomTablePrincipale);
 
-    bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
+    bool Eval(std::unordered_map<std::string, ColumnData> CombinaisonATester);
 };
 
 std::ostream& operator<<(std::ostream& out, const Clause& member);
@@ -297,19 +304,23 @@ public:
     // Data accesing methods
 
     void PrintCondition(std::ostream& out);
+
     void PrintConditionalt(std::ostream& out);
 
     auto Lhs() -> Condition
     {
         return m_Lhs;
     }
+
     auto Rhs() -> Condition { return m_Rhs; }
+
     auto Op() -> LogicalOperator { return m_Op; }
 
     bool IsEmpty(const Condition& cond)
     {
         return std::holds_alternative<std::monostate>(cond);
     }
+
     auto NullifyLhs() -> void
     {
         m_Lhs = std::monostate {};
@@ -322,6 +333,7 @@ public:
             m_ColumnUsedBelow = *std::get<BinaryExpression*>(right)->Column();
         }
     }
+
     auto NullifyRhs() -> void
     {
         m_Rhs = std::monostate {};
@@ -341,7 +353,7 @@ public:
 
     Condition ExtraireCond(std::unordered_set<std::string>* ColonnesAExtraire);
 
-    bool Eval(std::map<std::string, ColumnData> CombinaisonATester);
+    bool Eval(std::unordered_map<std::string, ColumnData> CombinaisonATester);
 
     void FormatColumnName(std::string NomTablePrincipale);
 
@@ -350,7 +362,9 @@ private:
     LogicalOperator m_Op;
 
     Condition m_Lhs;
+
     Condition m_Rhs;
+
     std::unordered_set<std::string> m_ColumnUsedBelow;
 };
 

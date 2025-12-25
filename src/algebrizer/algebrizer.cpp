@@ -127,31 +127,46 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
 
     //  on doit creer la table principale, pour cela on doit creer les racines et les Colonnes
-    std::vector<std::shared_ptr<Racine>> Racines;
-    Racines.reserve(TableNameToColumnList[TablePrincipaleNom].size());
-    std::vector<std::shared_ptr<Colonne>> Colonnes;
-    Colonnes.reserve(TableNameToColumnList[TablePrincipaleNom].size());
-    for (std::string colonne_nom : TableNameToColumnList[TablePrincipaleNom]) {
-        std::shared_ptr<Racine> RacinePtr = std::make_shared<Racine>(Racine(colonne_nom, File->Fd(), IndexGet));
-        Racines.push_back(RacinePtr);
-        std::shared_ptr<Colonne> ColonnePtr = std::make_shared<Colonne>(Colonne(RacinePtr, colonne_nom));
-        Colonnes.push_back(ColonnePtr);
-    }
-    // Maintenant que l'on as tout pour la table Principale on la créer
-    Table* table_principale = new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(Colonnes), TablePrincipaleNom);
-    Node RacineExec = Node(new Proj(NomColonneDeRetour, TablePrincipaleNom)); // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
-    std::vector<Table> Tables;
-    Tables.push_back(*table_principale); // on enregiste la table principale
+    auto racines = std::make_unique<std::vector<Racine>>();
 
-    std::map<std::string, std::pair<Node*, bool>> TableToRootOfTableMap; // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
-    TableToRootOfTableMap[TablePrincipaleNom] = std::pair<Node*, bool>((&RacineExec), true);
+    racines->reserve(TableNameToColumnList[TablePrincipaleNom].size());
+
+    auto colonnes = std::make_unique<std::vector<Colonne>>();
+
+    colonnes->reserve(TableNameToColumnList[TablePrincipaleNom].size());
+
+    for (std::string colonne_nom : TableNameToColumnList[TablePrincipaleNom]) {
+        Racine racine = Racine(colonne_nom, File->Fd(), IndexGet);
+
+        racines->emplace_back(racine);
+
+        Colonne c = Colonne(std::move(racine), colonne_nom);
+
+        colonnes->emplace_back(std::move(c));
+    }
+
+    // Maintenant que l'on as tout pour la table Principale on la créer
+
+    Table table_principale = Table(colonnes.get(), TablePrincipaleNom);
+
+    // Le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
+    auto exec_root = new Node(new Proj(NomColonneDeRetour, TablePrincipaleNom));
+
+    auto tables = std::vector<Table>();
+
+    tables.push_back(std::move(table_principale)); // on enregiste la table principale
+
+    std::map<std::string, std::pair<std::unique_ptr<Node>, bool>> TableToRootOfTableMap; // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
+    TableToRootOfTableMap[TablePrincipaleNom] = std::pair<std::unique_ptr<Node>, bool>(std::move(exec_root), true);
 
     // il faut maintenant récupérer les conditions càd les where
     if (where != NULL) { // une foit la racine de l'arbre d'éxécution définie, on peut lui ajouter une selection si nécessaire
         MainSelect = new Select(std::make_unique<std::unordered_set<std::string>>(*ConditionColumn), Condition, TablePrincipaleNom);
-        Node* Node_Select = new Node(MainSelect);
-        RacineExec.AddChild(true, Node_Select);
-        TableToRootOfTableMap[TablePrincipaleNom] = std::pair<Node*, bool>(Node_Select, true);
+        auto node_select = std::make_unique<Node>(MainSelect);
+
+        exec_root->AddChild(true, std::move(node_select));
+
+        TableToRootOfTableMap[TablePrincipaleNom] = std::pair<std::unique_ptr<Node>, bool>(std::move(node_select), true);
     }
 
     if (!tables_secondaires.empty()) { // si il y as des join
@@ -159,47 +174,70 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         //  pour cela on vas créer les racines et les colonne et donc les tables de chaque sous-table avant de créer l'arbre
 
         for (int i = 0; i < tables_secondaires.size(); i++) {
-            std::vector<std::shared_ptr<Racine>> Racines;
-            Racines.reserve(TableNameToColumnList[tables_secondaires[i]].size());
-            std::vector<std::shared_ptr<Colonne>> Colonnes;
-            Colonnes.reserve(TableNameToColumnList[tables_secondaires[i]].size());
+
+            auto racines_sec = std::make_unique<std::vector<Racine>>();
+
+            racines_sec->reserve(TableNameToColumnList[tables_secondaires[i]].size());
+
+            auto colonnes_sec = std::make_unique<std::vector<Colonne>>();
+
+            colonnes_sec->reserve(TableNameToColumnList[tables_secondaires[i]].size());
+
             for (std::string colonne_nom : TableNameToColumnList[tables_secondaires[i]]) {
-                std::shared_ptr<Racine> RacinePtr = std::make_shared<Racine>(Racine(colonne_nom, File->Fd(), IndexGet));
-                Racines.push_back(RacinePtr);
-                std::shared_ptr<Colonne> ColonnePtr = std::make_shared<Colonne>(Colonne(RacinePtr, colonne_nom));
-                Colonnes.push_back(ColonnePtr);
+
+                Racine r = Racine(colonne_nom, File->Fd(), IndexGet);
+
+                racines_sec->emplace_back(r);
+
+                Colonne c = Colonne(std::move(r), colonne_nom);
+
+                colonnes_sec->emplace_back(std::move(c));
             }
+
             // Maintenant que l'on as tout pour la table Principale on la créer
-            Table* table_secondaire = new Table(std::make_shared<std::vector<std::shared_ptr<Colonne>>>(Colonnes), tables_secondaires[i]);
-            Tables.push_back(*table_secondaire);
+            Table table_secondaire = Table(colonnes_sec.get(), tables_secondaires[i]);
 
-            std::string TableDéjàAjouter; // dans chaque création de jointure,il y a déjà une table présente dans l'arbre d'éxécution
-            std::string TableGauche = join_list[i]->GetLTable();
-            std::string TableDroite = join_list[i]->GetRTable();
-            if (TableToRootOfTableMap.contains(TableGauche)) {
-                TableDéjàAjouter = TableGauche;
+            tables.push_back(std::move(table_secondaire));
+
+            // dans chaque création de jointure,il y a déjà une table présente dans l'arbre d'éxécution
+            std::string already_added_table;
+            std::string left_table = join_list[i]->GetLTable();
+            std::string right_table = join_list[i]->GetRTable();
+
+            if (TableToRootOfTableMap.contains(left_table)) {
+                already_added_table = left_table;
             } else {
-                TableDéjàAjouter = TableDroite;
+                already_added_table = right_table;
             }
-            Node* NoeudRacineTableDéjàAjouter = std::move(TableToRootOfTableMap[TableDéjàAjouter].first);
-            bool EstGauche = TableToRootOfTableMap[TableDéjàAjouter].second;
-            Node* EmplacementNouveauJoin = new Node(join_list[i]);
-            NoeudRacineTableDéjàAjouter->AddChild(EstGauche, EmplacementNouveauJoin);
 
-            TableToRootOfTableMap[TableDroite] = std::pair<Node*, bool>(EmplacementNouveauJoin, false);
-            TableToRootOfTableMap[TableGauche] = std::pair<Node*, bool>(EmplacementNouveauJoin, true);
+            std::unique_ptr<Node> root_node_of_aat = std::move(TableToRootOfTableMap[already_added_table].first);
+
+            bool EstGauche = TableToRootOfTableMap[already_added_table].second;
+
+            auto new_join_location = std::make_unique<Node>(join_list[i]);
+
+            root_node_of_aat->AddChild(EstGauche, std::move(new_join_location));
+
+            TableToRootOfTableMap[left_table] = std::pair<std::unique_ptr<Node>, bool>(std::move(new_join_location), false);
+            TableToRootOfTableMap[right_table] = std::pair<std::unique_ptr<Node>, bool>(std::move(new_join_location), true);
         }
     }
 
-    Ikea* Magasin = new Ikea(Tables);
-    RacineExec.printBT(std::cout);
+    Ikea* magasin = new Ikea(tables);
+
+    Node::printBT(std::cout, exec_root);
+
     if (where != NULL) {
         std::cout << "\n et maintenant en descendant les sélections on a : \n  ";
-        RacineExec.SelectionDescent(Magasin, MainSelect);
-        RacineExec.printBT(std::cout);
+
+        exec_root->SelectionDescent(magasin, MainSelect);
+
+        Node::printBT(std::cout, exec_root);
     }
-    Table* Table_Finale = RacineExec.Pronf(Magasin);
-    Utils::AfficheResultat(Table_Finale);
+
+    Table final_table = exec_root->Pronf(magasin);
+
+    Utils::AfficheResultat(std::move(final_table));
 }
 
 };

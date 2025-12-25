@@ -28,12 +28,14 @@ public:
     };
     Parsing::BinaryExpression::Condition GetCond() { return m_Conds; }
 
-    Table* Exec(Table* table)
-    {   
-        if(std::holds_alternative<std::monostate>(m_Conds)){
-            return table; //pas besoin dans le reflechir la comparaison est nulle
+    Table Exec(Table table)
+    {
+        if (std::holds_alternative<std::monostate>(m_Conds)) {
+            return table; // pas besoin dans le reflechir la comparaison est nulle
         }
-        table->Selection(m_Conds, std::move(m_Cols));
+
+        table.Selection(m_Conds, std::move(m_Cols));
+
         return table;
     }
     std::string GetTableName()
@@ -41,9 +43,10 @@ public:
         return TableNameToExec;
     }
 
-    void NullifyCond(){
+    void NullifyCond()
+    {
         m_Cols = nullptr;
-        m_Conds = std::monostate{};
+        m_Conds = std::monostate {};
     }
 };
 

@@ -10,7 +10,7 @@
 
 namespace Database::Storing {
 
-template <DbInt8 N, DbInt8 S>
+template <DbUInt8 N>
 class BPlusTree {
 
     /*
@@ -30,53 +30,53 @@ public:
     struct Node {
         DbBool m_IsLeaf = false;
 
-        DbInt8 m_UsedCellNumber = 0;
+        DbUInt8 m_UsedCellNumber = 0;
 
-        DbInt8 m_ChildNumber = 0;
+        DbUInt8 m_ChildNumber = 0;
 
-        DbInt64 m_LeftSibling = 0;
-        DbInt64 m_RightSibling = 0;
+        DbUInt64 m_LeftSibling = 0;
+        DbUInt64 m_RightSibling = 0;
 
         std::vector<ColumnData> m_Keys; // Size N - 1 at most
-        std::vector<DbInt64> m_Childs; // N at most
+        std::vector<DbUInt64> m_Childs; // N at most
 
         bool IsFull() const;
 
-        void InsertValRange(int fd);
+        void InsertElement(const ColumnData value);
 
         void SerializeNode(int fd);
 
         void SerializeLeaf(int fd);
 
-        static Node ReadLeaf(int fd);
+        static Node ReadLeaf(int fd, DbInt64 offset);
 
-        static Node ReadInternalNode(int fd);
+        static Node ReadInternalNode(int fd, DbInt64 offset);
 
         // Constructor for root
-        Node(int fd)
+        Node(int fd, DbUInt8 e_size)
         {
             // Read child number
-            DbInt64 offset;
+            DbUInt64 offset;
 
-            lseek64(fd, DB_BOOL_SIZE, SEEK_SET);
+            lseek(fd, DB_BOOL_SIZE, SEEK_SET);
 
-            DbInt8 child_num;
+            DbUInt8 child_num;
 
-            FileInterface::ReadField(fd, &child_num, &offset, DB_INT8_SIZE);
+            FileInterface::ReadField(fd, &child_num, &offset, DB_UINT8_SIZE);
 
-            DbInt8 used_cell_num;
+            DbUInt8 used_cell_num;
 
-            FileInterface::ReadField(fd, &used_cell_num, &offset, DB_INT8_SIZE);
+            FileInterface::ReadField(fd, &used_cell_num, &offset, DB_UINT8_SIZE);
 
-            std::vector<DbInt64> childs;
+            std::vector<DbUInt64> childs;
 
-            FileInterface::ReadVec(fd, childs, &offset, DB_INT64_SIZE, child_num);
+            FileInterface::ReadVec(fd, childs, &offset, DB_UINT64_SIZE, child_num);
 
-            offset = lseek64(fd, (N - child_num) * DB_INT64_SIZE, SEEK_SET);
+            offset = lseek(fd, (N - child_num) * DB_UINT64_SIZE, SEEK_SET);
 
-            std::vector<DbInt64> keys;
+            std::vector<ColumnData> keys;
 
-            FileInterface::ReadVec(fd, childs, &offset, S, used_cell_num);
+            FileInterface::ReadVec(fd, childs, &offset, e_size, used_cell_num);
 
             m_Childs = childs;
 
@@ -84,15 +84,13 @@ public:
 
             m_UsedCellNumber = used_cell_num;
 
-            m_Keys =
-
-
+            m_Keys = keys;
         }
 
         // Constructor for leafs
     };
 
-    static Node FindRoot(int fd, DbInt64 offset);
+    static Node FindRoot(int fd, DbUInt64 offset);
 
     static Node SearchLeaf(int fd, const ColumnData k, Node n);
 

@@ -24,12 +24,13 @@ public:
     {
     }
 
-    Table* Exec(Table* table)
+    Table Exec(Table table)
     {
-        table->Projection(std::make_unique<std::vector<std::string>>(m_Cols));
+        table.Projection(std::make_unique<std::vector<std::string>>(m_Cols));
 
         return table;
     }
+
     std::string GetTableName() { return TableNameToExec; }
 };
 

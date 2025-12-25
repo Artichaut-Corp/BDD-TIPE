@@ -16,13 +16,13 @@ TableInfo::GetTableColumns(
     for (int i = column_number_beginning;
         i < column_number_beginning + column_number; i++) {
 
-        const auto [name, offset, size, sortable, sorted, sorted_offset, compressable,
+        const auto [name, offset, type, sortable, sorted, sorted_offset, compressable,
             compressed]
             = data->at(i);
 
         std::pair<std::string, ColumnInfo> e = {
             Convert::DbStringToString(name),
-            ColumnInfo(offset, size, sortable, sorted, sorted_offset, compressable, compressed)
+            ColumnInfo(offset, static_cast<DbElemType>(type), sortable, sorted, sorted_offset, compressable, compressed)
         };
 
         res->emplace_back(e);

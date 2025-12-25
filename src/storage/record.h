@@ -5,8 +5,9 @@
 #include "types.h"
 
 #include <cstdint>
+#include <format>
 #include <memory>
-#include <numbers>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -31,25 +32,21 @@ public:
         // - Lire à partir de l'offset n tous les n + |e|
         // - Remplir et retourner un vecteur
 
-        std::vector<T> result = std::make_unique<std::vector<T>>();
+        std::unique_ptr<std::vector<T>> result = std::make_unique<std::vector<T>>();
 
         uint32_t offset = info.GetOffset();
 
         uint8_t element_size = info.GetElementSize();
 
-        result->reserve(element_number);
+        result->resize(element_number);
 
         lseek(fd, offset, SEEK_SET);
 
-        T buffer;
-
-        int bytes_read = read(fd, &buffer, element_size * element_number);
+        ssize_t bytes_read = read(fd, result->data(), element_size * element_number);
 
         if (bytes_read != element_size * element_number) {
             throw std::runtime_error("failed to read");
         }
-
-        result->data() = buffer;
 
         return result;
     }
@@ -68,7 +65,7 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-             ++iter) {
+            ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
@@ -97,12 +94,12 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-             ++iter) {
+            ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
             // Ptêtre bound check quand même
-            lseek64(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
+            lseek(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
                 SEEK_SET);
 
             ret = write(fd, &data.at(iter->first), e_size);
@@ -113,41 +110,52 @@ public:
 
     // Using directly a map to write data
     // Does not ensure that the TableInfo provided corresponds to the data
-    static void Write(int fd, TableInfo* info, const std::unordered_map<std::string, ColumnData>& data)
+    static std::optional<Errors::Error> Write(int fd, TableInfo* info, const std::unordered_map<std::string, ColumnData>& data)
     {
 
         int ret = 0;
 
+        if (info->m_Columns.size() != data.size()) {
+            return Errors::Error(Errors::ErrorType::RuntimeError, "Write could not proceed due to unmatched argument number", 0, 0, Errors::ERROR_UNMATCHED_ARG_NUMBER);
+        }
+
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-             ++iter) {
+            ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
             // Ptêtre bound check quand même
-            lseek64(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
+            lseek(fd, iter->second.GetOffset() + e_size * info->GetElementNumber(),
                 SEEK_SET);
 
             ret = write(fd, &data.at(iter->first), e_size);
+
+            if (ret != e_size) {
+                return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Failed to write data in column {}", iter->first), 0, 0, Errors::ERROR_FAILED_IO);
+            }
         }
 
         info->IncrMaxRecord();
-    }
 
-    static void WriteIndex(int fd, TableInfo* info, const std::unordered_map<std::string, ColumnData>& data)
+        return std::nullopt;
+    }
+    static std::optional<Errors::Error> WriteIndex(int fd, TableInfo* info, const std::unordered_map<std::string, ColumnData>& data)
     {
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-             ++iter) {
+            ++iter) {
 
             if (iter->second.IsSorted()) {
                 DbInt64 offset = iter->second.GetIndexOffset();
 
-                // const DbInt8 e_size = iter->second.GetElementSize();
+                const DbInt8 e_size = iter->second.GetElementSize();
 
-                BPlusTree<TREE_ORDER, e_size>::Node root = BPlusTree<TREE_ORDER>::FindRoot(fd, offset);
+                BPlusTree<TREE_ORDER>::Node root = BPlusTree<TREE_ORDER>::FindRoot(fd, offset);
 
                 BPlusTree<TREE_ORDER>::Insert(fd, root, data.at(iter->first));
             }
         }
+
+        return std::nullopt;
     }
 
     // Utility function mapping key and values from vectors into a map
@@ -165,6 +173,10 @@ public:
             if (column_data->at(i).getColumnType() == Parsing::ColumnType::INTEGER_C) {
                 res->insert(
                     { column_order->at(i).getColumnName(), static_cast<DbInt>(std::stoi(column_data->at(i).getData())) });
+            } else if (column_data->at(i).getColumnType() == Parsing::ColumnType::FLOAT_C) {
+
+                res->insert(
+                    { column_order->at(i).getColumnName(), static_cast<DbFloat>(std::stof(column_data->at(i).getData())) });
             } else {
 
                 res->insert(
@@ -189,6 +201,10 @@ public:
             if (column_data[i].getColumnType() == Parsing::ColumnType::INTEGER_C) {
                 res->insert(
                     { column_order->at(i).getColumnName(), static_cast<DbInt>(std::stoi(column_data[i].getData())) });
+            } else if (column_data[i].getColumnType() == Parsing::ColumnType::FLOAT_C) {
+
+                res->insert(
+                    { column_order->at(i).getColumnName(), static_cast<DbFloat>(std::stof(column_data[i].getData())) });
             } else {
 
                 res->insert(
@@ -199,6 +215,5 @@ public:
         return res;
     }
 };
-
 }
 #endif

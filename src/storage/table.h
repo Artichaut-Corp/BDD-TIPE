@@ -16,18 +16,18 @@ namespace Database::Storing {
 class TableInfo {
     DbBool m_IsSys;
 
-    DbInt16 m_CurrentElementNb;
+    DbUInt16 m_CurrentElementNb;
 
-    DbInt8 m_ColumnNumber;
+    DbUInt8 m_ColumnNumber;
 
-    DbInt m_FirstColumnOffset;
+    DbUInt m_FirstColumnOffset;
 
 public:
     std::unordered_map<std::string, ColumnInfo> m_Columns;
 
     TableInfo() = default;
 
-    TableInfo(bool sys, uint8_t column_number, uint32_t first_offset,
+    TableInfo(DbBool sys, DbUInt8 column_number, DbUInt first_offset,
         std::vector<std::pair<std::string, ColumnInfo>> columns)
         : m_IsSys(sys)
         , m_CurrentElementNb(0)
@@ -39,8 +39,8 @@ public:
         m_Columns.insert(columns.begin(), columns.end());
     }
 
-    TableInfo(bool sys, uint16_t current_element_number, uint8_t column_number,
-        uint32_t first_offset,
+    TableInfo(DbBool sys, DbUInt16 current_element_number, DbUInt8 column_number,
+        DbUInt first_offset,
         std::vector<std::pair<std::string, ColumnInfo>> columns)
         : m_IsSys(sys)
         , m_CurrentElementNb(current_element_number)
@@ -51,11 +51,11 @@ public:
         m_Columns.insert(columns.begin(), columns.end());
     }
 
-    DbInt GetElementNumber() { return m_CurrentElementNb; }
+    DbUInt GetElementNumber() { return m_CurrentElementNb; }
 
     DbBool IsSys() { return m_IsSys; }
 
-    DbInt8 GetColumnNumber() { return m_ColumnNumber; }
+    DbUInt8 GetColumnNumber() { return m_ColumnNumber; }
 
     void IncrMaxRecord()
     {
@@ -84,7 +84,7 @@ public:
             ColumnInfo::ColumnInfoTuple>>& data);
 
     std::unordered_map<std::string, ColumnData> Map(const std::string& name,
-        DbInt offset)
+        DbUInt offset)
     {
         return { { "name", Convert::StringToDbString(name) },
             { "column_offset", offset },

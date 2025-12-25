@@ -58,9 +58,9 @@ Tokenizer::Tokenizer(std::string line, int l_number)
     while (!tok->is_empty()) {
         // Not safe, should check what's inside
 
-        if (tok->get_first().has_value())
+        if (tok->get_first().has_value()) {
             list->append(tok->get_first().value());
-
+        }
         tok->advance();
     }
 

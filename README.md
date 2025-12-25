@@ -33,11 +33,12 @@ TODO
 - [x] Parser -> réécrire toutes les structures: plutôt Ok, il reste des constructeurs et des champs à implémenter selon 
 [la documentation sqlite](https://www.sqlite.org/lang_keywords.html). Réalisé en Janvier 2025
 - [x] Parser -> créer les méthode et implémenter la fonction Parser::Parse(). Réalisé en Février 2025
-- [ ] BDD -> Implémentation des opérations de sélection, projection, jointures et fonctions aggrégatives
-- [ ] BDD -> Créer les plans de requête 
-- [ ] BDD -> Comment organiser les données dans le fichier contenant la BDD (csv / json / vraie solution) 
-- [ ] Interface -> Présenter et recevoir les données
+- [x] BDD -> Implémentation des opérations de sélection, projection, jointures et fonctions aggrégatives
+- [x] BDD -> Créer les plans de requête 
+- [x] BDD -> Comment organiser les données dans le fichier contenant la BDD (csv / json / vraie solution) 
+- [x] Interface -> Présenter et recevoir les données
 - [ ] Présentation -> Trouver un jeu de données adapté et des opérations dessus optimisables par notre algorithme
+- [ ] BDD -> 
 
 
 # Notes 'The design and implementation of modern column based databases'

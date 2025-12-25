@@ -339,6 +339,12 @@ Clause::ParseClauseMember(Lexing::Tokenizer* t)
         // Passer au suivant ici car Parse un nom de colonne le fait
         t->next();
     } break;
+    case Lexing::FLOAT_LITT_T: {
+        member = Convert::intToColumnData(LitteralValue<float>(ColumnType::FLOAT_C, std::stof(next.m_Value)).getData());
+
+        // Passer au suivant ici car Parse un nom de colonne le fait
+        t->next();
+    } break;
     case Lexing::VAR_NAME_T: {
         auto parsed_col = *ColumnName::ParseColumnName(t);
 
@@ -522,6 +528,7 @@ BinaryExpression::Condition BinaryExpression::ParseCondition(Lexing::Tokenizer* 
         case Database::Lexing::TokenType::VAR_NAME_T:
         case Database::Lexing::TokenType::STRING_LITT_T:
         case Database::Lexing::TokenType::NUM_LITT_T:
+        case Database::Lexing::TokenType::FLOAT_LITT_T:
             arg_pile.push(Clause::ParseClause(t));
             break;
         case Database::Lexing::TokenType::OR_T: {
@@ -706,7 +713,7 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<st
     }
 }
 
-bool Clause::Eval(std::map<std::string, ColumnData> CombinaisonATester)
+bool Clause::Eval( std::unordered_map<std::string, ColumnData> CombinaisonATester)
 {
     auto resolveOperand = [&](auto&& operand) -> ColumnData {
         using T = std::decay_t<decltype(operand)>;
@@ -717,7 +724,7 @@ bool Clause::Eval(std::map<std::string, ColumnData> CombinaisonATester)
         } else {
             throw Errors::Error(Errors::ErrorType::RuntimeError,
                 "Unknown type in the Clause parameter",
-                0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+                0, 0, Errors::ERROR_UNKNOWN_TYPE_BINARYEXPR);
         }
     };
 
@@ -740,11 +747,11 @@ bool Clause::Eval(std::map<std::string, ColumnData> CombinaisonATester)
     default:
         throw Errors::Error(Errors::ErrorType::RuntimeError,
             "Unknown Logical Operator",
-            0, 0, Errors::ERROR_UNKNOW_LOGICAL_OPERATOR);
+            0, 0, Errors::ERROR_UNKNOWN_LOGICAL_OPERATOR);
     }
 }
 
-bool BinaryExpression::Eval(std::map<std::string, ColumnData> CombinaisonATester)
+bool BinaryExpression::Eval(std::unordered_map<std::string, ColumnData> CombinaisonATester)
 {
     bool ResultAGauche;
     auto left = Lhs();

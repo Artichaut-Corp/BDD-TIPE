@@ -5,6 +5,7 @@
 #include "../parser/expression.h"
 #include "../utils/unordered_set_utils.h"
 #include "ikea.h"
+#include <memory>
 #include <unordered_set>
 #include <variant>
 
@@ -18,8 +19,8 @@ using NodeType = std::variant<Join*, Proj*, Select*>; // le type root est censé
 class Node {
 private:
     NodeType m_Type;
-    Node* m_Fg = nullptr;
-    Node* m_Fd = nullptr;
+    std::unique_ptr<Node> m_Fg = nullptr;
+    std::unique_ptr<Node> m_Fd = nullptr;
 
 public:
     Node(NodeType type)
@@ -27,20 +28,20 @@ public:
     {
     }
 
-    void AddChild(bool left, Node* child)
+    void AddChild(bool left, std::unique_ptr<Node> child)
     {
         if (left)
-            m_Fg = child;
+            m_Fg = std::move(child);
         else
-            m_Fd = child;
+            m_Fd = std::move(child);
     }
 
-    Table* Pronf(Ikea* Tables)
+    Table Pronf(Ikea* Tables)
     {
-        Table* result = nullptr;
+        Table result;
 
-        Table* tFg = nullptr;
-        Table* tFd = nullptr;
+        Table tFg;
+        Table tFd;
 
         if (m_Fg) {
             tFg = m_Fg->Pronf(Tables);
@@ -48,23 +49,24 @@ public:
         if (m_Fd) {
             tFd = m_Fd->Pronf(Tables);
         }
-        result = std::visit([&](auto* op) -> Table* { // <-- retour explicite Table*
+
+        result = std::visit([&](auto* op) -> Table { // <-- retour explicite Table*
             using T = std::decay_t<decltype(*op)>;
             if constexpr (std::is_same_v<T, Join>) {
-                if (tFg && tFd) {
-                    return op->Exec(tFg, tFd); // doit retourner Table*
+                if (!tFg.isUninitialized() && !tFd.isUninitialized()) {
+                    return op->Exec(std::move(tFg), std::move(tFd)); // doit retourner Table*
                 } else {
                     return op->Exec(Tables->GetTableByName(op->GetLTable()), Tables->GetTableByName(op->GetRTable()));
                 }
             } else if constexpr (std::is_same_v<T, Proj>) {
-                if (tFg) {
-                    return op->Exec(tFg); // doit retourner Table*
+                if (!tFg.isUninitialized()) {
+                    return op->Exec(std::move(tFg)); // doit retourner Table*
                 } else {
                     return op->Exec(Tables->GetTableByName(op->GetTableName()));
                 }
             } else if constexpr (std::is_same_v<T, Select>) {
-                if (tFg) {
-                    return op->Exec(tFg); // doit retourner Table*
+                if (!tFg.isUninitialized()) {
+                    return op->Exec(std::move(tFg)); // doit retourner Table*
                 } else {
                     return op->Exec(Tables->GetTableByName(op->GetTableName()));
                 }
@@ -77,12 +79,12 @@ public:
         return result;
     }
 
-    void printBT(const std::string& prefix, const Node* node, bool isLeft, std::ostream& out)
+    static void printBT(const std::string& prefix, const Node* node, bool isLeft, std::ostream& out)
     {
         if (node != nullptr) {
             out << prefix;
 
-            out << (isLeft &&node->m_Fd && std::holds_alternative<Join*>(node->m_Fd->m_Type) ? "├──" : "└──");
+            out << (isLeft && node->m_Fd && std::holds_alternative<Join*>(node->m_Fd->m_Type) ? "├──" : "└──");
 
             auto type = node->m_Type;
 
@@ -119,16 +121,18 @@ public:
 
             // enter the next tree level - left and right branch
             if (node->m_Fg) {
-                printBT(prefix + (isLeft &&node->m_Fd && std::holds_alternative<Join*>(node->m_Fd->m_Type) ? "│   " : "    "), node->m_Fg, true, out);
+                printBT(prefix + (isLeft && node->m_Fd && std::holds_alternative<Join*>(node->m_Fd->m_Type) ? "│   " : "    "), node->m_Fg.get(), true, out);
             }
+
             if (node->m_Fd) {
-                printBT(prefix + (isLeft&&node->m_Fd && std::holds_alternative<Join*>(node->m_Fd->m_Type) ? "│   " : "    "), node->m_Fd, false, out);
+                printBT(prefix + (isLeft && node->m_Fd && std::holds_alternative<Join*>(node->m_Fd->m_Type) ? "│   " : "    "), node->m_Fd.get(), false, out);
             }
         }
     }
-    void printBT(std::ostream& out)
+
+    static void printBT(std::ostream& out, const Node* n)
     {
-        printBT("", this, false, out);
+        printBT("", n, false, out);
     }
 
     std::unordered_set<std::string>* SelectionDescent(Ikea* Tables, Select* MainSelect)
@@ -153,9 +157,9 @@ public:
 
                     if (Utils::is_subset(ColumnInCond, SFg)) { // on peut tout mettre en bas à gauche
                         MainSelect->NullifyCond();
-                        auto temp = m_Fg;
-                        m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetLTable()));
-                        m_Fg->AddChild(true, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
+                        auto temp = std::move(m_Fg);
+                        m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetLTable()));
+                        m_Fg->AddChild(true, std::move(temp)); // on insère la selection entre ce noeud, et le noeud d'en dessous
                         return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                     } else { // on découpe MainCond
                         Parsing::BinaryExpression::Condition RecupGauche;
@@ -175,9 +179,9 @@ public:
                         }
 
                         if (!std::holds_alternative<std::monostate>(RecupGauche)) { // ce qu'on as extrait n'est pas vide
-                            auto temp = m_Fg;
-                            m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
-                            m_Fg->AddChild(true, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
+                            auto temp = std::move(m_Fg);
+                            m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
+                            m_Fg->AddChild(true, std::move(temp)); // on insère la selection entre ce noeud, et le noeud d'en dessous
                         }
                     }
                 } // D'après l'endroit (dans le code) où on appelle SelectionDescent, l'arbre d'apelle est de la forme P->S->J->*, ainsi si l'on n'est pas sur un join tout tentative de descente de selection est vide de sens
@@ -197,9 +201,9 @@ public:
 
                     if (Utils::is_subset(ColumnInCond, SFd)) { // on peut tout mettre en bas à droite
                         MainSelect->NullifyCond();
-                        auto temp = m_Fd;
-                        m_Fd = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetRTable()));
-                        m_Fd->AddChild(false, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
+                        auto temp = std::move(m_Fd);
+                        m_Fd = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetRTable()));
+                        m_Fd->AddChild(false, std::move(temp)); // on insère la selection entre ce noeud, et le noeud d'en dessous
                         return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                     } else { // on découpe MainCond
                         Parsing::BinaryExpression::Condition RecupDroit;
@@ -219,9 +223,9 @@ public:
                         }
 
                         if (!std::holds_alternative<std::monostate>(RecupDroit)) { // ce qu'on as extrait n'est pas vide
-                            auto temp = m_Fg;
-                            m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
-                            m_Fg->AddChild(true, temp); // on insère la selection entre ce noeud, et le noeud d'en dessous
+                            auto temp = std::move(m_Fg);
+                            m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
+                            m_Fg->AddChild(true, std::move(temp)); // on insère la selection entre ce noeud, et le noeud d'en dessous
                         }
                     }
                 } // D'après l'endroit (dans le code) où on appelle SelectionDescent, l'arbre d'apelle est de la forme P->S->J->*, ainsi si l'on n'est pas sur un join tout tentative de descente de selection est vide de sens
@@ -232,7 +236,7 @@ public:
                     auto jointure = std::get<Join*>(m_Type);
                     if (!m_Fg) { // si ce join n'as rien à gauche, on essaie de mettre un select en dessous à gauche du join
 
-                        auto ColonneDispoGauche = Tables->GetTableByName(jointure->GetLTable())->GetColumnNames();
+                        auto ColonneDispoGauche = Tables->GetTableByName(jointure->GetLTable()).GetColumnNames();
                         SFg->insert(ColonneDispoGauche->begin(), ColonneDispoGauche->end());
                         std::unordered_set<std::string>* ColumnInCond; // on récupère les colonnes présente dans la conditions
                         auto MainCond = MainSelect->GetCond();
@@ -243,7 +247,7 @@ public:
                         }
                         if (Utils::is_subset(ColumnInCond, SFg)) { // on peut tout mettre en bas à gauche
                             MainSelect->NullifyCond();
-                            m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetLTable()));
+                            m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetLTable()));
                             return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                         } else { // on découpe MainCond
                             Parsing::BinaryExpression::Condition RecupGauche;
@@ -263,14 +267,14 @@ public:
                             }
 
                             if (!std::holds_alternative<std::monostate>(RecupGauche)) { // ce qu'on as extrait n'est pas vide
-                                m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
+                                m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
                             }
                         }
                     }
                     // on fait la même chose à droite
                     if (!m_Fd && !std::holds_alternative<std::monostate>(MainSelect->GetCond())) { // si ce join n'as rien à droite et que la condtion n'est plus vide, on essaie de mettre un select en dessous à droite du join
 
-                        auto ColonneDispoDroite = Tables->GetTableByName(jointure->GetRTable())->GetColumnNames();
+                        auto ColonneDispoDroite = Tables->GetTableByName(jointure->GetRTable()).GetColumnNames();
                         std::copy(ColonneDispoDroite->begin(), ColonneDispoDroite->end(), std::inserter(*SFd, SFd->end())); // on récupere les colonnes dispo à droite
 
                         std::unordered_set<std::string>* ColumnInCond; // on récupère les colonnes présente dans la conditions
@@ -283,7 +287,7 @@ public:
 
                         if (Utils::is_subset(ColumnInCond, SFd)) { // on peut tout mettre en bas à droite
                             MainSelect->NullifyCond();
-                            m_Fd = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetRTable()));
+                            m_Fd = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnInCond), MainCond, jointure->GetRTable()));
                             return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
                         } else { // on découpe MainCond
                             Parsing::BinaryExpression::Condition RecupDroit;
@@ -303,7 +307,7 @@ public:
                             }
 
                             if (!std::holds_alternative<std::monostate>(RecupDroit)) { // ce qu'on as extrait n'est pas vide
-                                m_Fg = new Node(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
+                                m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<std::string>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
                             }
                         }
                     }

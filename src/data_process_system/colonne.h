@@ -15,73 +15,86 @@ namespace Database::QueryPlanning {
 // Colonne : contient un pointeur vers une racine + indices valides + nom de la colonne
 class Colonne {
 private:
-    std::shared_ptr<Racine> racine;
-    std::vector<int> indices; // indices valides dans racine
-    std::string nom_colonne; // nom de la colonne de la forme "Table.nom_colonne"
+    Racine m_Racine;
+
+    std::unique_ptr<std::vector<int>> m_Indices; // indices valides dans racine
+  
+    std::string m_ColumnName; // nom de la colonne de la forme "Table.nom_colonne"
 
 public:
-    Colonne(std::shared_ptr<Racine> racine_, const std::string& nom_colonne_)
-        : racine(racine_)
-        , nom_colonne(nom_colonne_)
+    Colonne(Racine racine, const std::string& column_name)
+        : m_Racine(racine)
+        , m_ColumnName(column_name)
     {
-        std::vector<int> temp;
-        temp.reserve(racine->size());
-        for (int i = 0; i < racine->size(); i++) {
-            temp.push_back(i);
+
+        auto temp = std::make_unique<std::vector<int>>();
+
+        temp->reserve(racine.size());
+
+        for (int i = 0; i < racine.size(); i++) {
+            temp->emplace_back(i);
         }
-        indices = temp;
+
+        m_Indices = std::move(temp);
     }
 
-    Colonne(std::shared_ptr<Racine> racine_, const std::string& nom_, const std::vector<int>& indices_)
-        : racine(std::move(racine_))
-        , nom_colonne(nom_)
-        , indices(indices_)
+    Colonne(Racine racine, const std::string& name, const std::vector<int>& indices)
+        : m_Racine(racine)
+        , m_ColumnName(name)
+        , m_Indices(std::make_unique<std::vector<int>>(indices))
     {
     }
 
     // Accès à une valeur via l'indice de la colonne
     ColumnData getValue(const int idx) const
     {
-        return racine->getValue((indices)[idx]);
+        return m_Racine.getValue(m_Indices->at(idx));
     }
 
     int size() const
     {
-        return indices.size();
+        return m_Indices->size();
     }
 
     void
-    print() const
+    Print() const
     {
-        for (int i = 0; i < indices.size(); i++) {
-            Database::QueryPlanning::afficherColumnData(racine->getValue((indices)[i]));
+        for (int i = 0; i < m_Indices->size(); i++) {
+            Database::QueryPlanning::afficherColumnData(m_Racine.getValue(m_Indices->at(i)));
         }
         std::cout << "\n";
     }
 
-    std::string get_name()
+    std::string getName()
     {
-        return nom_colonne;
+        return m_ColumnName;
     }
-    Racine* get_racine_ptr()
+
+    Racine getRacine()
     {
-        return racine.get();
+        return m_Racine;
     }
-    int get_pos_at_pos(int i)
+
+    int getPosAtPos(int i)
     {
-        return indices[i];
+        return m_Indices->at(i);
     }
-    void garder_indice_valide(std::shared_ptr<std::vector<int>> indices_valide)
+
+    void garder_indice_valide(std::unique_ptr<std::vector<int>> indices_valide)
     {
-        std::vector<int> filtré;
-        filtré.reserve(indices_valide->size()); // optimisation (merci chat gpt)
+        auto filtred = std::make_unique<std::vector<int>>();
+
+        filtred->reserve(indices_valide->size()); // optimisation (merci chat gpt)
 
         for (int idx : *indices_valide) {
-            if (idx < indices.size()) {
-                filtré.push_back(indices[idx]);
+
+            if (idx < m_Indices->size()) {
+
+                filtred->emplace_back(m_Indices->at(idx));
             }
         }
-        indices = filtré;
+
+        m_Indices = std::move(filtred);
     }
 };
 

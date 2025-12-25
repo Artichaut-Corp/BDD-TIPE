@@ -34,7 +34,7 @@ enum TokenType {
     DEFAULT_T,
     TRANSACTION_T,
     END_T,
-    
+
     // Aggregate Functions
     AGGR_FUNC_T,
 
@@ -79,6 +79,7 @@ enum TokenType {
     // Expression
     STRING_LITT_T,
     NUM_LITT_T,
+    FLOAT_LITT_T,
 
     // Identifiers
     VAR_NAME_T,

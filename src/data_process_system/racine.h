@@ -2,7 +2,6 @@
 #include "../database.h"
 
 #include <memory>
-#include <vector>
 
 #ifndef RACINE_H
 
@@ -11,36 +10,27 @@ namespace Database::QueryPlanning {
 
 // Racine : contient des pointeurs vers les données brutes (immutable)
 class Racine {
+
 private:
-    std::string NomColonne;
-    std::variant<std::unique_ptr<std::vector<DbString>>, std::unique_ptr<std::vector<DbInt>>, std::unique_ptr<std::vector<DbInt16>>, std::unique_ptr<std::vector<DbInt8>>> data; // données immuables
+    std::string m_ColumnName;
+    Column data; // données immuables
+
 public:
-    Racine(std::string NomColonne_, int fd, Storing::DBTableIndex* IndexGet)
-        : NomColonne(NomColonne_)
+    Racine(const std::string& column_name, int fd, Storing::DBTableIndex* Index)
+        : m_ColumnName(column_name)
     {
-        std::variant<Column, Errors::Error> ValeurRecuper = Storing::Store::DB_GetColumn(fd, IndexGet, NomColonne_.substr(0, NomColonne_.find(".")), NomColonne_.substr( NomColonne_.find(".")+1));
-        if (std::holds_alternative<Errors::Error>(ValeurRecuper)) {
-            Errors::Error e = std::get<Errors::Error>(ValeurRecuper);
+        std::variant<Column, Errors::Error> col = Storing::Store::DB_GetColumn(fd, Index, column_name.substr(0, column_name.find(".")), column_name.substr(column_name.find(".") + 1));
+
+        if (std::holds_alternative<Errors::Error>(col)) {
+            Errors::Error e = std::get<Errors::Error>(col);
             throw e;
         }
 
-        auto column_data = std::get<Column>(std::move(ValeurRecuper));
-
-        if (std::holds_alternative<std::unique_ptr<std::vector<DbString>>>(column_data)) {
-            data = std::get<std::unique_ptr<std::vector<DbString>>>(std::move(column_data));
-
-        } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt>>>(column_data)) {
-            data = std::get<std::unique_ptr<std::vector<DbInt>>>(std::move(column_data));
-
-        } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt16>>>(column_data)) {
-            data = std::get<std::unique_ptr<std::vector<DbInt16>>>(std::move(column_data));
-
-        } else {
-            data = std::get<std::unique_ptr<std::vector<DbInt8>>>(std::move(column_data));
-        }
+        data = std::move(std::get<Column>(col));
     }
+
     Racine(const Racine& other)
-        : NomColonne(other.NomColonne)
+        : m_ColumnName(other.m_ColumnName)
     {
         data = std::visit([](auto const& vecPtr) -> decltype(data) {
             using VecType = std::decay_t<decltype(*vecPtr)>;

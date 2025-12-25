@@ -19,11 +19,11 @@ public:
 
     static void GotoColumn(int fd, std::string column_key);
 
-    static void SetOffset(uint64_t size);
+    static void SetOffset(DbUInt64 size);
 
-    static uint64_t CurrentOffset();
+    static DbUInt64 CurrentOffset();
 
-    static uint64_t MoveOffset(uint64_t size);
+    static DbUInt64 MoveOffset(DbUInt64 size);
 };
 
 }
