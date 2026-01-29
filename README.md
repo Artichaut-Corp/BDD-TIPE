@@ -34,7 +34,7 @@ Installation
 -----
 il faut télécharger le projet, le compiler en lançant "make all" dans le dossier build
 
-pour le lancer il suffit de d'éxécuter  ./src/TIPE-BDD_run dans le dossier build
+pour le lancer il suffit de d'éxécuter  ./src/bdd_tipe dans le dossier build
 
 une fois lancer, vous aurez accès la REPL, un fichier main.db seras créé, il est propre à notre projet et inutilisable par tout autre SGBD
 
@@ -42,7 +42,7 @@ vous devrez insérez les donnée à partir de la REPL, pour cela veuillez lancer
 
 Des exemples de requête que l'on traite actuelement sont présenté dans ce même fichier res/sample.md
 
-Si vous voulez sauvegardez l'insertions des valeurs dans le fichier, il faut quitte la REPL en appuyant sur entrée après la fin de vos test
+Si vous voulez sauvegarder l'insertions des valeurs dans le fichier, il faut quitter la REPL en appuyant sur entrée après la fin de vos test
 
 TODO
 ----
@@ -88,6 +88,7 @@ Une explication de la gestion mémoire des tables dans le cadre d'une requête s
 une liste d'erreur trouvé et d'optimisation prévue est décrite dans ToDo.txt
 
 nos note de première lecture sur certain papier décrivant les SGBD colonne sont présente dans notes.md
+
 
 
 
