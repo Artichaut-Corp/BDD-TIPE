@@ -1,5 +1,6 @@
-#include "../algebrizer_types.h"
-#include "../database.h"
+#include "algebrizer_types.h"
+#include "database.h"
+
 #include "namingsystem.h"
 
 #include <memory>
@@ -13,80 +14,91 @@ namespace Database::QueryPlanning {
 
 // Racine : contient des pointeurs vers les données brutes (immutable)
 class Racine {
+
 private:
-    std::shared_ptr<ColonneNamesSet> m_NomColonne;
-    ColumnR m_data;
+    std::unique_ptr<ColonneNamesSet> m_ColumnName;
+
+    DbElemType m_DataType;
+
+    Column m_Data;
+
 public:
-    Racine(std::shared_ptr<ColonneNamesSet> NomColonne_, int fd, Storing::DBTableIndex* IndexGet)
-        : m_NomColonne(NomColonne_)
+    Racine(ColonneNamesSet* column_name, int fd, Storing::DBTableIndex* Index)
+        : m_ColumnName(std::unique_ptr<ColonneNamesSet>(column_name))
     {
-        std::variant<Column, Errors::Error> ValeurRecuper = Storing::Store::GetDBColumn(fd, IndexGet, NomColonne_->GetTableSet()->GetNameInMemory(), NomColonne_->GetMainName().substr(NomColonne_->GetMainName().find(".") + 1));
-        if (std::holds_alternative<Errors::Error>(ValeurRecuper)) {
-            Errors::Error e = std::get<Errors::Error>(ValeurRecuper);
+        std::string table_name = m_ColumnName->GetTableSet()->GetNameInMemory();
+        std::string col_name = m_ColumnName->GetMainName().substr(m_ColumnName->GetMainName().find(".") + 1);
+
+        std::variant<TypedColumn, Errors::Error> result = Storing::Store::DB_GetColumn(fd, Index, table_name, col_name);
+
+        if (std::holds_alternative<Errors::Error>(result)) {
+            Errors::Error e = std::get<Errors::Error>(result);
+
             throw e;
         }
 
-        auto column_data = std::get<Column>(std::move(ValeurRecuper));
+        TypedColumn col = std::move(std::get<TypedColumn>(result));
 
-        if (std::holds_alternative<std::unique_ptr<std::vector<DbString>>>(column_data)) {
-            auto temp = std::get<std::unique_ptr<std::vector<DbString>>>(std::move(column_data));
-            m_data = std::move(temp);
+        m_DataType = col.first;
+        m_Data = std::move(col.second);
+    }
 
-        } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt64>>>(column_data)) {
-            auto temp = std::get<std::unique_ptr<std::vector<DbInt64>>>(std::move(column_data));
-            m_data = std::move(temp);
+    /*
+      Racine(const Racine& other)
+          : m_ColumnName(std::move(other.m_ColumnName))
+      {
+          m_Data = std::move(other.m_Data);
+      }
+  */
 
-        } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt>>>(column_data)) {
-            auto temp = std::get<std::unique_ptr<std::vector<DbInt>>>(std::move(column_data));
-            m_data = std::move(temp);
+    template <typename T = DbElemType>
+    inline T GetValueOfType(int i) const
+    {
 
-        } else if (std::holds_alternative<std::unique_ptr<std::vector<DbInt16>>>(column_data)) {
-            auto temp = std::get<std::unique_ptr<std::vector<DbInt16>>>(std::move(column_data));
-            m_data = std::move(temp);
+        auto& column = std::get<std::unique_ptr<std::vector<T>>>(m_Data);
 
-        } else {
-            auto temp = std::get<std::unique_ptr<std::vector<DbInt8>>>(std::move(column_data));
-            m_data = std::move(temp);
+        if (!column || i >= column->size()) {
+            // Should return proper error
+            throw std::out_of_range("Index hors limites");
         }
-    }
-    Racine(const Racine& other)
-        : m_NomColonne(other.m_NomColonne)
-    {
-        m_data = other.m_data;
+
+        return column->at(i);
     }
 
-    ColumnData get_value_dans_ptr(int i) const
+    ColumnData GetValueAt(int i) const
     {
-        if (std::holds_alternative<std::shared_ptr<std::vector<DbString>>>(m_data)) {
-            auto temp = std::get<std::shared_ptr<std::vector<DbString>>>(m_data);
-            if (!temp || i >= temp->size()) {
-                throw std::out_of_range("Index hors limites");
-            }
-            return (*temp)[i];
-        } else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt64>>>(m_data)) {
-                    auto temp = std::get<std::shared_ptr<std::vector<DbInt64>>>(m_data);
-                    if (!temp || i >= temp->size()) {
-                        throw std::out_of_range("Index hors limites");
-                    }
-                    return (*temp)[i];
-        } else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt>>>(m_data)) {
-            auto temp = std::get<std::shared_ptr<std::vector<DbInt>>>(m_data);
-            if (!temp || i >= temp->size()) {
-                throw std::out_of_range("Index hors limites");
-            }
-            return (*temp)[i];
-        } else if (std::holds_alternative<std::shared_ptr<std::vector<DbInt16>>>(m_data)) {
-            auto temp = std::get<std::shared_ptr<std::vector<DbInt16>>>(m_data);
-            if (!temp || i >= temp->size()) {
-                throw std::out_of_range("Index hors limites");
-            }
-            return (*temp)[i];
-        } else {
-            auto temp = std::get<std::shared_ptr<std::vector<DbInt8>>>(m_data);
-            if (!temp || i >= temp->size()) {
-                throw std::out_of_range("Index hors limites");
-            }
-            return (*temp)[i];
+
+        switch (m_DataType) {
+        case DbElemType::DbNull:
+            return 0;
+        case DbElemType::DbBool:
+            return GetValueOfType<DbBool>(i);
+        case DbElemType::DbInt8:
+            return GetValueOfType<DbInt8>(i);
+        case DbElemType::DbUInt8:
+            return GetValueOfType<DbUInt8>(i);
+        case DbElemType::DbInt16:
+            return GetValueOfType<DbInt16>(i);
+        case DbElemType::DbUInt16:
+            return GetValueOfType<DbUInt16>(i);
+        case DbElemType::DbInt:
+            return GetValueOfType<DbInt>(i);
+        case DbElemType::DbUInt:
+            return GetValueOfType<DbUInt>(i);
+        case DbElemType::DbInt64:
+            return GetValueOfType<DbInt64>(i);
+        case DbElemType::DbUInt64:
+            return GetValueOfType<DbUInt64>(i);
+        case DbElemType::DbFloat:
+            return GetValueOfType<DbFloat>(i);
+        case DbElemType::DbFloat64:
+            return GetValueOfType<DbFloat64>(i);
+        case DbElemType::DbChar:
+            return GetValueOfType<DbChar>(i);
+        case DbElemType::DbString:
+            return GetValueOfType<DbString>(i);
+        default:
+            return 0;
         }
     }
 
@@ -95,16 +107,17 @@ public:
         return std::visit([](auto const& vecPtr) -> int {
             return vecPtr ? vecPtr->size() : 0;
         },
-            m_data);
-    }
-    std::shared_ptr<ColonneNamesSet> get_name()
-    {
-        return m_NomColonne;
+            m_Data);
     }
 
-    void addname(std::shared_ptr<ColonneNamesSet> colname)
+    ColonneNamesSet& GetName()
     {
-        m_NomColonne->FusionColumn(colname);
+        return *m_ColumnName.get();
+    }
+
+    void AddName(const ColonneNamesSet& colname)
+    {
+        m_ColumnName->FusionColumn(colname);
     }
 };
 

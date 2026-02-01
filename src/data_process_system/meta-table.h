@@ -1,9 +1,9 @@
-#include <cmath>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
-#include "../algebrizer_types.h"
+#include "algebrizer_types.h"
+
 #include "namingsystem.h"
 #include "table.h"
 
@@ -15,115 +15,171 @@ namespace Database::QueryPlanning {
 
 class MetaTable {
 private:
-    std::unordered_map<std::string, std::shared_ptr<Table>> m_MapTableNameToTable; // permet de trouver la Table à partir de son nom
-    std::vector<std::shared_ptr<Table>> m_Tables; // contient les noms de toute les tables présente dans la meta-table (de manière unique)
-    std::unordered_map<std::string, std::shared_ptr<Table>> m_MapColNameToTable;
+    // contient les noms de toute les tables présente dans la meta-table (de manière unique)
+    std::vector<Table> m_Tables;
+
+    // permet de trouver la Table à partir de son nom
+    std::unordered_map<std::string, int> m_MapTableNameToTable;
+
+    std::unordered_map<std::string, int> m_MapColNameToTable;
 
 public:
-    MetaTable(std::shared_ptr<Table> data_)
+    MetaTable(Table table)
     {
+        auto m_MapTableNameToTable = std::make_unique<std::unordered_map<std::string, int>>();
 
-        for (auto n : data_->get_name()->GetAllNames()) {
-            m_MapTableNameToTable[n] = data_;
+        auto m_MapColNameToTable = std::make_unique<std::unordered_map<std::string, int>>();
+
+        auto m_Tables = std::make_unique<std::vector<Table>>();
+
+        m_Tables->reserve(1);
+
+        for (auto& name : table.GetName().GetAllNames()) {
+            m_MapTableNameToTable->insert({ name, 0 });
         }
-        for (auto r : *data_->GetColumns()) {
-            for (auto r : r->get_name()->GetAllFullNames()) {
-                m_MapColNameToTable[r] = data_;
+
+        for (auto& r : *table.GetColumns()) {
+            for (auto r : r.GetName().GetAllFullNames()) {
+                m_MapColNameToTable->insert({ r, 0 });
             }
         }
-        m_Tables.push_back(data_);
+
+        m_Tables->emplace_back(std::move(table));
     }
 
-    void Selection(const Parsing::BinaryExpression::Condition pred, const std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> nom_colonnes);
-    void Projection(std::unique_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> ColumnToSave);
+    void Selection(const Parsing::BinaryExpression::Condition& pred, const std::unique_ptr<std::unordered_set<ColonneNamesSet*>> name_columns);
 
-    int size()
+    void Projection(std::unique_ptr<std::unordered_set<const ColonneNamesSet*>> columns_to_save);
+
+    inline int Length() const
     {
         return m_MapTableNameToTable.size();
     }
-    int Columnsize()
+
+    inline int Columnsize() const
     {
-        return m_Tables[0]->Columnsize();
+        return m_Tables.at(0).Columnsize();
     }
 
-    ColumnData get_value(std::shared_ptr<ColonneNamesSet> column_name, int pos_ind)
+    inline const Table& GetTableFromMap(int i) const
     {
-        return m_MapColNameToTable[column_name->GetMainName()]->get_value_dans_table(column_name, pos_ind);
+        return m_Tables.at(i);
     }
 
-    bool colonne_exist(std::shared_ptr<ColonneNamesSet> clef_testé)
+    const Table& GetTableByColName(const ColonneNamesSet& colname) const
     {
-        return m_MapColNameToTable.contains(clef_testé->GetMainName());
+        int i = m_MapColNameToTable.at(colname.GetMainName());
+
+        return GetTableFromMap(i);
     }
 
-    
-
-    std::shared_ptr<Table> GetTableByColName(std::shared_ptr<ColonneNamesSet> colname) { return m_MapColNameToTable[colname->GetMainName()]; }
-
-    std::shared_ptr<Table> GetTableByTableName(TableNamesSet* tablename) { return m_MapTableNameToTable[tablename->GetMainName()]; }
-
-    std::vector<std::shared_ptr<Table>>* GetTableNames() { return &m_Tables; }
-
-    void Sort(std::shared_ptr<ColonneNamesSet> ColonneToSortBy);
-
-    std::vector<ColumnData>* GetSample(std::shared_ptr<ColonneNamesSet> ColonneGetValueFrom)
+    const Table& GetTableByTableName(TableNamesSet* tablename) const
     {
-        auto table = m_MapTableNameToTable[ColonneGetValueFrom->GetTableSet()->GetMainName()];
-        std::vector<ColumnData>* ValSet = new std::vector<ColumnData>();
-        ValSet->reserve(1000);
-        for (int i = 0; i < 1000 and i < table->Columnsize(); i++) {
-            int pos = int(std::max(i * (table->Columnsize() / 1000), i));
-            auto temp = table->get_value_dans_table(ColonneGetValueFrom, pos);
-            ValSet->push_back(temp);
+        int i = m_MapTableNameToTable.at(tablename->GetMainName());
+
+        return GetTableFromMap(i);
+    }
+
+    ColumnData GetValue(const ColonneNamesSet& column_name, int pos_ind) const
+    {
+        const Table& t = GetTableFromMap(m_MapColNameToTable.at(column_name.GetMainName()));
+
+        return t.GetValueFromTable(column_name, pos_ind);
+    }
+
+    bool IsExisting(const ColonneNamesSet& tested_key) const
+    {
+        return m_MapColNameToTable.contains(tested_key.GetMainName());
+    }
+
+    std::vector<Table>& GetTableNames() { return m_Tables; }
+
+    void Sort(const ColonneNamesSet& ColonneToSortBy);
+
+    std::unique_ptr<std::vector<ColumnData>> GetSampleFromColumn(const ColonneNamesSet& column_name)
+    {
+        const Table& table = GetTableByColName(column_name);
+
+        auto values_set = std::make_unique<std::vector<ColumnData>>();
+
+        values_set->reserve(1000);
+
+        for (int i = 0; i < 1000 and i < table.Columnsize(); i++) {
+
+            int pos = int(std::max(i * (table.Columnsize() / 1000), i));
+
+            auto temp = table.GetValueFromTable(column_name, pos);
+
+            values_set->emplace_back(temp);
         }
-        return ValSet;
+        return values_set;
     }
 
     void UpdateMetaTable()
     {
         m_MapTableNameToTable.erase(m_MapTableNameToTable.begin(), m_MapTableNameToTable.end());
+
         m_MapColNameToTable.erase(m_MapColNameToTable.begin(), m_MapColNameToTable.end());
 
-        for (int i =0;i<m_Tables.size();i++) {
-            m_Tables[i]->update();
-            if (m_Tables[i]->size() == 0) {
-                m_Tables.erase(m_Tables.begin()+i);
-                i--;// if we delete a Table, we change the size and move all the vector to the left by 1 there fore we need to compensate it
+        for (int i = 0; i < m_Tables.size(); i++) {
+            m_Tables.at(i).Update();
+
+            if (m_Tables.at(i).size() == 0) {
+                // if we delete a Table, we change the size and move all the vector to the left by 1 there fore we need to compensate it
+                m_Tables.erase(m_Tables.begin()
+                    + i);
+
+                i--;
+
             } else {
-                for (auto n : m_Tables[i]->get_name()->GetAllNames()) {
-                    m_MapTableNameToTable[n] = m_Tables[i];
+
+                for (auto n : m_Tables.at(i).GetName().GetAllNames()) {
+                    m_MapTableNameToTable.at(n) = i;
                 }
-                for (auto r : *m_Tables[i]->GetColumns()) {
-                    for (auto s : r->get_name()->GetAllFullNames()) {
-                        m_MapColNameToTable[s] = m_Tables[i];
+
+                for (auto& r : *m_Tables.at(i).GetColumns()) {
+                    for (auto s : r.GetName().GetAllFullNames()) {
+                        m_MapColNameToTable.at(s) = i;
                     }
                 }
             }
         }
     }
 
-    void AppliqueOrdre(std::vector<int>* Ordre)
+    void AppliqueOrdre(const std::vector<int>& order)
     {
-        for (auto e : m_Tables) {
-            e->AppliqueFiltre(Ordre);
+        for (auto& e : m_Tables) {
+            e.ApplyFilter(order);
         }
     }
 
-    void FusionMetaTable(std::shared_ptr<MetaTable> table2)
+    void FusionMetaTable(MetaTable& other)
     {
-        m_Tables.insert(m_Tables.end(), table2->m_Tables.begin(), table2->m_Tables.end());
+        auto other_tables = std::move(other.m_Tables);
+
+        m_Tables.reserve(other_tables.size());
+
+        for (int i = 0; i < other_tables.size(); i++) {
+            m_Tables.emplace_back(std::move(other_tables.at(i)));
+        }
+
         UpdateMetaTable();
     }
-    std::string Get_name() { return m_Tables[0]->get_name()->GetMainName(); }
-    std::vector<std::shared_ptr<ColonneNamesSet>>* GetColumnNames()
+
+    std::string GetName() { return m_Tables.at(0).GetName().GetMainName(); }
+
+    std::unique_ptr<std::vector<std::reference_wrapper<ColonneNamesSet>>> GetColumnNames()
     {
-        auto vec = new std::vector<std::shared_ptr<ColonneNamesSet>> {};
+        auto vec = std::make_unique<std::vector<std::reference_wrapper<ColonneNamesSet>>>();
+
         vec->reserve(m_MapColNameToTable.size());
-        for (auto t : m_Tables) {
-            for (auto r : *t->GetColumns()) {
-                vec->push_back(r->get_name());
+
+        for (auto& t : m_Tables) {
+            for (auto& r : *t.GetColumns()) {
+                vec->emplace_back(r.GetName());
             }
         }
+
         return vec;
     }
 };

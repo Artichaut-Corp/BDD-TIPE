@@ -1,14 +1,13 @@
-
 #include <memory>
 #include <optional>
 #include <set>
-
-#include "../data_process_system/meta-table.h"
-#include "../data_process_system/namingsystem.h"
-#include "../parser/expression.h"
-#include "../storage/types.h"
 #include <utility>
 #include <vector>
+
+#include "data_process_system/meta-table.h"
+#include "data_process_system/namingsystem.h"
+#include "parser/expression.h"
+#include "storage/types.h"
 
 #ifndef agreg_H
 
@@ -17,64 +16,99 @@ namespace Database::QueryPlanning {
 
 class ReturnType {
 private:
-    std::shared_ptr<ColonneNamesSet> m_Colonne;
-    Parsing::AggrFuncType m_Opération;
+    const ColonneNamesSet& m_Colonne;
+
+    Parsing::AggrFuncType m_Operation;
 
 public:
-    ReturnType(std::shared_ptr<ColonneNamesSet> m_Colonne_, Parsing::AggrFuncType type_)
+    ReturnType(const ColonneNamesSet& m_Colonne_, Parsing::AggrFuncType type_)
         : m_Colonne(m_Colonne_)
-        , m_Opération(type_)
+        , m_Operation(type_)
     {
     }
-    Parsing::AggrFuncType GetType() { return m_Opération; };
 
-    std::shared_ptr<ColonneNamesSet> GetColonne() const { return m_Colonne; };
+    explicit ReturnType(const ReturnType& other)
+        : m_Operation(other.m_Operation)
+        , m_Colonne(other.m_Colonne)
+    {
+    }
 
-    Database::ColumnData AppliqueOperation(std::set<Database::ColumnData>& Values); // in case of Groupby
-    Database::ColumnData AppliqueOperationOnCol(std::shared_ptr<ColonneNamesSet> ColName, std::shared_ptr<MetaTable> table);
+    Parsing::AggrFuncType GetType() { return m_Operation; };
+
+    const ColonneNamesSet& GetColonne() const { return m_Colonne; };
+
+    Database::ColumnData AppliqueOperation(std::unique_ptr<std::set<Database::ColumnData>> Values); // in case of Groupby
+    //
+    Database::ColumnData AppliqueOperationOnCol(const ColonneNamesSet& ColName, MetaTable* table);
 };
 
 class Final {
 private:
-    std::vector<std::shared_ptr<ReturnType>>* m_ColonneInfo;
-    std::optional<std::vector<std::shared_ptr<ColonneNamesSet>>*> m_ColumnsToGroupBy;
-    std::optional<std::vector<std::pair<std::shared_ptr<ColonneNamesSet>, bool>>> m_OrderByCol; // liste des m_Colonne par lesquelles trié, le booléen est vrai si on doit triér dans l'ordre décroissant
+    std::vector<ReturnType>* m_ColonneInfo;
+
+    std::optional<std::vector<std::reference_wrapper<const ColonneNamesSet>>> m_ColumnsToGroupBy;
+
+    // liste des m_Colonne par lesquelles trie, le booleen est vrai si on doit trier dans l'ordre decroissant
+    std::optional<std::vector<std::pair<std::reference_wrapper<const ColonneNamesSet>, bool>>> m_OrderByCol;
+
     std::optional<std::pair<int, int>> m_Limite;
 
 public:
-    Final(std::vector<std::shared_ptr<ReturnType>>* m_ColonneInfo_)
-        : m_ColonneInfo(m_ColonneInfo_)
-        , m_ColumnsToGroupBy(std::nullopt)
+    explicit Final(std::vector<ReturnType>* colonneInfo)
+        : m_ColonneInfo(std::move(colonneInfo))
     {
     }
 
-    Final(std::vector<std::shared_ptr<ReturnType>>* m_ColonneInfo_, std::vector<std::shared_ptr<ColonneNamesSet>>* GroupByInfo_)
-        : m_ColonneInfo(m_ColonneInfo_)
-        , m_ColumnsToGroupBy(GroupByInfo_) {
-        };
+    Final(std::vector<ReturnType>* colonneInfo,
+        const std::vector<ColonneNamesSet>& groupBy)
+        : m_ColonneInfo(std::move(colonneInfo))
+        , m_ColumnsToGroupBy(make_ref_vector(groupBy))
+    {
+    }
 
-    Final(std::vector<std::shared_ptr<ReturnType>>* m_ColonneInfo_, std::vector<std::shared_ptr<ColonneNamesSet>>* GroupByInfo_, std::vector<std::pair<std::shared_ptr<ColonneNamesSet>, bool>> m_OrderByCol_)
-        : m_ColonneInfo(m_ColonneInfo_)
-        , m_ColumnsToGroupBy(GroupByInfo_)
-        , m_OrderByCol(m_OrderByCol_) {
-        };
-    Final(std::vector<std::shared_ptr<ReturnType>>* m_ColonneInfo_, std::vector<std::shared_ptr<ColonneNamesSet>>* GroupByInfo_, std::vector<std::pair<std::shared_ptr<ColonneNamesSet>, bool>> m_OrderByCol_, std::pair<int, int> limite_)
-        : m_ColonneInfo(m_ColonneInfo_)
-        , m_ColumnsToGroupBy(GroupByInfo_)
-        , m_OrderByCol(m_OrderByCol_)
-        , m_Limite(limite_) {
-        };
+    Final(std::vector<ReturnType>* colonneInfo,
+        const std::vector<ColonneNamesSet>& groupBy,
+        const std::vector<std::pair<ColonneNamesSet, bool>>& orderBy)
+        : m_ColonneInfo(std::move(colonneInfo))
+        , m_ColumnsToGroupBy(make_ref_vector(groupBy))
+    {
+        std::vector<std::pair<std::reference_wrapper<const ColonneNamesSet>, bool>> tmp;
+        tmp.reserve(orderBy.size());
 
-    void AjouteGroupBy(std::vector<std::shared_ptr<ColonneNamesSet>>* GroupBy) { m_ColumnsToGroupBy = GroupBy; }
-    void AjouteOrderBy(std::vector<std::pair<std::shared_ptr<ColonneNamesSet>, bool>>* OrderBy) { m_OrderByCol = *OrderBy; }
-    void AjouterLimite(int offset, int count) { m_Limite = std::pair<int, int>(offset, count); }
+        for (const auto& [col, desc] : orderBy)
+            tmp.emplace_back(std::cref(col), desc);
 
-    int GetTailleClef() { return (*m_ColumnsToGroupBy)->size(); }
+        m_OrderByCol = std::move(tmp);
+    }
 
-    std::chrono::high_resolution_clock::time_point  AppliqueAgregateAndPrint(std::shared_ptr<MetaTable> table,int benchmarking_INFO);
-    void TrierListe(std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues, std::vector<int>* IndicesVierge);
+    void AjouteGroupBy(const std::vector<std::reference_wrapper<const ColonneNamesSet>>& groupBy)
+    {
+        m_ColumnsToGroupBy = std::move(groupBy);
+    }
 
-    bool CompareDeuxIndices(std::unordered_map<std::string, std::vector<ColumnData>*>* ColumnNameToValues, int ind1, int ind2);
+    void AjouteOrderBy(
+        const std::vector<std::pair<std::reference_wrapper<const ColonneNamesSet>, bool>>& orderBy)
+    {
+        m_OrderByCol = std::move(orderBy);
+    }
+
+    void AjouterLimite(int offset, int count)
+    {
+        m_Limite.emplace(offset, count);
+    }
+
+    std::size_t GetTailleClef() const
+    {
+        return m_ColumnsToGroupBy
+            ? m_ColumnsToGroupBy->size()
+            : 0;
+    }
+
+    std::chrono::high_resolution_clock::time_point AppliqueAgregateAndPrint(MetaTable* table, int benchmarking_INFO);
+
+    void TrierListe(std::unordered_map<std::string, std::unique_ptr<std::vector<ColumnData>>>* ColumnNameToValues, std::vector<int>* IndicesVierge);
+
+    bool CompareDeuxIndices(std::unordered_map<std::string, std::unique_ptr<std::vector<ColumnData>>>* ColumnNameToValues, int ind1, int ind2);
 };
 
 } // Database::QueryPlanning

@@ -5,15 +5,12 @@
 #include "storage.h"
 
 #include <filesystem>
-#include <format>
 #include <iostream>
-#include <memory>
 #include <ostream>
 #include <replxx.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
-
 
 #ifndef DATABASE_H
 
@@ -21,18 +18,26 @@
 
 namespace Database {
 
+struct DatabaseSetting {
+public:
+    bool m_Repl = true;
+    std::string m_Address;
+    std::string m_FileName;
+
+    DatabaseSetting() = default;
+
+    DatabaseSetting(const std::string& fname)
+        : m_Repl(false)
+        , m_FileName(fname)
+    {
+    }
+
+    DatabaseSetting(const std::string& addr, const std::string& fname);
+};
+
 class DatabaseEngine {
 
 private:
-    class DatabaseSetting {
-    public:
-        bool m_Repl = true;
-        std::string m_Address;
-        std::string m_FileName;
-
-        DatabaseSetting() = default;
-    };
-
     std::unique_ptr<Storing::DBTableIndex> Index;
 
     Storing::DBTableOrder TableOrder = {};
@@ -88,7 +93,7 @@ private:
 
             buffer = tables_element_count[i];
 
-            int bytes_written = write(fd, &buffer, DB_INT_SIZE);
+            int bytes_written = write(fd, &buffer, DB_UINT_SIZE);
         }
 
         close(fd);
@@ -138,10 +143,9 @@ public:
                 // Text name
                 // Int pop
 
-                ColumnInfo country_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo country_name = ColumnInfo(DbElemType::DbString, false);
 
-                ColumnInfo country_pop = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-                    DB_INT_SIZE, false);
+                ColumnInfo country_pop = ColumnInfo(DbElemType::DbUInt, false);
 
                 auto country_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "name", country_name }, { "pop", country_pop }
@@ -156,13 +160,13 @@ public:
                 // Int pop
                 // Text country
 
-                ColumnInfo city_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo city_name = ColumnInfo(DbElemType::DbString, false);
 
-                ColumnInfo city_pop = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-                    DB_INT_SIZE, false);
+                ColumnInfo city_pop = ColumnInfo(
+                    DbElemType::DbUInt, false);
 
-                ColumnInfo city_country = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE),
-                    DB_STRING_SIZE, false);
+                ColumnInfo city_country = ColumnInfo(
+                    DbElemType::DbString, false);
 
                 auto city_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "name", city_name }, { "pop", city_pop }, { "country", city_country }
@@ -178,14 +182,14 @@ public:
                 // Text country
                 // Int mandate_beginning
 
-                ColumnInfo pres_first_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo pres_first_name = ColumnInfo (DbElemType::DbString, false);
 
-                ColumnInfo pres_last_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo pres_last_name = ColumnInfo( DbElemType::DbString, false);
 
-                ColumnInfo pres_mandate_beg = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-                    DB_INT_SIZE, false);
+                ColumnInfo pres_mandate_beg = ColumnInfo(
+                    DbElemType::DbUInt, false);
 
-                ColumnInfo pres_country = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo pres_country = ColumnInfo( DbElemType::DbString, false);
 
                 auto pres_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "first_name", pres_first_name }, { "last_name", pres_last_name }, { "country", pres_country }, { "mandate_beginning", pres_mandate_beg }
@@ -195,13 +199,13 @@ public:
 
                 CreateTable(fd, "president", president);
 
-                auto page_id = ColumnInfo(DB_INT_SIZE, false);
+                auto page_id = ColumnInfo(DbElemType::DbUInt, false);
 
-                auto page_ns = ColumnInfo(DB_INT8_SIZE, false);
+                auto page_ns = ColumnInfo(DbElemType::DbUInt8, false);
 
-                auto page_title = ColumnInfo(DB_STRING_SIZE, false);
+                auto page_title = ColumnInfo(DbElemType::DbString, false);
 
-                auto page_revision_id = ColumnInfo(DB_INT_SIZE, false);
+                auto page_revision_id = ColumnInfo(DbElemType::DbUInt, false);
 
                 auto page_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "id", page_id }, { "ns", page_ns }, { "title", page_title }, { "revision_id", page_revision_id }
@@ -211,13 +215,13 @@ public:
 
                 CreateTable(fd, "pages", pages);
 
-                auto revision_id = ColumnInfo(DB_INT_SIZE, false);
+                auto revision_id = ColumnInfo(DbElemType::DbUInt, false);
 
-                auto revision_parent_id = ColumnInfo(DB_INT_SIZE, false);
+                auto revision_parent_id = ColumnInfo(DbElemType::DbUInt, false);
 
-                auto revision_timestamp = ColumnInfo(DB_INT64_SIZE, false);
+                auto revision_timestamp = ColumnInfo(DbElemType::DbUInt64, false);
 
-                auto revision_contributor_id = ColumnInfo(DB_INT_SIZE, false);
+                auto revision_contributor_id = ColumnInfo(DbElemType::DbUInt, false);
 
                 auto revision_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "id", revision_id },
@@ -230,9 +234,9 @@ public:
 
                 CreateTable(fd, "revisions", revisions);
 
-                auto contr_id = ColumnInfo(DB_INT_SIZE, false);
+                auto contr_id = ColumnInfo(DbElemType::DbUInt, false);
 
-                auto contr_username = ColumnInfo(DB_STRING_SIZE, false);
+                auto contr_username = ColumnInfo(DbElemType::DbString, false);
 
                 auto contr_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "id", contr_id },
@@ -243,9 +247,9 @@ public:
 
                 CreateTable(fd, "contributors", contributors);
 
-                auto ns_key = ColumnInfo(DB_INT_SIZE, false);
+                auto ns_key = ColumnInfo(DbElemType::DbUInt, false);
 
-                auto ns_name = ColumnInfo(DB_STRING_SIZE, false);
+                auto ns_name = ColumnInfo(DbElemType::DbString, false);
 
                 auto ns_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "key", ns_key },
@@ -255,7 +259,6 @@ public:
                 auto ns = TableInfo(false, 2, 0, ns_columns);
 
                 CreateTable(fd, "namespaces", ns);
-
 
                 // Clean up and close
                 close(fd);
@@ -273,6 +276,20 @@ public:
 #ifdef _GLIBCXX_DEBUG_ONLY
         PrintIndex(std::cout);
 #endif
+    }
+
+    auto Exec(const std::string& req) -> std::string
+    {
+        // Should sanitize input
+        std::string result;
+
+        try {
+            result = Eval(req);
+        } catch (const Errors::Error& e) {
+            result = e.formatErrorInfo();
+        }
+
+        return result;
     }
 
     auto Run() -> void

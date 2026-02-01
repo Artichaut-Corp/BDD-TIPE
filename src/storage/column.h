@@ -1,5 +1,5 @@
-#include <cstdint>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 
 #include "cursor.h"
@@ -13,24 +13,45 @@ namespace Database::Storing {
 
 class ColumnInfo {
 
-    DbInt m_Offset;
+    DbUInt m_Offset;
 
-    DbInt8 m_ElementSize;
+    // Not actually written in memory as we can deduce it from the type
+    DbUInt8 m_ElementSize;
 
-    DbBool m_Sortable;
+    DbElemType m_Type;
 
-    DbBool m_IsSorted;
+    DbBool m_Sortable = false;
 
-    DbBool m_Compressable;
+    DbBool m_IsSorted = false;
 
-    DbBool m_IsCompressed;
+    DbUInt64 m_SortedColumnOffset;
+
+    DbBool m_Compressable = false;
+
+    DbBool m_IsCompressed = false;
 
 public:
+    using ColumnInfoTuple = std::tuple<DbString, DbUInt, DbUInt8, DbBool, DbBool, DbUInt64, DbBool, DbBool>;
+
     ColumnInfo() = default;
 
-    ColumnInfo(uint8_t e_size, bool opt)
-        : m_Offset(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * e_size))
-        , m_ElementSize(e_size)
+    // Simplest contructor for unsorted and uncompressed
+    ColumnInfo(DbElemType e_type, DbBool opt)
+        : m_ElementSize(Convert::TypeToTypeSize(e_type))
+        , m_Type(e_type)
+        , m_Sortable(opt)
+        , m_IsSorted(opt)
+        , m_Compressable(opt)
+        , m_IsCompressed(opt)
+    {
+
+        m_Offset = Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * m_ElementSize);
+    }
+
+    ColumnInfo(DbUInt offset, DbElemType e_type, DbBool opt)
+        : m_ElementSize(Convert::TypeToTypeSize(e_type))
+        , m_Offset(offset)
+        , m_Type(e_type)
         , m_Sortable(opt)
         , m_IsSorted(opt)
         , m_Compressable(opt)
@@ -38,20 +59,22 @@ public:
     {
     }
 
-  ColumnInfo(int offset, uint8_t e_size, bool opt)
+    // Contructor for indexed column
+    ColumnInfo(DbUInt offset, DbElemType e_type, DbBool sortable, DbBool sorted, DbUInt64 sorted_offset)
         : m_Offset(offset)
-        , m_ElementSize(e_size)
-        , m_Sortable(opt)
-        , m_IsSorted(opt)
-        , m_Compressable(opt)
-        , m_IsCompressed(opt)
+        , m_ElementSize(Convert::TypeToTypeSize(e_type))
+        , m_Type(e_type)
+        , m_Sortable(sortable)
+        , m_IsSorted(sorted)
+        , m_SortedColumnOffset(sorted_offset)
     {
     }
 
-    ColumnInfo(int offset, uint8_t e_size, bool sortable, bool sorted,
-        bool compressable, bool compressed)
+    ColumnInfo(DbUInt offset, DbElemType e_type, DbBool sortable, DbBool sorted, DbUInt64 sorted_offset,
+        DbBool compressable, DbBool compressed)
         : m_Offset(offset)
-        , m_ElementSize(e_size)
+        , m_Type(e_type)
+        , m_ElementSize(Convert::TypeToTypeSize(e_type))
         , m_Sortable(sortable)
         , m_IsSorted(sorted)
         , m_Compressable(compressable)
@@ -59,12 +82,19 @@ public:
     {
     }
 
-    uint64_t GetOffset() const { return m_Offset; }
+    DbUInt64 GetOffset() const { return m_Offset; }
 
-    uint8_t GetElementSize() const { return m_ElementSize; }
+    DbUInt64 GetIndexOffset() const { return m_SortedColumnOffset; }
 
-    static std::unique_ptr<std::vector<
-        std::tuple<DbString, DbInt, DbInt8, DbBool, DbBool, DbBool, DbBool>>>
+    DbUInt8 GetElementSize() const { return m_ElementSize; }
+
+    DbElemType GetType() const { return m_Type; }
+
+    DbBool IsSorted() const { return m_IsSorted; }
+
+    DbBool IsCompressed() const { return m_IsCompressed; }
+
+    static std::unique_ptr<std::vector<ColumnInfoTuple>>
     GetColumnsData(int fd, int total_column_number);
 
     std::unordered_map<std::string, ColumnData> Map(const std::string& name)
@@ -72,8 +102,8 @@ public:
 
         std::unordered_map<std::string, ColumnData> res = {
             { "name", Convert::StringToDbString(name) }, { "offset", m_Offset },
-            { "element_size", m_ElementSize }, { "sortable", m_Sortable },
-            { "sorted", m_IsSorted }, { "compressable", m_Compressable },
+            { "type", static_cast<DbUInt8>(m_Type) }, { "sortable", m_Sortable },
+            { "sorted", m_IsSorted }, { "index_offset", m_SortedColumnOffset }, { "compressable", m_Compressable },
             { "compressed", m_IsCompressed }
         };
 
@@ -85,9 +115,10 @@ public:
 
         std::unordered_map<std::string, ColumnData> res = {
             { "offset", m_Offset },
-            { "element_size", m_ElementSize },
+            { "type", static_cast<DbUInt8>(m_Type) },
             { "sortable", m_Sortable },
             { "sorted", m_IsSorted },
+            { "index_offset", m_SortedColumnOffset },
             { "compressable", m_Compressable },
             { "compressed", m_IsCompressed }
         };

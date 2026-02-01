@@ -1,5 +1,4 @@
 #include <cstdint>
-#include <cstdio>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -69,7 +68,65 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
         auto to_uint64 = [](const auto& v) -> uint64_t {
             return static_cast<uint64_t>(v);
         };
+        /*
+          int i = lhs.index();
 
+          if (lhs.index() == rhs.index()) {
+              switch (lhs.index()) {
+              case 0:
+                  return std::get<0>(lhs) == std::get<0>(rhs);
+              case 1:
+                  return std::get<1>(lhs) == std::get<1>(rhs);
+              case 2:
+                  return std::get<2>(lhs) == std::get<2>(rhs);
+              case 3:
+                  return std::get<3>(lhs) == std::get<3>(rhs);
+              case 4:
+                  return std::get<4>(lhs) == std::get<4>(rhs);
+              case 5:
+                  return std::get<5>(lhs) == std::get<5>(rhs);
+              case 6:
+                  return std::get<6>(lhs) == std::get<6>(rhs);
+              case 7:
+                  return std::get<7>(lhs) == std::get<7>(rhs);
+              case 8:
+                  return std::get<8>(lhs) == std::get<8>(rhs);
+              case 9:
+                  return std::get<9>(lhs) == std::get<9>(rhs);
+              case 10:
+                  return to_string_view(std::get<10>(lhs)) == to_string_view(std::get<10>(rhs)); // DbString
+              }
+          }
+
+          // Si deux entiers différents → comparer via uint64_t
+          auto is_integer = [](int idx) { return idx <= 9; };
+          if (is_integer(lhs.index()) && is_integer(rhs.index())) {
+              auto to_u64 = [](const ColumnData& c) -> uint64_t {
+                  switch (c.index()) {
+                  case 0:
+                      return std::get<0>(c);
+                  case 1:
+                      return std::get<1>(c);
+                  case 2:
+                      return std::get<2>(c);
+                  case 4:
+                      return std::get<4>(c);
+                  case 5:
+                      return std::get<5>(c);
+                  case 6:
+                      return std::get<6>(c);
+                  case 7:
+                      return std::get<7>(c);
+                  case 8:
+                      return std::get<8>(c);
+                  case 9:
+                      return std::get<9>(c);
+
+                  default:
+                      return 0;
+                  }
+              };
+        */
         uint64_t left_value;
         uint64_t right_value;
 
@@ -106,7 +163,35 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
 
 // Less than
 inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
-{
+{ /*
+     if (lhs.index() == rhs.index()) {
+         switch (lhs.index()) {
+         case 0:
+             return std::get<0>(lhs) < std::get<0>(rhs);
+         case 1:
+             return std::get<1>(lhs) < std::get<1>(rhs);
+         case 2:
+             return std::get<2>(lhs) < std::get<2>(rhs);
+         case 3:
+             return std::get<3>(lhs) < std::get<3>(rhs);
+         case 4:
+             return std::get<4>(lhs) < std::get<4>(rhs);
+         case 5:
+             return std::get<5>(lhs) < std::get<5>(rhs);
+         case 6:
+             return std::get<6>(lhs) < std::get<6>(rhs);
+         case 7:
+             return std::get<7>(lhs) < std::get<7>(rhs);
+         case 8:
+             return std::get<8>(lhs) < std::get<8>(rhs);
+         case 9:
+             return std::get<9>(lhs) < std::get<9>(rhs);
+         case 10:
+             return to_string_view(std::get<10>(lhs)) < to_string_view(std::get<10>(rhs)); // DbString
+         }
+     }
+ */
+    // Si deux entiers différents
     auto is_integer = [](int idx) { return idx <= 3; };
 
     if (is_integer(lhs.index()) && is_integer(rhs.index())) {
@@ -153,10 +238,15 @@ inline bool operator==(const ColumnData& lhs, const ColumnData& rhs)
 {
     return column_equal(lhs, rhs);
 }
+
 inline bool operator!=(const ColumnData& lhs, const ColumnData& rhs) { return !column_equal(lhs, rhs); }
+
 inline bool operator<(const ColumnData& lhs, const ColumnData& rhs) { return column_less(lhs, rhs); }
+
 inline bool operator>(const ColumnData& lhs, const ColumnData& rhs) { return column_less(rhs, lhs); }
+
 inline bool operator<=(const ColumnData& lhs, const ColumnData& rhs) { return !column_less(rhs, lhs); }
+
 inline bool operator>=(const ColumnData& lhs, const ColumnData& rhs) { return !column_less(lhs, rhs); }
 
 inline ColumnData operator+(const ColumnData& a, const ColumnData& b)
@@ -233,12 +323,11 @@ inline uint64_t hashColumn(const Database::ColumnData& c) noexcept
     const auto& s = std::get<DbString>(c);
     uint64_t h = 0xcbf29ce484222325ULL;
     for (uint8_t b : s) {
-        if (b == 0) break;
+        if (b == 0)
+            break;
         h = (h ^ b) * 0x100000001b3ULL; // FNV-1a
     }
     return mix64(h);
 }
-
-
 }
 #endif // !ALGEBRIZER_TYPES_H

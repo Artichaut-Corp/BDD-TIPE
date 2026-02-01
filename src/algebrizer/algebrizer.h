@@ -1,11 +1,11 @@
-#include "../algebrizer/tree.h"
-#include "../data_process_system/namingsystem.h"
-#include "../data_process_system/racine.h"
-#include "../database.h"
-#include "../operation/agreg.h"
-#include "../operation/join.h"
-#include "../operation/pred.h"
-#include "../parser/dml.h"
+#include "algebrizer/tree.h"
+#include "data_process_system/namingsystem.h"
+#include "data_process_system/racine.h"
+#include "database.h"
+#include "operation/agreg.h"
+#include "operation/join.h"
+#include "operation/pred.h"
+#include "parser/dml.h"
 
 #include <vector>
 
@@ -15,11 +15,12 @@
 
 namespace Database::QueryPlanning {
 
-ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, Database::Parsing::ColumnName* Colonne, std::unordered_map<std::string, TableNamesSet*>* variation_of_tablename_to_main_table_name);
+ColonneNamesSet* ConvertToStandardColumnName(const TableNamesSet& NomTablePrincipale, Database::Parsing::ColumnName* Colonne, std::unordered_map<std::string, TableNamesSet*>* variation_of_tablename_to_main_table_name);
 
 TableNamesSet* ConvertToStandardTableName(Database::Parsing::TableName* Table, std::unordered_map<std::string, TableNamesSet*>* variation_of_tablename_to_main_table_name);
 
-void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::basic_string<char>, Database::Storing::TableInfo>* IndexGet, std::shared_ptr<std::vector<int>> param);
+void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::string, Database::Storing::TableInfo>* IndexGet, std::unique_ptr<std::vector<int>> param);
 
 };
+
 #endif // ! ALGEBRIZER_H

@@ -7,8 +7,8 @@
 
 #include "tokens.h"
 
-#include "../errors.h"
-#include "../utils.h"
+#include "errors.h"
+#include "utils.h"
 
 #ifndef LEXER_H
 #define LEXER_H

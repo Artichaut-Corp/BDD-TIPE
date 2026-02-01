@@ -1,6 +1,6 @@
 #ifndef UNION_FIND_UTILS_H
 #define UNION_FIND_UTILS_H
-#include "../algebrizer/tree.h"
+#include "algebrizer/tree.h"
 
 #include <string>
 #include <unordered_map>
@@ -23,15 +23,21 @@ public:
 
     Database::QueryPlanning::Node* AddElem(Database::QueryPlanning::Join* join)
     {
-        auto parenttableL = trouver(join->GetLTable()->GetMainName());
+        auto parenttableL = trouver(join->GetLTable().GetMainName());
+
         auto NodeL = TableToNode[parenttableL];
-        auto parenttableR = trouver(join->GetRTable()->GetMainName());
+
+        auto parenttableR = trouver(join->GetRTable().GetMainName());
+
         auto NodeR = TableToNode[parenttableR];
+
         auto node = new Database::QueryPlanning::Node(join);
+
         node->AddChild(true, NodeL);
         node->AddChild(false, NodeR);
 
-        unir(join->GetLTable()->GetMainName(), join->GetRTable()->GetMainName(), node);
+        unir(join->GetLTable().GetMainName(), join->GetRTable().GetMainName(), node);
+
         return node;
     }
     std::string trouver(std::string table)

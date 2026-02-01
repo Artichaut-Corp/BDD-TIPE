@@ -1,5 +1,5 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef LINKED_LISTS_H
+#define LINKED_LISTS_H
 
 #include <iostream>
 #include <optional>
@@ -61,7 +61,7 @@ public:
         delete current.value();
     }
 
-    void append(U data)
+    void append(const U& data)
     {
         ListNode<U>* new_node = new ListNode<U>(data);
 
@@ -76,7 +76,7 @@ public:
         return;
     }
 
-    void push(U data)
+    void push(const U& data)
     {
         ListNode<U>* new_node = new ListNode<U>(data);
         ListNode<U>* current = get_head().value_or(nullptr);
@@ -90,7 +90,7 @@ public:
         return;
     }
 
-    void insert_at(U data, int indice)
+    void insert_at(const U& data, int indice)
     {
         ListNode<U>* new_node = new ListNode<U>(data);
         ListNode<U>* current = get_head().value_or(nullptr);
@@ -149,7 +149,7 @@ public:
         }
     }
 
-    bool is_empty()
+    bool is_empty() const
     {
         return !HEAD.has_value();
     }

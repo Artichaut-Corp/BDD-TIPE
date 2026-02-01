@@ -2,10 +2,11 @@
 #include <memory>
 #include <optional>
 #include <sys/wait.h>
+#include <unordered_set>
 #include <vector>
 
-#include "../lexer/tokenizer.h"
 #include "expression.h"
+#include "lexer/tokenizer.h"
 
 #ifndef DML_H
 
@@ -287,12 +288,29 @@ class WhereClause {
 public:
     BinaryExpression::Condition m_Condition;
 
-    WhereClause(BinaryExpression::Condition cond)
-        : m_Condition(BinaryExpression::Condition(std::move(cond)))
+    WhereClause(BinaryExpression::Condition& cond)
+        : m_Condition(
+              BinaryExpression::
+                  Condition(std::move(cond)))
     {
     }
 
     static WhereClause* ParseWhere(Lexing::Tokenizer* t);
+
+    std::unordered_set<QueryPlanning::ColonneNamesSet*>* GetConditionColumnNames(QueryPlanning::TableNamesSet* table_name)
+    {
+        if (std::holds_alternative<Parsing::BinaryExpression>(m_Condition)) {
+
+            std::get<Parsing::BinaryExpression>(m_Condition).FormatColumnName(table_name);
+
+            return std::get<Parsing::BinaryExpression>(m_Condition).Column();
+        } else {
+
+            std::get<Parsing::Clause>(m_Condition).FormatColumnName(table_name);
+
+            return std::get<Parsing::Clause>(m_Condition).Column();
+        }
+    }
 };
 
 /* Statements permettant de modifier les données (DML)

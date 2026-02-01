@@ -1,12 +1,14 @@
 #include "expression.h"
-#include "../storage/types.h"
-#include "../utils.h"
-#include "../utils/unordered_set_utils.h"
+
+#include "storage/types.h"
+#include "utils.h"
+#include "utils/unordered_set_utils.h"
 
 #include <cassert>
 #include <memory>
 #include <ostream>
 #include <unordered_set>
+#include <utility>
 #include <variant>
 
 namespace Database::Parsing {
@@ -392,11 +394,13 @@ std::ostream& operator<<(std::ostream& os, const ColumnName& col)
     return os;
 }
 
-std::pair<ClauseMember, std::shared_ptr<QueryPlanning::ColonneNamesSet>> Clause::ParseClauseMember(Lexing::Tokenizer* t)
+std::pair<ClauseMember, std::unique_ptr<QueryPlanning::ColonneNamesSet>> Clause::ParseClauseMember(Lexing::Tokenizer* t)
 {
     Lexing::Token next = t->peek();
+
     ClauseMember member;
-    std::shared_ptr<QueryPlanning::ColonneNamesSet> column_used = nullptr; // ✅ important
+
+    std::unique_ptr<QueryPlanning::ColonneNamesSet> column_used = nullptr;
 
     switch (next.m_Token) {
     case Lexing::STRING_LITT_T: {
@@ -409,22 +413,29 @@ std::pair<ClauseMember, std::shared_ptr<QueryPlanning::ColonneNamesSet>> Clause:
         t->next();
         break;
     }
+    case Lexing::FLOAT_LITT_T: {
+        member = Convert::intToColumnData(LitteralValue<float>(ColumnType::FLOAT_C, std::stof(next.m_Value)).getData());
+
+        t->next();
+    } break;
     case Lexing::VAR_NAME_T: {
         auto col_parsed_name = ColumnName::ParseColumnName(t);
 
         if (col_parsed_name->HaveTable()) {
-            auto table =  std::make_shared<QueryPlanning::TableNamesSet>(QueryPlanning::TableNamesSet(col_parsed_name->GetTable()));
-            column_used = std::make_shared<QueryPlanning::ColonneNamesSet>(QueryPlanning::ColonneNamesSet(
-                col_parsed_name->getColumnName(),
-                *col_parsed_name->GetAlias(),
-                table));
+
+            auto table = std::make_unique<QueryPlanning::TableNamesSet>(QueryPlanning::TableNamesSet(col_parsed_name->GetTable()));
+
+            column_used = std::make_unique<QueryPlanning::ColonneNamesSet>(col_parsed_name->getColumnName(),
+                col_parsed_name->GetAlias(),
+                std::move(table));
         } else {
-            column_used = std::make_shared<QueryPlanning::ColonneNamesSet>(QueryPlanning::ColonneNamesSet(
+            column_used = std::make_unique<QueryPlanning::ColonneNamesSet>(QueryPlanning::ColonneNamesSet(
                 col_parsed_name->getColumnName(),
                 *col_parsed_name->GetAlias()));
         }
 
-        member = column_used;
+        member = std::move(column_used);
+
         break;
     }
     default:
@@ -435,12 +446,12 @@ std::pair<ClauseMember, std::shared_ptr<QueryPlanning::ColonneNamesSet>> Clause:
             Errors::ERROR_EXPECTED_IDENTIFIER);
     }
 
-    return { member, column_used };
+    return { std::move(member), std::move(column_used) };
 }
 
 std::ostream& operator<<(std::ostream& out, const ClauseMember& member)
 {
-    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(member)) {
+    if (std::holds_alternative<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(member)) {
         out << member;
     } else if (std::holds_alternative<ColumnData>(member)) {
         auto c = std::get<ColumnData>(member);
@@ -463,14 +474,14 @@ void Clause::Print(std::ostream& out)
 {
 
     out << "(";
-    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs())) {
-        out << *std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs());
+    if (std::holds_alternative<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Lhs())) {
+        out << *std::get<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Lhs());
     } else {
         out << Lhs();
     }
     out << " " << m_Op << " ";
-    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs())) {
-        out << *std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs());
+    if (std::holds_alternative<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Rhs())) {
+        out << *std::get<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Rhs());
     } else {
         out << Rhs();
     }
@@ -495,17 +506,17 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
 
     auto [rhs, column_used_r] = ParseClauseMember(t);
 
-    auto col_used = new std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>;
+    auto col_used = std::make_unique<std::unordered_set<QueryPlanning::ColonneNamesSet*>>();
 
     col_used->reserve(2);
 
     if (column_used_l != nullptr && column_used_l->GetMainName() != "")
-        col_used->emplace(column_used_l);
+        col_used->emplace(column_used_l.get());
 
     if (column_used_r != nullptr && column_used_r->GetMainName() != "")
-        col_used->emplace(column_used_r);
+        col_used->emplace(column_used_r.get());
 
-    return new Clause(std::get<LogicalOperator>(op), lhs, rhs, col_used);
+    return new Clause(std::get<LogicalOperator>(op), std::move(lhs), std::move(rhs), std::move(col_used));
 }
 
 /*
@@ -533,53 +544,53 @@ std::ostream& operator<<(std::ostream& out, const Clause& member)
     return out;
 }
 
-std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* BinaryExpression::MergeColumns(Condition lhs, Condition rhs)
+std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>> BinaryExpression::MergeColumns(const Condition& lhs, const Condition& rhs)
 {
-    auto res = new std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>();
+    auto res = std::make_unique<std::unordered_set<QueryPlanning::ColonneNamesSet*>>();
 
-    std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* left;
-    std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* right;
+    std::unordered_set<QueryPlanning::ColonneNamesSet*>* left;
+    std::unordered_set<QueryPlanning::ColonneNamesSet*>* right;
 
-    if (std::holds_alternative<BinaryExpression*>(lhs)) {
+    if (std::holds_alternative<BinaryExpression>(lhs)) {
 
-        BinaryExpression* b = std::get<BinaryExpression*>(lhs);
+        auto& b = std::get<BinaryExpression>(lhs);
 
-        left = b->m_ColumnUsedBelow;
+        // UUPO
+        left = b.Column();
     } else {
-        left = std::get<Clause*>(lhs)->Column();
+        auto& clause = std::get<Clause>(lhs);
+
+        left = clause.Column();
     }
 
-    if (std::holds_alternative<BinaryExpression*>(rhs)) {
+    if (std::holds_alternative<BinaryExpression>(rhs)) {
 
-        BinaryExpression* b = std::get<BinaryExpression*>(rhs);
+        auto& b = std::get<BinaryExpression>(rhs);
 
-        right = b->m_ColumnUsedBelow;
+        right = b.Column();
 
     } else {
-        right = std::get<Clause*>(rhs)->Column();
+        right = std::get<Clause>(rhs).Column();
     }
-
-    size_t tot_size = left->size() + right->size();
-
-    res->reserve(tot_size);
 
     for (auto e : *left) {
         res->emplace(e);
     }
 
-    for (auto e : *right) {
+    for (auto& e : *right) {
         res->emplace(e);
     }
 
     return res;
 }
 
-BinaryExpression::Condition BinaryExpression::ParseCondition(Lexing::Tokenizer* t)
+BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer* t)
 {
 
     Lexing::Token next = t->peek();
 
-    auto arg_pile = Utils::Stack<Condition>();
+    auto arg_pile = Utils::Stack<Condition*>();
+
     auto op_pile = Utils::Stack<LogicalOperator>();
 
     int parenth_count = 0;
@@ -603,12 +614,14 @@ BinaryExpression::Condition BinaryExpression::ParseCondition(Lexing::Tokenizer* 
                 nb_count_equal_zero++;
             }
 
-            auto lhs = arg_pile.pop();
+            Condition* lhs = arg_pile.pop();
 
             if (!arg_pile.empty()) {
-                auto rhs = arg_pile.pop();
+                Condition* rhs = arg_pile.pop();
 
-                arg_pile.push(new BinaryExpression(op_pile.pop(), lhs, rhs, MergeColumns(lhs, rhs)));
+                Condition bexpr = BinaryExpression(op_pile.pop(), lhs, rhs, MergeColumns(*lhs, *rhs).get());
+
+                arg_pile.push(&bexpr);
 
             } else {
                 arg_pile.push(lhs);
@@ -617,8 +630,11 @@ BinaryExpression::Condition BinaryExpression::ParseCondition(Lexing::Tokenizer* 
         case Database::Lexing::TokenType::VAR_NAME_T:
         case Database::Lexing::TokenType::STRING_LITT_T:
         case Database::Lexing::TokenType::NUM_LITT_T:
-            arg_pile.push(Clause::ParseClause(t));
-            break;
+        case Database::Lexing::TokenType::FLOAT_LITT_T: {
+            auto cl = Condition(std::in_place_index<1>, std::move(*Clause::ParseClause(t)));
+
+            arg_pile.push(&cl);
+        } break;
         case Database::Lexing::TokenType::OR_T: {
             op_pile.push(LogicalOperator::OR);
             t->next();
@@ -644,154 +660,194 @@ BinaryExpression::Condition BinaryExpression::ParseCondition(Lexing::Tokenizer* 
 
 void BinaryExpression::PrintConditionalt(std::ostream& out)
 {
-    auto n = this;
-    auto g = n->m_Lhs;
-    auto d = n->m_Rhs;
-    out << "(";
-    if (std::holds_alternative<Clause*>(g)) {
-        auto cl = std::get<Clause*>(g);
+    Condition* g = m_Lhs.get();
+    Condition* d = m_Rhs.get();
 
-        cl->Print(out);
-    } else if (std::holds_alternative<BinaryExpression*>(g)) {
-        auto bexpr = std::get<BinaryExpression*>(g);
-        bexpr->PrintCondition(out);
+    out << "(";
+
+    if (std::holds_alternative<Clause>(*g)) {
+        auto& cl = std::get<Clause>(*g);
+
+        cl.Print(out);
+    } else if (std::holds_alternative<BinaryExpression>(*g)) {
+
+        auto& bexpr = std::get<BinaryExpression>(*g);
+
+        bexpr.PrintCondition(out);
     } else {
         out << "Condition vide";
     }
+
     out << ") ";
 
-    out << (n->m_Op == LogicalOperator::AND ? "AND " : "OR ");
+    out << (m_Op == LogicalOperator::AND ? "AND " : "OR ");
     out << "(";
 
-    if (std::holds_alternative<Clause*>(d)) {
-        auto cl = std::get<Clause*>(d);
+    if (std::holds_alternative<Clause>(*d)) {
+        auto& cl = std::get<Clause>(*d);
 
-        cl->Print(out);
-    } else if (std::holds_alternative<BinaryExpression*>(d)) {
-        auto bexpr = std::get<BinaryExpression*>(d);
-        bexpr->PrintCondition(out);
+        cl.Print(out);
+    } else if (std::holds_alternative<BinaryExpression>(*d)) {
+        auto& bexpr = std::get<BinaryExpression>(*d);
+        bexpr.PrintCondition(out);
 
     } else {
         out << "Condition vide";
     }
     out << ")";
 }
+
 void BinaryExpression::PrintCondition(std::ostream& out)
 {
     this->PrintConditionalt(out);
     out << std::endl;
 }
-BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* ColonnesAExtraire)
+
+BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire)
 {
     if (BinaryExpression::Op() == LogicalOperator::AND) { // on ne peut pas couper un OR
 
-        std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* LeftColumn;
-        auto left = Lhs();
-        if (std::holds_alternative<std::monostate>(left)) {
-            LeftColumn = {};
-        } else if (std::holds_alternative<Clause*>(left)) {
-            LeftColumn = std::get<Clause*>(left)->Column();
+        auto left_col = std::make_unique<std::unordered_set<QueryPlanning::ColonneNamesSet*>>();
+
+        auto left = m_Lhs.get();
+
+        if (std::holds_alternative<std::monostate>(*left)) {
+            left_col = {};
+        } else if (std::holds_alternative<Clause>(*left)) {
+            left_col = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(std::get<Clause>(*left).Column());
         } else {
-            LeftColumn = std::get<BinaryExpression*>(left)->Column();
-        }
-        std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* RightColumn;
-        auto right = Rhs();
-        if (std::holds_alternative<std::monostate>(right)) {
-            RightColumn = {};
-        } else if (std::holds_alternative<Clause*>(right)) {
-            RightColumn = std::get<Clause*>(right)->Column();
-        } else {
-            RightColumn = std::get<BinaryExpression*>(right)->Column();
+            left_col = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(std::get<BinaryExpression>(*left).Column());
         }
 
-        if (Utils::is_subset(LeftColumn, ColonnesAExtraire)) { // je peut prendre tout gauche
+        auto right_col = std::make_unique<std::unordered_set<QueryPlanning::ColonneNamesSet*>>();
+
+        auto right = m_Rhs.get();
+
+        if (std::holds_alternative<std::monostate>(*right)) {
+            right_col = {};
+        } else if (std::holds_alternative<Clause>(*right)) {
+            right_col = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(std::get<Clause>(*right).Column());
+        } else {
+            right_col = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(std::get<BinaryExpression>(*right).Column());
+        }
+
+        // je peut prendre tout gauche
+        if (Utils::is_subset(left_col.get(), ColonnesAExtraire)) {
+
             // il faut tester si on ne peut pas avoir des truc à droite
-            if (Utils::is_subset(RightColumn, ColonnesAExtraire)) { // on peut tout prendre à droite et à gauche
+            if (Utils::is_subset(right_col.get(), ColonnesAExtraire)) { // on peut tout prendre à droite et à gauche
+
                 NullifyLhs();
                 NullifyRhs();
-                return new BinaryExpression(LogicalOperator::AND, left, right, MergeColumns(left, right));
+
+                return BinaryExpression(LogicalOperator::AND, left, right, MergeColumns(*left, *right).get());
             } else {
-                BinaryExpression::Condition RecupADroite;
-                if (std::holds_alternative<std::monostate>(right)) {
-                    RecupADroite = std::monostate {};
-                } else if (std::holds_alternative<Clause*>(right)) {
-                    if (Utils::is_subset(std::get<Clause*>(right)->Column(), ColonnesAExtraire)) { // techniqument impossible, car on serais allé dans le cas où on peut tout prendre à droite
+                BinaryExpression::Condition* RecupADroite;
+
+                if (std::holds_alternative<std::monostate>(*right)) {
+                    *RecupADroite = std::monostate {};
+                } else if (std::holds_alternative<Clause>(*right)) {
+
+                    // techniqument impossible, car on serais allé dans le cas où on peut tout prendre à droite
+                    if (Utils::is_subset(std::get<Clause>(*right).Column(), ColonnesAExtraire)) {
                         NullifyRhs();
                         RecupADroite = right;
                     } else {
-                        RecupADroite = std::monostate {}; // on ne peut pas découper une clause, donc on renvoie rien
+                        // on ne peut pas découper une clause, donc on renvoie rien
+                        *RecupADroite = std::monostate {};
                     }
                 } else {
-                    RecupADroite = std::get<BinaryExpression*>(right)->ExtraireCond(ColonnesAExtraire);
+                    *RecupADroite = std::get<BinaryExpression>(*right).ExtraireCond(ColonnesAExtraire);
                 }
 
-                bool RecupADroiteEstVide = IsEmpty(RecupADroite);
+                bool RecupADroiteEstVide = IsEmpty(*RecupADroite);
 
-                auto temp = left;
+                Condition* temp = left;
+
                 NullifyLhs();
-                if (RecupADroiteEstVide) {
-                    return temp; // on a rien trouvé à droite, donc on renvoie juste tout gauche
-                } else { // y'as des truc à droite donc on les regroupe et on renvoie ça
 
-                    return new BinaryExpression(LogicalOperator::AND, RecupADroite, temp, MergeColumns(RecupADroite, temp));
+                if (RecupADroiteEstVide) {
+                    // on a rien trouvé à droite, donc on renvoie juste tout gauche
+                    return std::move(*temp);
+                } else {
+                    // y'as des truc à droite donc on les regroupe et on renvoie ça
+                    return BinaryExpression(LogicalOperator::AND, RecupADroite, temp, MergeColumns(*RecupADroite, *temp).get());
                 }
             }
-        } else { // on ne peut pas tout prendre à gauche, donc on teste à droite et on prend un max à gauche
-            BinaryExpression::Condition RecupAGauche;
-            if (std::holds_alternative<std::monostate>(left)) {
-                RecupAGauche = std::monostate {};
-            } else if (std::holds_alternative<Clause*>(left)) {
-                if (Utils::is_subset(std::get<Clause*>(left)->Column(), ColonnesAExtraire)) { // techniqument impossible, car on serais allé dans le cas où on peut tout prendre à droite
+        } else {
+
+            // on ne peut pas tout prendre à gauche, donc on teste à droite et on prend un max à gauche
+            BinaryExpression::Condition* RecupAGauche;
+
+            if (std::holds_alternative<std::monostate>(*left)) {
+                *RecupAGauche = std::monostate {};
+            } else if (std::holds_alternative<Clause>(*left)) {
+                // techniqument impossible, car on serais allé dans le cas où on peut tout prendre à droite
+                if (Utils::is_subset(std::get<Clause>(*left).Column(), ColonnesAExtraire)) {
+
                     NullifyRhs();
+
                     RecupAGauche = left;
+
                 } else {
-                    RecupAGauche = std::monostate {}; // on ne peut pas découper une clause, donc on renvoie rien
+                    // on ne peut pas découper une clause, donc on renvoie rien
+                    *RecupAGauche = std::monostate {};
                 }
             } else {
-                RecupAGauche = std::get<BinaryExpression*>(left)->ExtraireCond(ColonnesAExtraire);
+                *RecupAGauche = std::get<BinaryExpression>(*left).ExtraireCond(ColonnesAExtraire);
             }
 
-            bool RecupAGaucheEstVide = IsEmpty(RecupAGauche);
+            bool RecupAGaucheEstVide = IsEmpty(*RecupAGauche);
 
-            if (Utils::is_subset(RightColumn, ColonnesAExtraire)) { // je peut tout prendre à droite
-                auto temp = right;
+            // je peut tout prendre à droite
+            if (Utils::is_subset(right_col.get(), ColonnesAExtraire)) {
+
+                Condition* temp = right;
+
                 NullifyRhs();
+
                 // il faut tester si on n'as pas eu des truc à gauche
+                //
                 if (RecupAGaucheEstVide) {
-                    return temp; // on a rien trouvé à gauche, donc on renvoie juste tout droite
+                    // on a rien trouvé à gauche, donc on renvoie juste tout droite
+                    return std::move(*temp);
                 } else { // y'as des truc à gauche donc on les regroupe et on renvoie ça
-                    return new BinaryExpression(LogicalOperator::AND, RecupAGauche, temp, MergeColumns(RecupAGauche, temp));
+                    return BinaryExpression(LogicalOperator::AND, RecupAGauche, temp, MergeColumns(*RecupAGauche, *temp).get());
                 }
             } else { // On ne peut pas tout prendre à droite ni tout prendre à gauche
-                BinaryExpression::Condition RecupADroite;
-                if (std::holds_alternative<std::monostate>(right)) {
-                    RecupADroite = std::monostate {};
-                } else if (std::holds_alternative<Clause*>(right)) {
-                    if (Utils::is_subset(std::get<Clause*>(right)->Column(), ColonnesAExtraire)) { // techniqument impossible, car on serais allé dans le cas où on peut tout prendre à droite
+                BinaryExpression::Condition* RecupADroite;
+
+                if (std::holds_alternative<std::monostate>(*right)) {
+
+                    *RecupADroite = std::monostate {};
+
+                } else if (std::holds_alternative<Clause>(*right)) {
+                    // techniqument impossible, car on serais allé dans le cas où on peut tout prendre à droite
+                    if (Utils::is_subset(std::get<Clause>(*right).Column(), ColonnesAExtraire)) {
+
                         NullifyRhs();
                         RecupADroite = right;
+
                     } else {
-                        RecupADroite = std::monostate {}; // on ne peut pas découper une clause, donc on renvoie rien
+                        *RecupADroite = std::monostate {}; // on ne peut pas découper une clause, donc on renvoie rien
                     }
                 } else {
-                    RecupADroite = std::get<BinaryExpression*>(right)->ExtraireCond(ColonnesAExtraire);
+                    *RecupADroite = std::get<BinaryExpression>(*right).ExtraireCond(ColonnesAExtraire);
                 }
 
-                bool RecupADroiteEstVide = IsEmpty(RecupADroite);
+                bool RecupADroiteEstVide = IsEmpty(*RecupADroite);
 
                 if (RecupADroiteEstVide) {
                     if (RecupAGaucheEstVide) {
                         return std::monostate {};
                     } else {
-                        return RecupAGauche;
+                        return std::move(*RecupAGauche);
                     }
                 } else {
                     if (RecupAGaucheEstVide) {
-                        return RecupADroite;
+                        return std::move(*RecupADroite);
                     } else {
-                        auto temp = new BinaryExpression(LogicalOperator::AND, RecupADroite, RecupAGauche, MergeColumns(RecupADroite, RecupAGauche));
-                        return temp;
-                        ;
+                        return BinaryExpression(LogicalOperator::AND, RecupADroite, RecupAGauche, MergeColumns(*RecupADroite, *RecupAGauche).get());
                     }
                 }
             }
@@ -801,11 +857,14 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<st
     }
 }
 
-bool Clause::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester)
+bool Clause::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester) const
 {
     ColumnData LeftVal;
-    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs())) {
-        auto temp = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs());
+
+    if (std::holds_alternative<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Lhs())) {
+
+        auto& temp = std::get<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Lhs());
+
         LeftVal = *(*CombinaisonATester)[temp->GetMainName()];
 
     } else if (std::holds_alternative<ColumnData>(Lhs())) {
@@ -813,12 +872,12 @@ bool Clause::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATest
     } else {
         throw Errors::Error(Errors::ErrorType::RuntimeError,
             "Unknown type in the Clause parameter",
-            0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+            0, 0, Errors::ERROR_UNKNOWN_TYPE_BINARYEXPR);
     }
 
     ColumnData RightVal;
-    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs())) {
-        auto temp = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs());
+    if (std::holds_alternative<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Rhs())) {
+        auto& temp = std::get<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Rhs());
         RightVal = *(*CombinaisonATester)[temp->GetMainName()];
 
     } else if (std::holds_alternative<ColumnData>(Rhs())) {
@@ -827,7 +886,7 @@ bool Clause::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATest
     } else {
         throw Errors::Error(Errors::ErrorType::RuntimeError,
             "Unknown type in the Clause parameter",
-            0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+            0, 0, Errors::ERROR_UNKNOWN_TYPE_BINARYEXPR);
     }
     switch (Op()) {
     case Parsing::LogicalOperator::EQ:
@@ -845,18 +904,20 @@ bool Clause::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATest
     default:
         throw Errors::Error(Errors::ErrorType::RuntimeError,
             "Unknown Logical Operator",
-            0, 0, Errors::ERROR_UNKNOW_LOGICAL_OPERATOR);
+            0, 0, Errors::ERROR_UNKNOWN_LOGICAL_OPERATOR);
     }
 }
 
-bool BinaryExpression::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester)
+bool BinaryExpression::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester) const
 {
     bool ResultAGauche;
-    auto left = Lhs();
-    if (std::holds_alternative<BinaryExpression*>(left)) {
-        ResultAGauche = std::get<BinaryExpression*>(left)->Eval(CombinaisonATester);
-    } else if (std::holds_alternative<Clause*>(left)) {
-        ResultAGauche = std::get<Clause*>(left)->Eval(CombinaisonATester);
+
+    auto left = m_Lhs.get();
+
+    if (std::holds_alternative<BinaryExpression>(*left)) {
+        ResultAGauche = std::get<BinaryExpression>(*left).Eval(CombinaisonATester);
+    } else if (std::holds_alternative<Clause>(*left)) {
+        ResultAGauche = std::get<Clause>(*left).Eval(CombinaisonATester);
     } else {
         ResultAGauche = true;
     }
@@ -866,11 +927,13 @@ bool BinaryExpression::Eval(std::unordered_map<std::string, ColumnData*>* Combin
         return false;
     } else {
         bool ResultADroite;
-        auto droite = Rhs();
-        if (std::holds_alternative<BinaryExpression*>(droite)) {
-            ResultADroite = std::get<BinaryExpression*>(droite)->Eval(CombinaisonATester);
-        } else if (std::holds_alternative<Clause*>(droite)) {
-            ResultADroite = std::get<Clause*>(droite)->Eval(CombinaisonATester);
+
+        auto droite = m_Rhs.get();
+
+        if (std::holds_alternative<BinaryExpression>(*droite)) {
+            ResultADroite = std::get<BinaryExpression>(*droite).Eval(CombinaisonATester);
+        } else if (std::holds_alternative<Clause>(*droite)) {
+            ResultADroite = std::get<Clause>(*droite).Eval(CombinaisonATester);
         } else {
             ResultADroite = true;
         }
@@ -882,62 +945,90 @@ bool BinaryExpression::Eval(std::unordered_map<std::string, ColumnData*>* Combin
     }
 }
 
-void Clause::FormatColumnName(std::shared_ptr<QueryPlanning::TableNamesSet> NomTablePrincipale)
+// Wants to take ownership of the argument, dont kwno if doable or not
+// UUPO
+void Clause::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
 {
     m_ColumnUsed->clear();
-    auto left = Lhs();
-    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(left)) {
-        auto LeftColumn = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(left);
-        if (!LeftColumn->HaveTableSet()) {
-            LeftColumn->SetTableSet(NomTablePrincipale);
+
+    auto& left = m_Lhs;
+
+    if (std::holds_alternative<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(left)) {
+
+        auto& left_col = std::get<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(left);
+
+        if (!left_col->HaveTableSet()) {
+            left_col->SetTableSet(NomTablePrincipale);
         }
+
         this->EditLhs(left);
-        m_ColumnUsed->insert(LeftColumn);
+
+        m_ColumnUsed->insert(left_col.get());
     }
 
-    auto right = Rhs();
-    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(right)) {
-        auto RightColumn = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(right);
-        if (!RightColumn->HaveTableSet()) {
-            RightColumn->SetTableSet(NomTablePrincipale);
+    auto& right = m_Rhs;
+
+    if (std::holds_alternative<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(right)) {
+
+        auto& right_col = std::get<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(right);
+
+        if (!right_col->HaveTableSet()) {
+            right_col->SetTableSet(std::move(NomTablePrincipale));
         }
+
         this->EditRhs(right);
-        m_ColumnUsed->insert(RightColumn);
+
+        m_ColumnUsed->insert(right_col.get());
     }
 }
 
-void BinaryExpression::FormatColumnName(std::shared_ptr<QueryPlanning::TableNamesSet> NomTablePrincipale)
+// UUPO
+void BinaryExpression::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
 {
     m_ColumnUsedBelow->clear();
-    auto left = Lhs();
-    if (std::holds_alternative<BinaryExpression*>(left)) {
-        std::get<BinaryExpression*>(left)->FormatColumnName(NomTablePrincipale);
-        m_ColumnUsedBelow->insert(std::get<BinaryExpression*>(left)->Column()->begin(), std::get<BinaryExpression*>(left)->Column()->end());
-    } else if (std::holds_alternative<Clause*>(left)) {
-        std::get<Clause*>(left)->FormatColumnName(NomTablePrincipale);
-        m_ColumnUsedBelow->insert(std::get<Clause*>(left)->Column()->begin(), std::get<Clause*>(left)->Column()->end());
-    }
-    auto right = Rhs();
-    if (std::holds_alternative<BinaryExpression*>(right)) {
-        std::get<BinaryExpression*>(right)->FormatColumnName(NomTablePrincipale);
-        m_ColumnUsedBelow->insert(std::get<BinaryExpression*>(right)->Column()->begin(), std::get<BinaryExpression*>(right)->Column()->end());
 
-    } else if (std::holds_alternative<Clause*>(right)) {
-        std::get<Clause*>(right)->FormatColumnName(NomTablePrincipale);
-        m_ColumnUsedBelow->insert(std::get<Clause*>(right)->Column()->begin(), std::get<Clause*>(right)->Column()->end());
+    auto& left = m_Lhs;
+
+    if (std::holds_alternative<BinaryExpression>(*left)) {
+
+        std::get<BinaryExpression>(*left).FormatColumnName(NomTablePrincipale);
+
+        m_ColumnUsedBelow->insert(std::get<BinaryExpression>(*left).Column()->begin(), std::get<BinaryExpression>(*left).Column()->end());
+
+    } else if (std::holds_alternative<Clause>(*left)) {
+        std::get<Clause>(*left).FormatColumnName(NomTablePrincipale);
+        m_ColumnUsedBelow->insert(std::get<Clause>(*left).Column()->begin(), std::get<Clause>(*left).Column()->end());
+    }
+
+    auto& right = m_Rhs;
+
+    if (std::holds_alternative<BinaryExpression>(*right)) {
+        std::get<BinaryExpression>(*right).FormatColumnName(NomTablePrincipale);
+
+        m_ColumnUsedBelow->insert(std::get<BinaryExpression>(*right).Column()->begin(), std::get<BinaryExpression>(*right).Column()->end());
+
+    } else if (std::holds_alternative<Clause>(*right)) {
+
+        std::get<Clause>(*right).FormatColumnName(NomTablePrincipale);
+
+        m_ColumnUsedBelow->insert(std::get<Clause>(*right).Column()->begin(), std::get<Clause>(*right).Column()->end());
     }
 }
 
 bool BinaryExpression::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* CombinaisonATester)
 {
     m_InfoSelectivité.first++;
+
     bool resultat_eval;
     bool ResultAGauche;
-    auto left = Lhs();
-    if (std::holds_alternative<BinaryExpression*>(left)) {
-        ResultAGauche = std::get<BinaryExpression*>(left)->EstimeSelectivite(CombinaisonATester);
-    } else if (std::holds_alternative<Clause*>(left)) {
-        ResultAGauche = std::get<Clause*>(left)->EstimeSelectivite(CombinaisonATester);
+
+    auto& left = m_Lhs;
+
+    if (std::holds_alternative<BinaryExpression>(*left)) {
+
+        ResultAGauche = std::get<BinaryExpression>(*left).EstimeSelectivite(CombinaisonATester);
+    } else if (std::holds_alternative<Clause>(*left)) {
+        ResultAGauche = std::get<Clause>(*left).EstimeSelectivite(CombinaisonATester);
     } else {
         ResultAGauche = true;
     }
@@ -946,12 +1037,18 @@ bool BinaryExpression::EstimeSelectivite(std::unordered_map<std::string, ColumnD
     } else if (m_Op == LogicalOperator::AND && !ResultAGauche) {
         resultat_eval = false;
     }
+
     bool ResultADroite;
-    auto droite = Rhs();
-    if (std::holds_alternative<BinaryExpression*>(droite)) {
-        ResultADroite = std::get<BinaryExpression*>(droite)->EstimeSelectivite(CombinaisonATester);
-    } else if (std::holds_alternative<Clause*>(droite)) {
-        ResultADroite = std::get<Clause*>(droite)->EstimeSelectivite(CombinaisonATester);
+
+    auto& droite = m_Rhs;
+
+    if (std::holds_alternative<BinaryExpression>(*droite)) {
+
+        ResultADroite = std::get<BinaryExpression>(*droite).EstimeSelectivite(CombinaisonATester);
+
+    } else if (std::holds_alternative<Clause>(*droite)) {
+
+        ResultADroite = std::get<Clause>(*droite).EstimeSelectivite(CombinaisonATester);
     } else {
         ResultADroite = true;
     }
@@ -969,10 +1066,15 @@ bool BinaryExpression::EstimeSelectivite(std::unordered_map<std::string, ColumnD
 bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* CombinaisonATester)
 {
     m_InfoSelectivité.first++;
+
     bool resultat_eval;
+
     ColumnData LeftVal;
-    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs())) {
-        auto temp = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Lhs());
+
+    if (std::holds_alternative<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Lhs())) {
+
+        auto& temp = std::get<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Lhs());
+
         LeftVal = (*CombinaisonATester)[temp->GetMainName()];
 
     } else if (std::holds_alternative<ColumnData>(Lhs())) {
@@ -980,12 +1082,15 @@ bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* Comb
     } else {
         throw Errors::Error(Errors::ErrorType::RuntimeError,
             "Unknown type in the Clause parameter",
-            0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+            0, 0, Errors::ERROR_UNKNOWN_TYPE_BINARYEXPR);
     }
 
     ColumnData RightVal;
-    if (std::holds_alternative<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs())) {
-        auto temp = std::get<std::shared_ptr<QueryPlanning::ColonneNamesSet>>(Rhs());
+
+    if (std::holds_alternative<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Rhs())) {
+
+        auto& temp = std::get<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(Rhs());
+
         RightVal = (*CombinaisonATester)[temp->GetMainName()];
 
     } else if (std::holds_alternative<ColumnData>(Rhs())) {
@@ -994,7 +1099,7 @@ bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* Comb
     } else {
         throw Errors::Error(Errors::ErrorType::RuntimeError,
             "Unknown type in the Clause parameter",
-            0, 0, Errors::ERROR_UNKNOW_TYPE_BINARYEXPR);
+            0, 0, Errors::ERROR_UNKNOWN_TYPE_BINARYEXPR);
     }
     switch (Op()) {
     case Parsing::LogicalOperator::EQ:
@@ -1025,7 +1130,7 @@ bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* Comb
         throw Errors::Error(
             Errors::ErrorType::RuntimeError,
             "Unknown Logical Operator",
-            0, 0, Errors::ERROR_UNKNOW_LOGICAL_OPERATOR);
+            0, 0, Errors::ERROR_UNKNOWN_LOGICAL_OPERATOR);
     }
 
     if (resultat_eval) {
@@ -1033,29 +1138,38 @@ bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* Comb
     }
     return resultat_eval;
 }
+
 float BinaryExpression::OptimiseBinaryExpression()
 {
     float RatioGauche;
-    auto left = Lhs();
-    if (std::holds_alternative<BinaryExpression*>(left)) {
-        RatioGauche = std::get<BinaryExpression*>(left)->OptimiseBinaryExpression();
-    } else if (std::holds_alternative<Clause*>(left)) {
-        RatioGauche = std::get<Clause*>(left)->GetSelectivite();
+
+    auto& left = m_Lhs;
+
+    if (std::holds_alternative<BinaryExpression>(*left)) {
+        RatioGauche = std::get<BinaryExpression>(*left).OptimiseBinaryExpression();
+    } else if (std::holds_alternative<Clause>(*left)) {
+        RatioGauche = std::get<Clause>(*left).GetSelectivite();
     }
 
     float RatioDroite;
-    auto droite = Rhs();
-    if (std::holds_alternative<BinaryExpression*>(droite)) {
-        RatioDroite = std::get<BinaryExpression*>(droite)->OptimiseBinaryExpression();
-    } else if (std::holds_alternative<Clause*>(droite)) {
-        RatioDroite = std::get<Clause*>(droite)->GetSelectivite();
+
+    auto& droite = m_Rhs;
+
+    if (std::holds_alternative<BinaryExpression>(*droite)) {
+        RatioDroite = std::get<BinaryExpression>(*droite).OptimiseBinaryExpression();
+    } else if (std::holds_alternative<Clause>(*droite)) {
+        RatioDroite = std::get<Clause>(*droite).GetSelectivite();
     }
     if ((Op() == LogicalOperator::OR && RatioDroite > RatioGauche) || (Op() == LogicalOperator::AND && RatioDroite < RatioGauche)) {
         // si on as un Or, on passe en premier sur celle qui a le plus de chance de passer, si on a un and, on passe en premier sur celle qui a les plus de chance d'être fausse et donc d'éviter les execution inutile
-        Condition temp = m_Lhs;
-        m_Lhs = m_Rhs;
-        m_Rhs = temp;
+        Condition* temp = m_Lhs.get();
+
+        m_Lhs = std::move(m_Rhs);
+
+        m_Rhs = std::unique_ptr<Condition>(temp);
     }
+
     return m_InfoSelectivité.second / m_InfoSelectivité.first;
 }
+
 } // namespace parsing

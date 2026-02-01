@@ -6,11 +6,11 @@
 #include <unordered_set>
 #include <variant>
 
-
-#include "../algebrizer_types.h"
-#include "../data_process_system/namingsystem.h"
-#include "../lexer/tokenizer.h"
-#include "../utils.h"
+#include "algebrizer_types.h"
+#include "data_process_system/namingsystem.h"
+#include "errors.h"
+#include "lexer/tokenizer.h"
+#include "utils.h"
 
 #ifndef EXPRESSION_H
 
@@ -46,7 +46,7 @@ enum class AggrFuncType {
 
 enum class ColumnType { NULL_C,
     INTEGER_C,
-    REAL_C,
+    FLOAT_C,
     TEXT_C };
 
 class Expr {
@@ -251,7 +251,7 @@ public:
     static std::variant<AggregateFunction*, Errors::Error> ParseAggregateFunction(Lexing::Tokenizer* t);
 };
 
-using ClauseMember = std::variant<std::shared_ptr<QueryPlanning::ColonneNamesSet>, ColumnData>;
+using ClauseMember = std::variant<std::unique_ptr<QueryPlanning::ColonneNamesSet>, ColumnData>;
 
 std::ostream& operator<<(std::ostream& out, const ClauseMember& member);
 
@@ -260,123 +260,161 @@ class Clause {
     LogicalOperator m_Op;
 
     ClauseMember m_Lhs;
-    ClauseMember m_Rhs;
-    std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* m_ColumnUsed;
-    std::pair<float,float> m_InfoSelectivité;
 
+    ClauseMember m_Rhs;
+
+    std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>> m_ColumnUsed;
+
+    std::pair<float, float> m_InfoSelectivité;
 
 public:
-    Clause(LogicalOperator op, ClauseMember lhs, ClauseMember rhs, std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* col_used)
+    Clause(LogicalOperator op, ClauseMember lhs, ClauseMember rhs, std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>> col_used)
         : m_Op(op)
-        , m_Lhs(lhs)
-        , m_Rhs(rhs)
-        , m_ColumnUsed(col_used)
+        , m_Lhs(std::move(lhs))
+        , m_Rhs(std::move(rhs))
+        , m_ColumnUsed(std::move(col_used))
     {
     }
 
-    auto Lhs() const -> ClauseMember { return m_Lhs; }
-    auto Rhs() const -> ClauseMember { return m_Rhs; }
-    auto Op() const -> LogicalOperator { return m_Op; }
-    auto Column() -> std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* { return m_ColumnUsed; }
-    auto EditLhs(ClauseMember NewClause) { m_Lhs = NewClause; }
-    auto EditRhs(ClauseMember NewClause) { m_Rhs = NewClause; }
+    auto Lhs() const -> const ClauseMember& { return m_Lhs; }
+
+    auto Rhs() const -> const ClauseMember& { return m_Rhs; }
+
+    auto Op() const -> const LogicalOperator { return m_Op; }
+
+    auto Column() const -> std::unordered_set<QueryPlanning::ColonneNamesSet*>* { return m_ColumnUsed.get(); }
+
+    auto EditLhs(ClauseMember& NewClause) { m_Lhs = std::move(NewClause); }
+
+    auto EditRhs(ClauseMember& NewClause) { m_Rhs = std::move(NewClause); }
+
     void Print(std::ostream& out);
 
-    static std::pair<ClauseMember, std::shared_ptr<QueryPlanning::ColonneNamesSet>> ParseClauseMember(Lexing::Tokenizer* t);
+    static std::pair<ClauseMember, std::unique_ptr<QueryPlanning::ColonneNamesSet>> ParseClauseMember(Lexing::Tokenizer* t);
 
     static Clause* ParseClause(Lexing::Tokenizer* t);
 
-    void FormatColumnName(std::shared_ptr<QueryPlanning::TableNamesSet> NomTablePrincipale);
+    // UUOP
+    void FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale);
 
-    bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
+    bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester) const;
 
     bool EstimeSelectivite(std::unordered_map<std::string, ColumnData>* CombinaisonATester);
 
-    float GetSelectivite(){return m_InfoSelectivité.second/m_InfoSelectivité.first;}
+    float GetSelectivite() { return m_InfoSelectivité.second / m_InfoSelectivité.first; }
 };
 
 std::ostream& operator<<(std::ostream& out, const Clause& member);
 
 class BinaryExpression {
-
 public:
-    using Condition = std::variant<BinaryExpression*, Clause*, std::monostate>; // monostate représente le noeud vide
-
-    BinaryExpression(LogicalOperator op, Condition lhs, Condition rhs, std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* col_used)
-        : m_Op(op)
-        , m_Lhs(lhs)
-        , m_Rhs(rhs)
-        , m_ColumnUsedBelow(col_used) { };
-
-    // Parsing utilities
-    static std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* MergeColumns(Condition lhs, Condition rhs);
-
-    static BinaryExpression::Condition ParseCondition(Lexing::Tokenizer* t);
-
-    // Data accesing methods
-
-    void PrintCondition(std::ostream& out);
-    void PrintConditionalt(std::ostream& out);
-
-    auto Lhs() -> Condition
-    {
-        return m_Lhs;
-    }
-    auto Rhs() -> Condition { return m_Rhs; }
-    auto Op() -> LogicalOperator { return m_Op; }
-
-    bool IsEmpty(const Condition& cond)
-    {
-        return std::holds_alternative<std::monostate>(cond);
-    }
-    auto NullifyLhs() -> void
-    {
-        m_Lhs = std::monostate {};
-        auto right = Rhs();
-        if (std::holds_alternative<std::monostate>(right)) {
-            m_ColumnUsedBelow = {};
-        } else if (std::holds_alternative<Clause*>(right)) {
-            m_ColumnUsedBelow = std::get<Clause*>(right)->Column();
-        } else {
-            m_ColumnUsedBelow = std::get<BinaryExpression*>(right)->Column();
-        }
-    }
-    auto NullifyRhs() -> void
-    {
-        m_Rhs = std::monostate {};
-        auto left = Lhs();
-        if (std::holds_alternative<std::monostate>(left)) {
-            m_ColumnUsedBelow = {};
-        } else if (std::holds_alternative<Clause*>(left)) {
-            m_ColumnUsedBelow = std::get<Clause*>(left)->Column();
-        } else {
-            m_ColumnUsedBelow = std::get<BinaryExpression*>(left)->Column();
-        }
-    }
-
-    auto Column() -> std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* { return m_ColumnUsedBelow; }
-
-    // Evaluation methods
-
-    Condition ExtraireCond(std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* ColonnesAExtraire);
-
-    bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester);
-
-    bool EstimeSelectivite(std::unordered_map<std::string, ColumnData>* CombinaisonATester);
-
-    void FormatColumnName(std::shared_ptr<QueryPlanning::TableNamesSet> NomTablePrincipale);
-
-    float OptimiseBinaryExpression();
+    // monostate représente le noeud vide
+    using Condition = std::variant<std::monostate, Clause, BinaryExpression>;
 
 private:
     // Opérateur, ne peut être que AND / OR
     LogicalOperator m_Op;
 
-    Condition m_Lhs;
-    Condition m_Rhs;
-    std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* m_ColumnUsedBelow;
+    std::unique_ptr<Condition> m_Lhs;
 
-    std::pair<float,float> m_InfoSelectivité;
+    std::unique_ptr<Condition> m_Rhs;
+
+    std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>> m_ColumnUsedBelow;
+
+    std::pair<float, float> m_InfoSelectivité;
+
+public:
+    // UUPO je sais pas à qui appartiennent les conditions
+    BinaryExpression(const LogicalOperator op, Condition* lhs, Condition* rhs, std::unordered_set<QueryPlanning::ColonneNamesSet*>* col_used)
+        : m_Op(op)
+        , m_Lhs(std::move(lhs))
+        , m_Rhs(std::move(rhs))
+        , m_ColumnUsedBelow(std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(col_used)) { };
+
+    // Parsing utilities
+    static std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>> MergeColumns(const Condition& lhs, const Condition& rhs);
+
+    static BinaryExpression::Condition* ParseCondition(Lexing::Tokenizer* t);
+
+    // Data accesing methods
+
+    void PrintCondition(std::ostream& out);
+
+    void PrintConditionalt(std::ostream& out);
+
+    /*
+      auto Lhs() -> Condition&
+      {
+          return m_Lhs;
+      }
+
+      auto Rhs() -> Condition& { return m_Rhs; }
+  */
+
+    auto Op() const -> LogicalOperator { return m_Op; }
+
+    bool IsEmpty(const Condition& cond) const
+    {
+        return std::holds_alternative<std::monostate>(cond);
+    }
+
+    auto NullifyLhs() -> void
+    {
+        m_Lhs = std::make_unique<Condition>(std::monostate {});
+
+        switch (m_Rhs->index()) {
+        case 0: {
+            m_ColumnUsedBelow = std::make_unique<std::unordered_set<QueryPlanning::ColonneNamesSet*>>();
+        } break;
+        case 1: {
+            auto& clause = std::get<Clause>(*m_Rhs.get());
+
+            m_ColumnUsedBelow = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(clause.Column());
+
+        } break;
+        case 2: {
+            auto& bin_expr = std::get<BinaryExpression>(*m_Rhs.get());
+
+            m_ColumnUsedBelow = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(bin_expr.Column());
+        } break;
+        }
+    }
+
+    auto NullifyRhs() -> void
+    {
+        m_Rhs = std::make_unique<Condition>(std::monostate {});
+
+        switch (m_Lhs->index()) {
+        case 0: {
+            m_ColumnUsedBelow = std::make_unique<std::unordered_set<QueryPlanning::ColonneNamesSet*>>();
+        } break;
+        case 1: {
+            auto& clause = std::get<Clause>(*m_Lhs.get());
+
+            m_ColumnUsedBelow = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(clause.Column());
+
+        } break;
+        case 2: {
+            auto& bin_expr = std::get<BinaryExpression>(*m_Lhs.get());
+
+            m_ColumnUsedBelow = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(bin_expr.Column());
+        } break;
+        }
+    }
+
+    auto Column() const -> std::unordered_set<QueryPlanning::ColonneNamesSet*>* { return m_ColumnUsedBelow.get(); }
+
+    // Evaluation methods
+
+    Condition ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire);
+
+    bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester) const;
+
+    bool EstimeSelectivite(std::unordered_map<std::string, ColumnData>* CombinaisonATester);
+
+    void FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale);
+
+    float OptimiseBinaryExpression();
 };
 
 } // namespace parsing

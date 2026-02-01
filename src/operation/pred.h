@@ -1,7 +1,7 @@
-#include "../parser.h"
 #include <iostream>
 
-#include "../algebrizer_types.h"
+#include "parser.h"
+#include "algebrizer_types.h"
 
 #ifndef PRED_H
 

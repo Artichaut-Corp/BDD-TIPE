@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include "../errors.h"
+#include "errors.h"
 
 #include "column.h"
 #include "cursor.h"
