@@ -22,9 +22,9 @@
 
 namespace Database::QueryPlanning {
 
-std::unique_ptr<ColonneNamesSet> ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, Database::Parsing::ColumnName* colonne, std::unordered_map<std::string, std::unique_ptr<TableNamesSet>>& variation_of_tablename_to_main_table_name)
+ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, Database::Parsing::ColumnName* colonne, std::unordered_map<std::string, std::unique_ptr<TableNamesSet>>& variation_of_tablename_to_main_table_name)
 {
-    std::unique_ptr<ColonneNamesSet> standard_name = nullptr;
+   ColonneNamesSet* standard_name = nullptr;
 
     if (colonne->HaveTable()) {
 
@@ -33,13 +33,13 @@ std::unique_ptr<ColonneNamesSet> ConvertToStandardColumnName(TableNamesSet& NomT
         std::string full_name = colonne->getColumnName();
 
         // récupere le nom de cette colonne
-        standard_name = std::make_unique<ColonneNamesSet>(full_name, colonne->GetAlias(), std::unique_ptr<TableNamesSet>(table));
+        standard_name = new ColonneNamesSet(full_name, colonne->GetAlias(), std::unique_ptr<TableNamesSet>(table));
     } else {
         // la colonne n'as pas de nom de table, on en conclut que c'est une colonne de la table principale, il faut donc rajouter le nom de cette table à son identifiant
 
         auto parent_tbl = std::unique_ptr<TableNamesSet>(&NomTablePrincipale);
 
-        standard_name = std::make_unique<ColonneNamesSet>(colonne->getColumnName(),
+        standard_name = new ColonneNamesSet(colonne->getColumnName(),
             colonne->GetAlias(),
             std::move(parent_tbl));
     }
@@ -84,6 +84,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     std::unordered_map<std::string, std::unordered_set<ColonneNamesSet*>*> TableNameToColumnList;
 
+    // Could be rewritten to use unique_ptr
     auto UsefullColumnForAggrAndOutput = std::make_unique<std::unordered_set<const ColonneNamesSet*>>();
 
     bool IsAgregate = false;
@@ -102,21 +103,21 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
                 tables_secondaires.push_back(ConvertToStandardTableName(j.getTable(), *variation_of_tablename_to_main_table_name));
 
-                std::unique_ptr<ColonneNamesSet> colonne_gauche = (ConvertToStandardColumnName(*TablePrincipaleNom, j.getLeftColumn(), *variation_of_tablename_to_main_table_name));
+                ColonneNamesSet* colonne_gauche = (ConvertToStandardColumnName(*TablePrincipaleNom, j.getLeftColumn(), *variation_of_tablename_to_main_table_name));
 
-                std::unique_ptr<ColonneNamesSet> colonne_droite = (ConvertToStandardColumnName(*TablePrincipaleNom, j.getRightColumn(), *variation_of_tablename_to_main_table_name));
+                ColonneNamesSet* colonne_droite = (ConvertToStandardColumnName(*TablePrincipaleNom, j.getRightColumn(), *variation_of_tablename_to_main_table_name));
 
                 std::unordered_set<ColonneNamesSet*>* sd = TableNameToColumnList.at(colonne_droite->GetTableSet()->GetMainName());
 
-                sd->insert(colonne_droite.get());
+                sd->insert(colonne_droite);
 
                 std::unordered_set<ColonneNamesSet*>* sg = TableNameToColumnList.at(colonne_gauche->GetTableSet()->GetMainName());
 
-                sg->insert(colonne_gauche.get());
+                sg->insert(colonne_gauche);
 
                 Comparateur condition = Comparateur(Parsing::LogicalOperator::EQ); // dans tout les cas c'est un égal
 
-                Join* jointure = new Join(condition, *colonne_gauche.get(), *colonne_droite.get());
+                Join* jointure = new Join(condition, *colonne_gauche, *colonne_droite);
 
                 join_list.push_back(jointure);
             } else {
@@ -133,15 +134,32 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
             } else { // il faut savoir de quelle table vient cette colonne
                 if (arg.m_Field.has_value()) { // on vérifie que y'as bien une valeur, c'est un type optional
-                    auto NomColonne = (ConvertToStandardColumnName(*TablePrincipaleNom, &(arg.m_Field.value()), *variation_of_tablename_to_main_table_name));
+                    auto col = (ConvertToStandardColumnName(*TablePrincipaleNom, &(arg.m_Field.value()), *variation_of_tablename_to_main_table_name));
 
-                    UsefullColumnForAggrAndOutput->insert(NomColonne.get());
+                    UsefullColumnForAggrAndOutput->insert(col);
 
-                    std::unordered_set<ColonneNamesSet*>* s = TableNameToColumnList.at(NomColonne->GetTableSet()->GetMainName());
+                    std::unordered_set<ColonneNamesSet*>* s;
 
-                    s->insert(NomColonne.get());
+                 
 
-                    colonnes_de_retour->push_back(ReturnType(*NomColonne.get(), Parsing::AggrFuncType::NOTHING_F));
+                     if (TableNameToColumnList.contains(col->GetTableSet()->GetMainName()))
+                     {
+                         s = TableNameToColumnList.at(col->GetTableSet()->GetMainName());
+
+                         s->insert(col);
+                     } else {
+                        s = new std::unordered_set<ColonneNamesSet*>;
+
+
+
+
+                        s->insert(col);
+
+                        TableNameToColumnList.insert({
+                            col->GetTableSet()->GetMainName(), s});
+                     }
+
+                    colonnes_de_retour->emplace_back(std::move(*col), Parsing::AggrFuncType::NOTHING_F);
 
                 } else {
                     // bizare, c'est normalement impossible
@@ -153,17 +171,17 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
             if (!arg.isAll()) {
                 // on vérifie que y'as bien une valeur, c'est un type optinal
-                std::unique_ptr<ColonneNamesSet> NomColonne = ConvertToStandardColumnName(*TablePrincipaleNom, arg.getColumnName(), *variation_of_tablename_to_main_table_name);
+                ColonneNamesSet* NomColonne = ConvertToStandardColumnName(*TablePrincipaleNom, arg.getColumnName(), *variation_of_tablename_to_main_table_name);
 
                 std::unordered_set<ColonneNamesSet*>* s = TableNameToColumnList.at(NomColonne->GetTableSet()->GetMainName());
 
-                s->insert(NomColonne.get());
+                s->insert(NomColonne);
 
-                colonnes_de_retour->push_back(ReturnType(*NomColonne.get(), arg.getType()));
+                colonnes_de_retour->push_back(ReturnType(*NomColonne, arg.getType()));
 
                 IsAgregate = true;
 
-                UsefullColumnForAggrAndOutput->insert(NomColonne.get());
+                UsefullColumnForAggrAndOutput->insert(NomColonne);
 
             } else {
                 std::cout << "y'as une étoile\n"
@@ -187,15 +205,15 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             std::vector<std::reference_wrapper<const ColonneNamesSet>> ColumnGroupByed = {};
 
             for (auto e : Groupby->getByItems()) {
-                std::unique_ptr<ColonneNamesSet> NomColonne = ConvertToStandardColumnName(*TablePrincipaleNom, e.getColName(), *variation_of_tablename_to_main_table_name);
+                ColonneNamesSet* NomColonne = ConvertToStandardColumnName(*TablePrincipaleNom, e.getColName(), *variation_of_tablename_to_main_table_name);
 
                 std::unordered_set<ColonneNamesSet*>* s = TableNameToColumnList.at(NomColonne->GetTableSet()->GetMainName());
 
-                s->insert(NomColonne.get());
+                s->insert(NomColonne);
 
-                ColumnGroupByed.push_back(*NomColonne.get());
+                ColumnGroupByed.push_back(*NomColonne);
 
-                UsefullColumnForAggrAndOutput->insert(NomColonne.get());
+                UsefullColumnForAggrAndOutput->insert(NomColonne);
             }
 
             AppliqueAggr
@@ -215,12 +233,12 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         std::vector<std::pair<std::reference_wrapper<const ColonneNamesSet>, bool>> OrderVect = {};
 
         for (auto e : order->getByItems()) {
-            std::unique_ptr<ColonneNamesSet> NomColonne = ConvertToStandardColumnName(*TablePrincipaleNom, e.getColName(), *variation_of_tablename_to_main_table_name);
+            ColonneNamesSet* NomColonne = ConvertToStandardColumnName(*TablePrincipaleNom, e.getColName(), *variation_of_tablename_to_main_table_name);
 
             bool est_présent = false;
 
             for (auto& x : *colonnes_de_retour) {
-                if (x.GetColonne() == *NomColonne.get()) {
+                if (x.GetColonne() == *NomColonne) {
                     est_présent = true;
                 }
             }
@@ -230,13 +248,13 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
                 std::unordered_set<ColonneNamesSet*>* s = TableNameToColumnList.at(NomColonne->GetTableSet()->GetMainName());
 
-                s->insert(NomColonne.get());
+                s->insert(NomColonne);
 
-                UsefullColumnForAggrAndOutput->insert(NomColonne.get());
+                UsefullColumnForAggrAndOutput->insert(NomColonne);
             }
 
             // on inverse le Desc car il est vrai si c'est inversé et dans la suite on considère que si c'est vrai alors c'est Asc
-            OrderVect.push_back({ *NomColonne.get(), !e.isDsc() });
+            OrderVect.push_back({ *NomColonne, !e.isDsc() });
         }
 
         AppliqueAggr.AjouteOrderBy(OrderVect);
@@ -292,7 +310,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     std::unordered_set<std::unique_ptr<ColonneNamesSet>> ColonneAlreadyCreate;
 
-    for (auto& colonne_nom : *TableNameToColumnList.at(TablePrincipaleNom->GetMainName())) {
+    for (auto colonne_nom : *TableNameToColumnList.at(TablePrincipaleNom->GetMainName())) {
 
         bool est_déjà_ajouté = false;
 
@@ -317,7 +335,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
 
     // Maintenant que l'on as tout pour la table Principale on la créer
-    std::unique_ptr<MetaTable> table_principale = std::make_unique<MetaTable>(Table(Racines, *TablePrincipaleNom.get()));
+    std::unique_ptr<MetaTable> table_principale = std::make_unique<MetaTable>(Racines, *TablePrincipaleNom.get());
 
     // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
     Node RacineExec = Node(new Proj(std::move(UsefullColumnForAggrAndOutput), *TablePrincipaleNom.get()));

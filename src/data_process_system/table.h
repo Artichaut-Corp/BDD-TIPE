@@ -1,6 +1,8 @@
+#include <cassert>
 #include <memory>
 #include <numeric>
 #include <string>
+#include <sys/wait.h>
 #include <unordered_map>
 #include <vector>
 
@@ -44,10 +46,10 @@ public:
             auto e = std::move(data[i]);
 
             for (auto n : e.GetName().GetAllFullNames()) {
-                m_Map->at(n) = i;
+                m_Map->insert({n,  i});
             }
 
-            m_Map->at(e.GetName().GetMainName()) = i;
+            m_Map->insert({e.GetName().GetMainName(),i});
 
             m_Columns->push_back(std::move(e));
         }
@@ -63,10 +65,15 @@ public:
         m_Indices = std::move(temp);
     }
 
+
     Table(const Table& other)
         : m_Name(other.m_Name)
+
     {
+        assert(other.m_Columns == nullptr);
     }
+
+
 
     const Table&
     operator=(const Table& other)
@@ -174,7 +181,7 @@ public:
             auto& r = m_Columns->at(i);
 
             for (auto n : r.GetName().GetAllFullNames()) {
-                m_Map->at(n) = i;
+                m_Map->insert({n , i});
             }
         }
     }

@@ -294,7 +294,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
     std::string output = "";
 
-    std::shared_ptr<Parsing::Parser> parser = std::make_shared<Parsing::Parser>(input);
+    std::unique_ptr<Parsing::Parser> parser = std::make_unique<Parsing::Parser>(input);
 
     std::variant<Parsing::Statement, Errors::Error> n = parser->Parse();
 

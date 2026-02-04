@@ -41,6 +41,7 @@ public:
 
         m_DataType = col.first;
         m_Data = std::move(col.second);
+       
     }
 
     /*

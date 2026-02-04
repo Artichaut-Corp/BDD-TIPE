@@ -20,7 +20,10 @@ public:
         m_Catalogue = std::make_unique<std::unordered_map<std::string, std::unique_ptr<MetaTable>>>();
 
         for (int i = 0; i < lane.size(); i++) {
-            m_Catalogue->at(lane[i]->GetName()) = std::move(lane[i]);
+
+            const std::string& name = lane[i]->GetName();
+
+            m_Catalogue->insert({ name,  std::move(lane[i])});
         }
     }
 

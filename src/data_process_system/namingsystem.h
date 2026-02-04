@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <unordered_set>
 
@@ -28,16 +29,16 @@ public:
         m_ListOfName.emplace(m_MainName);
     }
 
-    bool TableEqual(const std::shared_ptr<TableNamesSet> other) const noexcept
+    bool TableEqual(const TableNamesSet& other) const noexcept
     {
         for (const auto& e : m_ListOfName) {
-            for (const auto& f : other->m_ListOfName) {
+            for (const auto& f : other.m_ListOfName) {
                 if (e == f) {
                     return true;
                 }
             }
         }
-        return m_MainName == other->m_MainName;
+        return m_MainName == other.m_MainName;
     }
 
     std::string GetMainName() const
@@ -61,7 +62,7 @@ public:
 
 inline bool operator==(const TableNamesSet& first, const TableNamesSet& second)
 {
-    return first.TableEqual(std::make_shared<TableNamesSet>(second));
+    return first.TableEqual(second);
 }
 
 class ColonneNamesSet {
@@ -130,7 +131,7 @@ public:
 
     const std::unordered_set<std::string>& GetAllFullNames() const { return m_ListOfFullName; }
 
-    TableNamesSet* GetTableSet() const { return m_ParentTable.get(); }
+    TableNamesSet* GetTableSet() const { if (m_ParentTable) return m_ParentTable.get(); else throw  std::runtime_error("Column was initialized without parent.");}
 
     bool HaveTableSet() const { return m_ParentTable != nullptr; }
 
