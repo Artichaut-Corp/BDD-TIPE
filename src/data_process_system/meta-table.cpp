@@ -62,6 +62,7 @@ void MetaTable::Projection(std::unique_ptr<std::unordered_set<const ColonneNames
 
     for (auto& t : m_Tables) {
 
+
         for (auto& r : *t.GetColumns()) {
 
             bool to_delete = true;

@@ -59,7 +59,6 @@ MetaTable* Node::Pronf(Ikea* Tables, int type_of_join) // parcours en profondeur
         }
     } else if (std::holds_alternative<Select*>(m_Type)) {
         auto op = std::get<Select*>(m_Type);
-
         if (tFg) {
             result = op->Exec(tFg); // doit retourner Table*
         } else {

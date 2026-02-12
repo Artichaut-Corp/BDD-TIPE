@@ -2,7 +2,7 @@
 
 namespace Database::Utils {
 
-void AfficheResultat(std::unique_ptr<QueryPlanning::MetaTable> table, std::unique_ptr<std::vector<QueryPlanning::ReturnType>> OrdreRetour)
+void AfficheResultat(QueryPlanning::MetaTable* table, std::unique_ptr<std::vector<QueryPlanning::ReturnType>> OrdreRetour)
 {
     if (!table) {
         std::cout << "(table vide)" << std::endl;

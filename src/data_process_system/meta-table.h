@@ -47,15 +47,14 @@ public:
         m_Tables.emplace_back(std::move(table));
     }
 
- MetaTable(std::vector<Racine>& data, const TableNamesSet& name)
+    MetaTable(std::vector<Racine>& data, const TableNamesSet& name)
     {
 
-         m_MapTableNameToTable = std::unordered_map<std::string, int>();
+        m_MapTableNameToTable = std::unordered_map<std::string, int>();
 
-         m_MapColNameToTable = std::unordered_map<std::string, int>();
+        m_MapColNameToTable = std::unordered_map<std::string, int>();
 
         m_Tables = std::vector<Table>();
-
 
         m_Tables.emplace_back(data, name);
 
@@ -69,9 +68,8 @@ public:
             }
         }
 
-
+        std::cout << m_Tables.at(0).Columnsize() << "\n";
     }
-
 
     void Selection(const Parsing::BinaryExpression::Condition& pred, const std::unique_ptr<std::unordered_set<ColonneNamesSet*>> name_columns);
 
@@ -149,7 +147,6 @@ public:
 
         for (int i = 0; i < m_Tables.size(); i++) {
             m_Tables.at(i).Update();
-            std::cout<<m_Tables.at(i).Columnsize();
 
             if (m_Tables.at(i).size() == 0) {
                 // if we delete a Table, we change the size and move all the vector to the left by 1 there fore we need to compensate it
@@ -161,12 +158,12 @@ public:
             } else {
 
                 for (auto n : m_Tables.at(i).GetName().GetAllNames()) {
-                    m_MapTableNameToTable.insert({n, i});
+                    m_MapTableNameToTable.insert({ n, i });
                 }
 
                 for (auto& r : *m_Tables.at(i).GetColumns()) {
                     for (auto s : r.GetName().GetAllFullNames()) {
-                        m_MapColNameToTable.insert({s, i});
+                        m_MapColNameToTable.insert({ s, i });
                     }
                 }
             }

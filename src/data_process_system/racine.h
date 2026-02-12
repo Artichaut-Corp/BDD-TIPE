@@ -41,16 +41,59 @@ public:
 
         m_DataType = col.first;
         m_Data = std::move(col.second);
-       
     }
 
+    Racine(Racine&& other) noexcept = default;
+
+    Racine& operator=(Racine&&) noexcept = default;
+
+    Racine& operator=(const Racine&) = delete;
+
+    Racine(const Racine& other) = delete;
     /*
       Racine(const Racine& other)
-          : m_ColumnName(std::move(other.m_ColumnName))
+          : m_ColumnName(std::move(other.m_ColumnName.get()))
+          , m_DataType(other.m_DataType)
       {
-          m_Data = std::move(other.m_Data);
+
+          Column* col = new Column();
+
+          switch (other.m_DataType) {
+          case DbElemType::DbNull:
+              break;
+          case DbElemType::DbBool:
+              m_Data = std::move( std::get<std::unique_ptr<std::vector<DbBool>>>(other.m_Data));
+              break;
+          case DbElemType::DbInt8:
+              m_Data = std::get<std::unique_ptr<std::vector<DbInt8>>>(other.m_Data);
+          case DbElemType::DbUInt8:
+              m_Data = std::get<std::unique_ptr<std::vector<DbUInt8>>>(other.m_Data);
+          case DbElemType::DbInt16:
+              m_Data = std::get<std::unique_ptr<std::vector<DbInt16>>>(other.m_Data);
+          case DbElemType::DbUInt16:
+              m_Data = std::get<std::unique_ptr<std::vector<DbUInt16>>>(other.m_Data);
+          case DbElemType::DbInt:
+              m_Data = std::get<std::unique_ptr<std::vector<DbInt>>>(other.m_Data);
+          case DbElemType::DbUInt:
+              m_Data = std::get<std::unique_ptr<std::vector<DbUInt>>>(other.m_Data);
+          case DbElemType::DbInt64:
+              m_Data = std::get<std::unique_ptr<std::vector<DbInt64>>>(other.m_Data);
+          case DbElemType::DbUInt64:
+              m_Data = std::get<std::unique_ptr<std::vector<DbUInt64>>>(other.m_Data);
+          case DbElemType::DbFloat:
+              m_Data = std::get<std::unique_ptr<std::vector<DbFloat>>>(other.m_Data);
+          case DbElemType::DbFloat64:
+              m_Data = std::get<std::unique_ptr<std::vector<DbFloat64>>>(other.m_Data);
+          case DbElemType::DbChar:
+              m_Data = std::get<std::unique_ptr<std::vector<DbChar>>>(other.m_Data);
+          case DbElemType::DbString:
+              m_Data = std::get<std::unique_ptr<std::vector<DbString>>>(other.m_Data);
+          default:
+              m_Data = Column();
+          }
       }
-  */
+
+    */
 
     template <typename T = DbElemType>
     inline T GetValueOfType(int i) const

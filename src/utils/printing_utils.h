@@ -37,7 +37,7 @@ inline void print_cell(const std::string& s, int width)
 }
 
 // Fonction d’affichage du résultat
-void AfficheResultat(std::unique_ptr<QueryPlanning::MetaTable> table, std::unique_ptr<std::vector<QueryPlanning::ReturnType>> OrdreRetour);
+void AfficheResultat(QueryPlanning::MetaTable* table, std::unique_ptr<std::vector<QueryPlanning::ReturnType>> OrdreRetour);
 
 void AfficheAgreg(
     std::unique_ptr<std::unordered_map<std::string, std::unique_ptr<std::vector<ColumnData>>>> ColumnNameToValues,

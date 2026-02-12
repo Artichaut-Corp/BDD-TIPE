@@ -38,6 +38,8 @@ public:
 
         m_Columns = std::make_unique<std::vector<Racine>>();
 
+        size_t data_size = data.at(0).size();
+
         m_Map->reserve(data.size());
 
         m_Columns->reserve(data.size());
@@ -46,25 +48,24 @@ public:
             auto e = std::move(data[i]);
 
             for (auto n : e.GetName().GetAllFullNames()) {
-                m_Map->insert({n,  i});
+                m_Map->insert({ n, i });
             }
 
-            m_Map->insert({e.GetName().GetMainName(),i});
+            m_Map->insert({ e.GetName().GetMainName(), i });
 
             m_Columns->push_back(std::move(e));
         }
 
         auto temp = std::make_unique<std::vector<int>>();
 
-        temp->reserve(data[0].size());
+        temp->reserve(data_size);
 
-        for (int i = 0; i < data[0].size(); i++) {
+        for (int i = 0; i < data_size; i++) {
             temp->emplace_back(i);
         }
 
         m_Indices = std::move(temp);
     }
-
 
     Table(const Table& other)
         : m_Name(other.m_Name)
@@ -72,8 +73,6 @@ public:
     {
         assert(other.m_Columns == nullptr);
     }
-
-
 
     const Table&
     operator=(const Table& other)
@@ -181,7 +180,7 @@ public:
             auto& r = m_Columns->at(i);
 
             for (auto n : r.GetName().GetAllFullNames()) {
-                m_Map->insert({n , i});
+                m_Map->insert({ n, i });
             }
         }
     }

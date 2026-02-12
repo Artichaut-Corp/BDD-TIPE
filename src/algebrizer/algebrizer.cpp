@@ -24,7 +24,7 @@ namespace Database::QueryPlanning {
 
 ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, Database::Parsing::ColumnName* colonne, std::unordered_map<std::string, std::unique_ptr<TableNamesSet>>& variation_of_tablename_to_main_table_name)
 {
-   ColonneNamesSet* standard_name = nullptr;
+    ColonneNamesSet* standard_name = nullptr;
 
     if (colonne->HaveTable()) {
 
@@ -140,24 +140,17 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
                     std::unordered_set<ColonneNamesSet*>* s;
 
-                 
+                    if (TableNameToColumnList.contains(col->GetTableSet()->GetMainName())) {
+                        s = TableNameToColumnList.at(col->GetTableSet()->GetMainName());
 
-                     if (TableNameToColumnList.contains(col->GetTableSet()->GetMainName()))
-                     {
-                         s = TableNameToColumnList.at(col->GetTableSet()->GetMainName());
-
-                         s->insert(col);
-                     } else {
+                        s->insert(col);
+                    } else {
                         s = new std::unordered_set<ColonneNamesSet*>;
-
-
-
 
                         s->insert(col);
 
-                        TableNameToColumnList.insert({
-                            col->GetTableSet()->GetMainName(), s});
-                     }
+                        TableNameToColumnList.insert({ col->GetTableSet()->GetMainName(), s });
+                    }
 
                     colonnes_de_retour->emplace_back(std::move(*col), Parsing::AggrFuncType::NOTHING_F);
 
@@ -337,12 +330,15 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     // Maintenant que l'on as tout pour la table Principale on la créer
     std::unique_ptr<MetaTable> table_principale = std::make_unique<MetaTable>(Racines, *TablePrincipaleNom.get());
 
+    std::cout << table_principale->Columnsize() << "\n";
+
     // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
     Node RacineExec = Node(new Proj(std::move(UsefullColumnForAggrAndOutput), *TablePrincipaleNom.get()));
 
     std::vector<std::unique_ptr<MetaTable>> Tables;
 
     // on enregiste la table principale
+    std::cout << table_principale->Columnsize() << std::endl;
     Tables.push_back(std::move(table_principale));
 
     auto RacineMainTable = &RacineExec;
@@ -430,7 +426,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         }
     }
 
-    Ikea* Magasin = new Ikea(Tables);
+    auto Magasin = std::make_unique<Ikea>(Tables);
 
     if (benchmarking == 0) {
         RacineExec.printBT(std::cout);
@@ -532,7 +528,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         }
     }
     if (where != NULL and descend_select == 1) {
-        RacineExec.SelectionDescent(Magasin, MainSelect);
+        RacineExec.SelectionDescent(Magasin.get(), MainSelect);
         if (benchmarking == 0) {
             std::cout << "\n en descendant les sélections on a : \n";
 
@@ -552,7 +548,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     std::chrono::high_resolution_clock::time_point fin;
 
-    std::unique_ptr<MetaTable> Table_Finale = std::unique_ptr<MetaTable>(RacineExec.Pronf(Magasin, type_of_join));
+    std::unique_ptr<MetaTable> Table_Finale = std::unique_ptr<MetaTable>(RacineExec.Pronf(Magasin.get(), type_of_join));
 
     auto endTime = std::chrono::high_resolution_clock::now();
 
@@ -562,13 +558,15 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         fin = std::chrono::high_resolution_clock::now();
 
         if (benchmarking == 0) {
-            Utils::AfficheResultat(std::move(Table_Finale), std::move(colonnes_de_retour));
+            Utils::AfficheResultat(Table_Finale.get(), std::move(colonnes_de_retour));
         }
     }
 
     if (benchmarking == 1) {
         std::ofstream file;
+
         file.open("../script/data.csv", std::ios::app);
+
         if (!file.is_open()) {
             std::cout << "Error: File not found or could not be opened." << std::endl;
         } else {
@@ -578,4 +576,4 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         file.close();
     }
 }
-};
+}
