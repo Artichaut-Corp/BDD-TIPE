@@ -31,6 +31,12 @@ public:
 
         return value;
     }
+    const T& first()
+    {        
+        const T& value = m_Data.get_first().value();
+
+        return value;
+    }
 };
 
 } // namespace Database::Utils

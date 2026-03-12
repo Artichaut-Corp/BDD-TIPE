@@ -27,15 +27,21 @@ private:
     std::unique_ptr<std::unordered_set<ColonneNamesSet*>> m_Cols;
 
 public:
-    Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>> cols, Parsing::BinaryExpression::Condition& cond, const TableNamesSet& Table)
+    Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>> cols, Parsing::BinaryExpression::Condition cond, const TableNamesSet& Table)
         : TableNameToExec(Table)
         , m_Cols(std::move(cols))
         , m_Conds(cond)
 
     {
     };
+    Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>> cols, Parsing::BinaryExpression::Condition* cond, const TableNamesSet& Table)
+        : TableNameToExec(Table)
+        , m_Cols(std::move(cols))
+        , m_Conds(*cond)
 
-    const std::reference_wrapper<Parsing::BinaryExpression::Condition> GetCond() const { return m_Conds; }
+    {
+    };
+    const std::reference_wrapper<Parsing::BinaryExpression::Condition> GetCond() const  { return m_Conds.get(); }
 
     MetaTable* Exec(MetaTable* table)
 

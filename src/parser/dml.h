@@ -305,7 +305,7 @@ public:
 
             return std::get<Parsing::BinaryExpression>(m_Condition).Column();
         } else {
-
+            
             std::get<Parsing::Clause>(m_Condition).FormatColumnName(table_name);
 
             return std::get<Parsing::Clause>(m_Condition).Column();

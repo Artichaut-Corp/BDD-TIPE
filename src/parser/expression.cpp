@@ -515,8 +515,8 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
 
     if (column_used_r != nullptr && column_used_r->GetMainName() != "")
         col_used->emplace(column_used_r.get());
-
-    return new Clause(std::get<LogicalOperator>(op), std::move(lhs), std::move(rhs), std::move(col_used));
+    auto temp =new  Clause(std::get<LogicalOperator>(op), std::move(lhs), std::move(rhs), std::move(col_used));
+    return temp;
 }
 
 /*
@@ -619,9 +619,9 @@ BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer*
             if (!arg_pile.empty()) {
                 Condition* rhs = arg_pile.pop();
 
-                Condition bexpr = BinaryExpression(op_pile.pop(), lhs, rhs, MergeColumns(*lhs, *rhs).get());
+                auto bexpr =new Condition( BinaryExpression(op_pile.pop(), lhs, rhs, MergeColumns(*lhs, *rhs).get()));
 
-                arg_pile.push(&bexpr);
+                arg_pile.push(bexpr);
 
             } else {
                 arg_pile.push(lhs);
@@ -631,9 +631,9 @@ BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer*
         case Database::Lexing::TokenType::STRING_LITT_T:
         case Database::Lexing::TokenType::NUM_LITT_T:
         case Database::Lexing::TokenType::FLOAT_LITT_T: {
-            auto cl = Condition(std::in_place_index<1>, std::move(*Clause::ParseClause(t)));
+            auto cl = new Condition(std::in_place_index<1>, std::move(*Clause::ParseClause(t)));
 
-            arg_pile.push(&cl);
+            arg_pile.push(cl);
         } break;
         case Database::Lexing::TokenType::OR_T: {
             op_pile.push(LogicalOperator::OR);
@@ -650,7 +650,7 @@ BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer*
                 throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected clause after AND/OR", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
             }
 
-            return arg_pile.pop();
+            return  arg_pile.pop();
         } break;
         }
     } while (nb_count_equal_zero != 2);

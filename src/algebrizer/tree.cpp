@@ -165,7 +165,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                 // identification des colonnes encore existante dans la condition
                 std::unordered_set<ColonneNamesSet*>* ColumnInCond;
 
-                auto MainCond = MainSelect->GetCond();
+                std::reference_wrapper<Parsing::BinaryExpression::Condition> MainCond = MainSelect->GetCond();
 
                 if (std::holds_alternative<Parsing::Clause>(MainCond.get())) {
                     ColumnInCond = std::get<Parsing::Clause>(MainCond.get()).Column();
@@ -180,8 +180,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
 
                     auto& temp = m_Fg;
 
-                    m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond),
-                        MainCond, jointure->GetLTable()));
+                    m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), &MainCond.get(), jointure->GetLTable()));
 
                     // on insère la selection entre ce noeud, et le noeud d'en dessous
                     m_Fg->AddChild(true, temp.get());
@@ -215,7 +214,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                     if (!std::holds_alternative<std::monostate>(RecupGauche)) { // ce qu'on as extrait n'est pas vide
                         auto temp = std::move(m_Fg);
 
-                        m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
+                        m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondGauche), std::move(RecupGauche), jointure->GetLTable()));
 
                         // on insère la selection entre ce noeud, et le noeud d'en dessous
                         m_Fg->AddChild(true, temp.get());
@@ -252,7 +251,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
 
                     auto temp = std::move(m_Fd);
 
-                    m_Fd = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), MainCond, jointure->GetRTable()));
+                    m_Fd = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), &MainCond.get(), jointure->GetRTable()));
 
                     // on insère la selection entre ce noeud, et le noeud d'en dessous
                     m_Fd->AddChild(false, temp.get());
@@ -289,7 +288,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
 
                         auto temp = std::move(m_Fg);
 
-                        m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
+                        m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondDroit), std::move(RecupDroit), jointure->GetLTable()));
 
                         // on insère la selection entre ce noeud, et le noeud d'en dessous
                         m_Fg->AddChild(true, temp.get());
@@ -331,7 +330,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                     if (Utils::is_subset(ColumnInCond, SFg)) { // on peut tout mettre en bas à gauche
                         MainSelect->NullifyCond();
 
-                        m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), MainCond, jointure->GetLTable()));
+                        m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), &MainCond.get(), jointure->GetLTable()));
 
                         // on a descendu la condition entierrement, on remonte l'arbre
                         return nullptr;
@@ -359,7 +358,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                         }
 
                         if (!std::holds_alternative<std::monostate>(RecupGauche)) { // ce qu'on as extrait n'est pas vide
-                            m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondGauche), RecupGauche, jointure->GetLTable()));
+                            m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondGauche), std::move(RecupGauche), jointure->GetLTable()));
                         }
                     }
                 }
@@ -387,7 +386,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
 
                     if (Utils::is_subset(ColumnInCond, SFd)) { // on peut tout mettre en bas à droite
                         MainSelect->NullifyCond();
-                        m_Fd = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), MainCond, jointure->GetRTable()));
+                        m_Fd = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), &MainCond.get(), jointure->GetRTable()));
 
                         return nullptr; // on a descendu la condition entierrement, on remonte l'arbre
 
@@ -412,7 +411,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                         }
 
                         if (!std::holds_alternative<std::monostate>(RecupDroit)) { // ce qu'on as extrait n'est pas vide
-                            m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondDroit), RecupDroit, jointure->GetLTable()));
+                            m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondDroit), std::move(RecupDroit), jointure->GetLTable()));
                         }
                     }
                 }

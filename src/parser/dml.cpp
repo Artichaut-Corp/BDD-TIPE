@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <sys/select.h>
+#include <utility>
 #include <variant>
 
 namespace Database::Parsing {
@@ -378,8 +379,9 @@ std::variant<OrderByClause*, Errors::Error> OrderByClause::ParseOrderBy(Lexing::
 WhereClause* WhereClause::ParseWhere(Lexing::Tokenizer* t)
 {
 
-    auto tok = t->peek();
-    return new WhereClause(*BinaryExpression::ParseCondition(t));
+    auto tok = t->peek();  
+
+    return std::move( new WhereClause(*BinaryExpression::ParseCondition(t)));
 }
 
 DeleteStmt* DeleteStmt::ParseDelete(Lexing::Tokenizer* t)

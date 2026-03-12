@@ -179,12 +179,12 @@ public:
 
     void FusionMetaTable(MetaTable& other)
     {
-        auto other_tables = std::move(other.m_Tables);
+        int nbr_other_tabeles = other.m_Tables.size();
 
-        m_Tables.reserve(other_tables.size());
-
-        for (int i = 0; i < other_tables.size(); i++) {
-            m_Tables.emplace_back(std::move(other_tables.at(i)));
+        m_Tables.reserve(nbr_other_tabeles);
+        
+        for (int i = 0; i < nbr_other_tabeles; i++) {
+            m_Tables.emplace_back(std::move(other.m_Tables.at(i)));
         }
 
         UpdateMetaTable();

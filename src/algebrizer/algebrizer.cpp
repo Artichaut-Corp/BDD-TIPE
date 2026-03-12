@@ -106,10 +106,16 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 ColonneNamesSet* colonne_gauche = (ConvertToStandardColumnName(*TablePrincipaleNom, j.getLeftColumn(), *variation_of_tablename_to_main_table_name));
 
                 ColonneNamesSet* colonne_droite = (ConvertToStandardColumnName(*TablePrincipaleNom, j.getRightColumn(), *variation_of_tablename_to_main_table_name));
+                if(!TableNameToColumnList.contains(colonne_droite->GetTableSet()->GetMainName())){
+                    TableNameToColumnList.emplace(colonne_droite->GetTableSet()->GetMainName(), new std::unordered_set<ColonneNamesSet*> ());
+                }
+                TableNameToColumnList.at(colonne_droite->GetTableSet()->GetMainName())->emplace(colonne_droite);
 
-                std::unordered_set<ColonneNamesSet*>* sd = TableNameToColumnList.at(colonne_droite->GetTableSet()->GetMainName());
 
-                sd->insert(colonne_droite);
+                if(!TableNameToColumnList.contains(colonne_gauche->GetTableSet()->GetMainName())){
+                    TableNameToColumnList.emplace(colonne_gauche->GetTableSet()->GetMainName(),new std::unordered_set<ColonneNamesSet*> ());
+                }
+                TableNameToColumnList.at(colonne_gauche->GetTableSet()->GetMainName())->emplace(colonne_gauche);
 
                 std::unordered_set<ColonneNamesSet*>* sg = TableNameToColumnList.at(colonne_gauche->GetTableSet()->GetMainName());
 
@@ -277,6 +283,8 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
         ConditionColumn = where->GetConditionColumnNames(TablePrincipaleNom.get());
 
+        cond = std::move(where->m_Condition);
+
         for (auto& NomColonne : *ConditionColumn) {
 
             bool est_présent = false;
@@ -395,7 +403,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             }
 
             // Maintenant que l'on as tout pour la table Principale on la créer
-            std::unique_ptr<MetaTable> table_secondaire = std::make_unique<MetaTable>(Table(Racines, *tables_secondaires[i].get()));
+            std::unique_ptr<MetaTable> table_secondaire = std::make_unique<MetaTable>(Racines, *tables_secondaires[i].get());
 
             Tables.push_back(std::move(table_secondaire));
 
