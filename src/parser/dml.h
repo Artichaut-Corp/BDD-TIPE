@@ -286,12 +286,10 @@ public:
 
 class WhereClause {
 public:
-    BinaryExpression::Condition m_Condition;
+    BinaryExpression::Condition* m_Condition;
 
-    WhereClause(BinaryExpression::Condition& cond)
-        : m_Condition(
-              BinaryExpression::
-                  Condition(std::move(cond)))
+    WhereClause(BinaryExpression::Condition* cond)
+        : m_Condition(cond)
     {
     }
 
@@ -299,16 +297,16 @@ public:
 
     std::unordered_set<QueryPlanning::ColonneNamesSet*>* GetConditionColumnNames(QueryPlanning::TableNamesSet* table_name)
     {
-        if (std::holds_alternative<Parsing::BinaryExpression>(m_Condition)) {
+        if (std::holds_alternative<Parsing::BinaryExpression>(*m_Condition)) {
 
-            std::get<Parsing::BinaryExpression>(m_Condition).FormatColumnName(table_name);
+            std::get<Parsing::BinaryExpression>(*m_Condition).FormatColumnName(table_name);
 
-            return std::get<Parsing::BinaryExpression>(m_Condition).Column();
+            return std::get<Parsing::BinaryExpression>(*m_Condition).Column();
         } else {
             
-            std::get<Parsing::Clause>(m_Condition).FormatColumnName(table_name);
+            std::get<Parsing::Clause>(*m_Condition).FormatColumnName(table_name);
 
-            return std::get<Parsing::Clause>(m_Condition).Column();
+            return std::get<Parsing::Clause>(*m_Condition).Column();
         }
     }
 };

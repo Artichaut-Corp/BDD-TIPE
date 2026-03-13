@@ -4,6 +4,7 @@
 
 #include "pred.h"
 
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <unordered_set>
@@ -41,7 +42,7 @@ public:
 
     {
     };
-    const std::reference_wrapper<Parsing::BinaryExpression::Condition> GetCond() const  { return m_Conds.get(); }
+    const std::reference_wrapper<Parsing::BinaryExpression::Condition> GetCond() const  { return m_Conds; }
 
     MetaTable* Exec(MetaTable* table)
 

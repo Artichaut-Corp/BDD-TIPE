@@ -71,6 +71,7 @@ MetaTable* Node::Pronf(Ikea* Tables, int type_of_join) // parcours en profondeur
     return result;
 }
 
+
 void Node::printBT(const std::string& prefix, const Node* node, bool isLeft, std::ostream& out)
 {
     if (node != nullptr) {

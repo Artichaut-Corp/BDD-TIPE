@@ -47,6 +47,7 @@ ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, 
     return standard_name;
 }
 
+
 std::unique_ptr<TableNamesSet> ConvertToStandardTableName(Database::Parsing::TableName* Table, std::unordered_map<std::string, std::unique_ptr<TableNamesSet>>& variation_of_tablename_to_main_table_name)
 {
     std::unique_ptr<TableNamesSet> standard_name = std::make_unique<TableNamesSet>(Table->getTableName());
@@ -276,15 +277,14 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     std::unordered_set<ColonneNamesSet*>* ConditionColumn;
 
-    Parsing::BinaryExpression::Condition cond; // those variable are used two times,
+    Parsing::BinaryExpression::Condition* cond; // those variable are used two times,
 
     // il faut ajouter les colonnes utilisé dans la conditions avant de créer la table principale
     if (where != nullptr) {
 
         ConditionColumn = where->GetConditionColumnNames(TablePrincipaleNom.get());
 
-        cond = std::move(where->m_Condition);
-
+        cond = where->m_Condition;
         for (auto& NomColonne : *ConditionColumn) {
 
             bool est_présent = false;
@@ -349,7 +349,8 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     std::cout << table_principale->Columnsize() << std::endl;
     Tables.push_back(std::move(table_principale));
 
-    auto RacineMainTable = &RacineExec;
+    auto RacineMainTable = std::unique_ptr<Node>(&RacineExec);
+    std::unique_ptr<Node> Node_Select;
 
     std::unordered_map<std::string, std::pair<Node*, bool>> TableToRootOfTableMap; // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
     TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>((&RacineExec), true);
@@ -357,15 +358,15 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     // il faut maintenant récupérer les conditions càd les where
     if (where != NULL) {
         // une foit la racine de l'arbre d'éxécution définie, on peut lui ajouter une selection si nécessaire
-        MainSelect = new Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>>(ConditionColumn), cond, *TablePrincipaleNom.get());
+        auto temp =  std::move(cond);
+        MainSelect = new Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>>(ConditionColumn),temp, *TablePrincipaleNom.get());
 
-        auto Node_Select = std::make_unique<Node>(MainSelect);
+        Node_Select = std::make_unique<Node>(MainSelect);
 
         RacineExec.AddChild(true, Node_Select.get());
 
         TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>(Node_Select.get(), true);
 
-        RacineMainTable = Node_Select.get();
     }
 
     if (!tables_secondaires.empty()) { // si il y as des join
@@ -528,7 +529,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             last = uf.AddElem(joinandrc.first);
         }
 
-        RacineMainTable->AddChild(true, last);
         if (benchmarking == 0) {
             std::cout << "\n en Optimisant le plan en fonction des RC on a : \n";
 
@@ -556,17 +556,17 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     std::chrono::high_resolution_clock::time_point fin;
 
-    std::unique_ptr<MetaTable> Table_Finale = std::unique_ptr<MetaTable>(RacineExec.Pronf(Magasin.get(), type_of_join));
+    MetaTable* Table_Finale = RacineExec.Pronf(Magasin.get(), type_of_join);
 
     auto endTime = std::chrono::high_resolution_clock::now();
 
     if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
-        fin = AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale.get(), benchmarking);
+        fin = AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale, benchmarking);
     } else {
         fin = std::chrono::high_resolution_clock::now();
 
         if (benchmarking == 0) {
-            Utils::AfficheResultat(Table_Finale.get(), std::move(colonnes_de_retour));
+            Utils::AfficheResultat(Table_Finale, std::move(colonnes_de_retour));
         }
     }
 

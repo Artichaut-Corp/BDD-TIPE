@@ -135,6 +135,14 @@ using IndexedColumn = std::pair<
         std::unique_ptr<std::vector<DbUInt64>>>,
     std::unique_ptr<std::vector<DbString>>>;
 
+template<typename T>
+constexpr bool is_numeric_v =
+    std::is_same_v<T, DbInt8>  || std::is_same_v<T, DbUInt8>  ||
+    std::is_same_v<T, DbInt16> || std::is_same_v<T, DbUInt16> ||
+    std::is_same_v<T, DbInt>   || std::is_same_v<T, DbUInt>   ||
+    std::is_same_v<T, DbInt64> || std::is_same_v<T, DbUInt64> ||
+    std::is_same_v<T, DbFloat> || std::is_same_v<T, DbFloat64>;
+
 using TypedColumn = std::pair<DbElemType, Column>;
 
 using ColumnR = std::variant<

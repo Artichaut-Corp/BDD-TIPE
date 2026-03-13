@@ -59,7 +59,28 @@ inline std::string_view to_string_view(const DbString& arr)
     }
     return std::string_view(reinterpret_cast<const char*>(arr.data()), len);
 }
-// Compare two ColumnData
+
+
+inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
+{
+    return std::visit([](const auto& a, const auto& b) -> bool {
+        using A = std::decay_t<decltype(a)>;
+        using B = std::decay_t<decltype(b)>;
+
+        if constexpr (is_numeric_v<A> && is_numeric_v<B>) {
+            return static_cast<DbFloat64>(a) == static_cast<DbFloat64>(b);
+        }
+        else if constexpr (std::is_same_v<A, DbString> && std::is_same_v<B, DbString>) {
+            return a == b;
+        }
+        else {
+            return false;
+        }
+ }, lhs, rhs);
+}
+
+// Compare two ColumnData 
+/*
 inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
 {
     auto is_integer = [](int idx) { return idx <= 3; };
@@ -68,7 +89,7 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
         auto to_uint64 = [](const auto& v) -> uint64_t {
             return static_cast<uint64_t>(v);
         };
-        /*
+        
           int i = lhs.index();
 
           if (lhs.index() == rhs.index()) {
@@ -126,7 +147,7 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
                       return 0;
                   }
               };
-        */
+        
         uint64_t left_value;
         uint64_t right_value;
 
@@ -160,10 +181,12 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
     throw std::runtime_error("Types incompatibles");
     return false;
 }
+*/ 
 
 // Less than
+/*
 inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
-{ /*
+{ 
      if (lhs.index() == rhs.index()) {
          switch (lhs.index()) {
          case 0:
@@ -190,9 +213,9 @@ inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
              return to_string_view(std::get<10>(lhs)) < to_string_view(std::get<10>(rhs)); // DbString
          }
      }
- */
+ 
     // Si deux entiers différents
-    auto is_integer = [](int idx) { return idx <= 3; };
+    auto is_integer = [](int idx) { return (idx >= 2 && idx <= 6); };
 
     if (is_integer(lhs.index()) && is_integer(rhs.index())) {
         auto to_uint64 = [](const auto& v) -> uint64_t {
@@ -231,6 +254,26 @@ inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
 
     throw std::runtime_error("Types incompatibles");
     return false;
+}
+*/
+
+inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
+{
+    return std::visit([](const auto& a, const auto& b) -> bool {
+        using A = std::decay_t<decltype(a)>;
+        using B = std::decay_t<decltype(b)>;
+
+        if constexpr (is_numeric_v<A> && is_numeric_v<B>) {
+            return static_cast<DbFloat64>(a) < static_cast<DbFloat64>(b);
+        }
+        else if constexpr (std::is_same_v<A, DbString> && std::is_same_v<B, DbString>) {
+            return a < b;
+        }
+        else {
+            return false;
+        }
+
+    }, lhs, rhs);
 }
 
 // Autres opérateurs dérivés
