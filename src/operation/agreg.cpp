@@ -277,18 +277,23 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
 
             auto& ColName = e.GetColonne();
 
-            ColumnNameToValues->at(ColName.GetMainName()) = std::move(ResultVector);
+            ColumnNameToValues->insert({ ColName.GetMainName(), std::move(ResultVector) });
 
             if (e.GetType() != Parsing::AggrFuncType::NOTHING_F) {
 
                 auto t = e.AppliqueOperationOnCol(ColName, table);
 
-                ColumnNameToValues->at(ColName.GetMainName())
-                    ->push_back(t);
+                ColumnNameToValues->at(ColName.GetMainName())->push_back(t);
             } else {
-                for (int i = 0; i < table->Columnsize(); ++i) {
-                    ColumnNameToValues->at(ColName.GetMainName())->push_back(table->GetValue(ColName, i));
-                }
+                if (m_Limite.has_value()) {
+                    for (int i = m_Limite->first; i < std::min(table->Columnsize(), m_Limite->second+m_Limite->first); ++i) {
+                        ColumnNameToValues->at(ColName.GetMainName())->push_back(table->GetValue(ColName, i));
+                    }
+                } else {
+                    for (int i = 0; i < table->Columnsize(); ++i) {
+                        ColumnNameToValues->at(ColName.GetMainName())->push_back(table->GetValue(ColName, i));
+                    }
+                }   
             }
         }
     }

@@ -182,14 +182,14 @@ public:
                 // Text country
                 // Int mandate_beginning
 
-                ColumnInfo pres_first_name = ColumnInfo (DbElemType::DbString, false);
+                ColumnInfo pres_first_name = ColumnInfo(DbElemType::DbString, false);
 
-                ColumnInfo pres_last_name = ColumnInfo( DbElemType::DbString, false);
+                ColumnInfo pres_last_name = ColumnInfo(DbElemType::DbString, false);
 
                 ColumnInfo pres_mandate_beg = ColumnInfo(
                     DbElemType::DbUInt, false);
 
-                ColumnInfo pres_country = ColumnInfo( DbElemType::DbString, false);
+                ColumnInfo pres_country = ColumnInfo(DbElemType::DbString, false);
 
                 auto pres_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "first_name", pres_first_name }, { "last_name", pres_last_name }, { "country", pres_country }, { "mandate_beginning", pres_mandate_beg }
@@ -325,6 +325,8 @@ public:
                 // Add to history
                 replxx_history_add(rx, input.c_str());
             }
+
+            replxx_end(rx);
         } else {
 
             if (Settings.m_Address == "") {

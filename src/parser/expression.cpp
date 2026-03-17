@@ -427,7 +427,7 @@ std::pair<ClauseMember, std::unique_ptr<QueryPlanning::ColonneNamesSet>> Clause:
 
             column_used = std::make_unique<QueryPlanning::ColonneNamesSet>(col_parsed_name->getColumnName(),
                 col_parsed_name->GetAlias(),
-                std::move(table));
+                *std::move(table));
         } else {
             column_used = std::make_unique<QueryPlanning::ColonneNamesSet>(QueryPlanning::ColonneNamesSet(
                 col_parsed_name->getColumnName(),

@@ -22,42 +22,41 @@
 
 namespace Database::QueryPlanning {
 
-ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, Database::Parsing::ColumnName* colonne, std::unordered_map<std::string, std::unique_ptr<TableNamesSet>>& variation_of_tablename_to_main_table_name)
+ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, Database::Parsing::ColumnName* colonne, std::unordered_map<std::string, TableNamesSet*>& variation_of_tablename_to_main_table_name)
 {
     ColonneNamesSet* standard_name = nullptr;
 
     if (colonne->HaveTable()) {
 
-        TableNamesSet* table = variation_of_tablename_to_main_table_name.at(colonne->GetTable()).get();
+        TableNamesSet* table = variation_of_tablename_to_main_table_name.at(colonne->GetTable());
 
         std::string full_name = colonne->getColumnName();
 
         // récupere le nom de cette colonne
-        standard_name = new ColonneNamesSet(full_name, colonne->GetAlias(), std::unique_ptr<TableNamesSet>(table));
+        standard_name = new ColonneNamesSet(full_name, colonne->GetAlias(), *table);
     } else {
         // la colonne n'as pas de nom de table, on en conclut que c'est une colonne de la table principale, il faut donc rajouter le nom de cette table à son identifiant
 
-        auto parent_tbl = std::unique_ptr<TableNamesSet>(&NomTablePrincipale);
 
         standard_name = new ColonneNamesSet(colonne->getColumnName(),
             colonne->GetAlias(),
-            std::move(parent_tbl));
+            NomTablePrincipale);
     }
 
     return standard_name;
 }
 
 
-std::unique_ptr<TableNamesSet> ConvertToStandardTableName(Database::Parsing::TableName* Table, std::unordered_map<std::string, std::unique_ptr<TableNamesSet>>& variation_of_tablename_to_main_table_name)
+std::unique_ptr<TableNamesSet> ConvertToStandardTableName(Database::Parsing::TableName* Table, std::unordered_map<std::string, TableNamesSet*>& variation_of_tablename_to_main_table_name)
 {
     std::unique_ptr<TableNamesSet> standard_name = std::make_unique<TableNamesSet>(Table->getTableName());
 
-    variation_of_tablename_to_main_table_name[standard_name->GetMainName()] = std::unique_ptr<TableNamesSet>(standard_name.get());
+    variation_of_tablename_to_main_table_name[standard_name->GetMainName()] = standard_name.get();
 
     for (auto e : *Table->GetAlias()) {
         standard_name->AddAlias(e);
 
-        variation_of_tablename_to_main_table_name[e] = std::unique_ptr<TableNamesSet>(standard_name.get());
+        variation_of_tablename_to_main_table_name[e] = standard_name.get();
     }
 
     return standard_name;
@@ -75,7 +74,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     int benchmarking = param->at(5);
 
     // Implémentation d'une conversion en arbre d'une query simple
-    auto variation_of_tablename_to_main_table_name = std::make_unique<std::unordered_map<std::string, std::unique_ptr<TableNamesSet>>>();
+    auto variation_of_tablename_to_main_table_name = std::make_unique<std::unordered_map<std::string, TableNamesSet*>>();
 
     // ne peut pas être nullptr
     std::unique_ptr<TableNamesSet> TablePrincipaleNom = ConvertToStandardTableName(Selection->getTable(), *variation_of_tablename_to_main_table_name);
@@ -309,7 +308,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     Racines.reserve(TableNameToColumnList[TablePrincipaleNom->GetMainName()]->size());
 
-    std::unordered_set<std::unique_ptr<ColonneNamesSet>> ColonneAlreadyCreate;
+    std::unordered_set<ColonneNamesSet*> ColonneAlreadyCreate;
 
     for (auto colonne_nom : *TableNameToColumnList.at(TablePrincipaleNom->GetMainName())) {
 
@@ -321,7 +320,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
                 est_déjà_ajouté = true;
 
-                colonne_nom->FusionColumn(*e.get());
+                colonne_nom->FusionColumn(*e);
 
                 break;
             }
@@ -341,29 +340,33 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     std::cout << table_principale->Columnsize() << "\n";
 
     // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
-    Node RacineExec = Node(new Proj(std::move(UsefullColumnForAggrAndOutput), *TablePrincipaleNom.get()));
+    Node* RacineExec = new Node(new Proj(std::move(UsefullColumnForAggrAndOutput), *TablePrincipaleNom.get()));
 
     std::vector<std::unique_ptr<MetaTable>> Tables;
 
     // on enregiste la table principale
     std::cout << table_principale->Columnsize() << std::endl;
+
     Tables.push_back(std::move(table_principale));
 
-    auto RacineMainTable = std::unique_ptr<Node>(&RacineExec);
+    auto RacineMainTable = std::unique_ptr<Node>(RacineExec);
+
     std::unique_ptr<Node> Node_Select;
 
-    std::unordered_map<std::string, std::pair<Node*, bool>> TableToRootOfTableMap; // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
-    TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>((&RacineExec), true);
+     // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
+    std::unordered_map<std::string, std::pair<Node*, bool>> TableToRootOfTableMap;
+    TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>(RacineExec, true);
 
     // il faut maintenant récupérer les conditions càd les where
     if (where != NULL) {
         // une foit la racine de l'arbre d'éxécution définie, on peut lui ajouter une selection si nécessaire
         auto temp =  std::move(cond);
+
         MainSelect = new Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>>(ConditionColumn),temp, *TablePrincipaleNom.get());
 
         Node_Select = std::make_unique<Node>(MainSelect);
 
-        RacineExec.AddChild(true, Node_Select.get());
+        RacineExec->AddChild(true, Node_Select.get());
 
         TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>(Node_Select.get(), true);
 
@@ -390,7 +393,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                     if (*colonne_nom == *e) {
                         est_déjà_ajouté = true;
 
-                        colonne_nom->FusionColumn(*e.get());
+                        colonne_nom->FusionColumn(*e);
                         break;
                     }
                 }
@@ -438,12 +441,12 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     auto Magasin = std::make_unique<Ikea>(Tables);
 
     if (benchmarking == 0) {
-        RacineExec.printBT(std::cout);
+        RacineExec->printBT(std::cout);
     }
 
     if (where != NULL and optimize_BinaryExpr == 1) {
 
-        auto SelectNode = RacineExec.GetLeftPtr();
+        auto SelectNode = RacineExec->GetLeftPtr();
 
         if (SelectNode == nullptr) {
             std::cout << "Absurdité, where n'est pas null mais aucun select n'est présent\n"
@@ -532,31 +535,33 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         if (benchmarking == 0) {
             std::cout << "\n en Optimisant le plan en fonction des RC on a : \n";
 
-            RacineExec.printBT(std::cout);
+            RacineExec->printBT(std::cout);
         }
     }
+
     if (where != NULL and descend_select == 1) {
-        RacineExec.SelectionDescent(Magasin.get(), MainSelect);
+        RacineExec->SelectionDescent(Magasin.get(), MainSelect);
         if (benchmarking == 0) {
             std::cout << "\n en descendant les sélections on a : \n";
 
-            RacineExec.printBT(std::cout);
+            RacineExec->printBT(std::cout);
         }
     }
+
     if (InserProj == 1) {
         auto ColumnToKeep = std::make_unique<std::unordered_set<const ColonneNamesSet*>>();
 
-        RacineExec.InsertProj(ColumnToKeep.get());
+        RacineExec->InsertProj(ColumnToKeep.get());
 
         if (benchmarking == 0) {
             std::cout << "\n en insérant des Projections là où il faut : \n";
-            RacineExec.printBT(std::cout);
+            RacineExec->printBT(std::cout);
         }
     }
 
     std::chrono::high_resolution_clock::time_point fin;
 
-    MetaTable* Table_Finale = RacineExec.Pronf(Magasin.get(), type_of_join);
+    MetaTable* Table_Finale = RacineExec->Pronf(Magasin.get(), type_of_join);
 
     auto endTime = std::chrono::high_resolution_clock::now();
 

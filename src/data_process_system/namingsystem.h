@@ -2,6 +2,7 @@
 #define NAMING_SYSTEM_H
 
 #include <format>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <ostream>
@@ -20,6 +21,8 @@ private:
     std::string m_MainName;
 
 public:
+    TableNamesSet() = default;
+
     explicit TableNamesSet(const std::string& main_name)
         : m_ListOfName()
         , m_NameInMemory(main_name)
@@ -73,7 +76,7 @@ private:
     std::string m_MainName;
 
     // pointeur nullable, ownership externe
-    std::unique_ptr<TableNamesSet> m_ParentTable;
+    std::reference_wrapper<TableNamesSet> m_ParentTable;
 
     // tous les noms possibles (Union entre le main name, alias et pour chaque noms de la table, table.(main name ou alias de la colonne))
     std::unordered_set<std::string> m_ListOfFullName;
@@ -83,25 +86,27 @@ private:
 
 public:
     // Constructeur avec table
-    ColonneNamesSet(std::string mainName_, std::unordered_set<std::string>* aliases, std::unique_ptr<TableNamesSet> table)
+    ColonneNamesSet(std::string mainName_, std::unordered_set<std::string>* aliases, TableNamesSet& table)
         : m_ListOfFullName()
         , m_MainName(mainName_)
         , m_Aliases(*aliases)
-        , m_ParentTable(std::move(table))
+        , m_ParentTable(table)
     {
         m_ListOfFullName.emplace(m_MainName);
+
         for (const auto& alias : m_Aliases) {
             m_ListOfFullName.emplace(alias);
         }
-        if (m_ParentTable) {
-            for (const auto& tName : m_ParentTable->GetAllNames()) {
+
+       
+            for (const auto& tName : table.GetAllNames()) {
                 m_ListOfFullName.emplace(std::format("{}.{}", tName, m_MainName));
                 for (const auto& cName : GetAlias()) {
                     m_MainAlias = cName;
                     m_ListOfFullName.emplace(std::format("{}.{}", tName, cName));
                 }
             }
-        }
+        
     }
 
     // Constructeur sans table (colonne générique)
@@ -109,7 +114,7 @@ public:
         : m_ListOfFullName()
         , m_MainName(std::move(mainName))
         , m_Aliases(std::move(aliases))
-        , m_ParentTable(nullptr)
+        , m_ParentTable(*(new TableNamesSet()))
 
     {
         for (const auto& alias : m_Aliases) {
@@ -121,8 +126,8 @@ public:
 
     std::string GetMainName() const
     {
-        if (m_ParentTable != nullptr) {
-            auto tName = m_ParentTable->GetMainName();
+        if (m_ParentTable.get().GetMainName() != "") {
+            auto tName = m_ParentTable.get().GetMainName();
             return std::format("{}.{}", tName, m_MainName);
         } else {
             return m_MainName;
@@ -131,9 +136,13 @@ public:
 
     const std::unordered_set<std::string>& GetAllFullNames() const { return m_ListOfFullName; }
 
-    TableNamesSet* GetTableSet() const { if (m_ParentTable) return m_ParentTable.get(); else throw  std::runtime_error("Column was initialized without parent.");}
+    TableNamesSet* GetTableSet() const
+    {
+        
+            return &m_ParentTable.get();
+    }
 
-    bool HaveTableSet() const { return m_ParentTable != nullptr; }
+    bool HaveTableSet() const { return m_ParentTable.get().GetMainName() != ""; }
 
     void AddColumn(const std::string& column) { m_ListOfFullName.insert(column); }
 
@@ -144,23 +153,23 @@ public:
 
     void SetTableSet(TableNamesSet* new_table)
     {
-        m_ParentTable = std::unique_ptr<TableNamesSet>(new_table);
+        m_ParentTable = *new_table;
 
-        if (m_ParentTable) {
-            for (const auto& tName : m_ParentTable->GetAllNames()) {
+        
+            for (const auto& tName : m_ParentTable.get().GetAllNames()) {
                 m_ListOfFullName.emplace(std::format("{}.{}", tName, m_MainName));
                 for (const auto& cName : GetAlias()) {
                     m_ListOfFullName.emplace(std::format("{}.{}", tName, cName));
                 }
             }
-        }
+       
     }
 
     std::string GetMainAliasName() const
     {
         if (m_Aliases.size() != 0) {
-            if (m_ParentTable != nullptr) {
-                auto tName = m_ParentTable->GetMainName();
+            if (m_ParentTable.get().GetMainName()  != "") {
+                auto tName = m_ParentTable.get().GetMainName();
                 return std::format("{}.{}", tName, m_MainAlias);
             } else {
                 return m_MainName;
