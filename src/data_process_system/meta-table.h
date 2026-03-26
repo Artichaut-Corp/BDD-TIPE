@@ -16,7 +16,7 @@ namespace Database::QueryPlanning {
 class MetaTable {
 private:
     // contient les noms de toute les tables présente dans la meta-table (de manière unique)
-    std::vector<Table> m_Tables;
+    std::vector<std::unique_ptr<Table>> m_Tables;
 
     // permet de trouver la Table à partir de son nom
     std::unordered_map<std::string, int> m_MapTableNameToTable;
@@ -24,22 +24,22 @@ private:
     std::unordered_map<std::string, int> m_MapColNameToTable;
 
 public:
-    MetaTable(Table table)
+    MetaTable(std::unique_ptr<Table> table)
     {
         m_MapTableNameToTable = std::unordered_map<std::string, int>();
 
         m_MapColNameToTable = std::unordered_map<std::string, int>();
 
-        m_Tables = std::vector<Table>();
+        m_Tables = std::vector<std::unique_ptr<Table>>();
 
         m_Tables.reserve(1);
 
-        for (auto& name : table.GetName().GetAllNames()) {
+        for (auto& name : table->GetName().GetAllNames()) {
             m_MapTableNameToTable.insert({ name, 0 });
         }
 
-        for (auto& r : *table.GetColumns()) {
-            for (auto r : r.GetName().GetAllFullNames()) {
+        for (auto* r : *table->GetColumns()) {
+            for (auto r : r->GetName().GetAllFullNames()) {
                 m_MapColNameToTable.insert({ r, 0 });
             }
         }
@@ -47,28 +47,27 @@ public:
         m_Tables.emplace_back(std::move(table));
     }
 
-    MetaTable(std::vector<Racine>& data, const TableNamesSet& name)
+    MetaTable(std::vector<Racine*>& data, const TableNamesSet& name)
     {
 
         m_MapTableNameToTable = std::unordered_map<std::string, int>();
 
         m_MapColNameToTable = std::unordered_map<std::string, int>();
 
-        m_Tables = std::vector<Table>();
+        m_Tables = std::vector<std::unique_ptr<Table>>();
 
-        m_Tables.emplace_back(data, name);
+        m_Tables.emplace_back(std::make_unique<Table>(data, name));
 
-        for (auto& name : m_Tables.at(0).GetName().GetAllNames()) {
+        for (auto& name : m_Tables.at(0)->GetName().GetAllNames()) {
             m_MapTableNameToTable.insert({ name, 0 });
         }
 
-        for (auto& r : *m_Tables.at(0).GetColumns()) {
-            for (auto r : r.GetName().GetAllFullNames()) {
+        for (auto r : *m_Tables.at(0)->GetColumns()) {
+            for (auto r : r->GetName().GetAllFullNames()) {
                 m_MapColNameToTable.insert({ r, 0 });
             }
         }
 
-        std::cout << m_Tables.at(0).Columnsize() << "\n";
     }
 
     void Selection(const Parsing::BinaryExpression::Condition& pred, const std::unique_ptr<std::unordered_set<ColonneNamesSet*>> name_columns);
@@ -82,12 +81,12 @@ public:
 
     inline int Columnsize() const
     {
-        return m_Tables.at(0).Columnsize();
+        return m_Tables.at(0)->Columnsize();
     }
 
     inline const Table& GetTableFromMap(int i) const
     {
-        return m_Tables.at(i);
+        return *m_Tables.at(i).get();
     }
 
     const Table& GetTableByColName(const ColonneNamesSet& colname) const
@@ -116,7 +115,7 @@ public:
         return m_MapColNameToTable.contains(tested_key.GetMainName());
     }
 
-    std::vector<Table>& GetTableNames() { return m_Tables; }
+    std::vector<std::unique_ptr<Table>>& GetTableNames() { return m_Tables; }
 
     void Sort(const ColonneNamesSet& ColonneToSortBy);
 
@@ -146,9 +145,9 @@ public:
         m_MapColNameToTable.erase(m_MapColNameToTable.begin(), m_MapColNameToTable.end());
 
         for (int i = 0; i < m_Tables.size(); i++) {
-            m_Tables.at(i).Update();
+            m_Tables.at(i)->Update();
 
-            if (m_Tables.at(i).size() == 0) {
+            if (m_Tables.at(i)->size() == 0) {
                 // if we delete a Table, we change the size and move all the vector to the left by 1 there fore we need to compensate it
                 m_Tables.erase(m_Tables.begin()
                     + i);
@@ -157,12 +156,12 @@ public:
 
             } else {
 
-                for (auto n : m_Tables.at(i).GetName().GetAllNames()) {
+                for (auto n : m_Tables.at(i)->GetName().GetAllNames()) {
                     m_MapTableNameToTable.insert({ n, i });
                 }
 
-                for (auto& r : *m_Tables.at(i).GetColumns()) {
-                    for (auto s : r.GetName().GetAllFullNames()) {
+                for (auto r : *m_Tables.at(i)->GetColumns()) {
+                    for (auto s : r->GetName().GetAllFullNames()) {
                         m_MapColNameToTable.insert({ s, i });
                     }
                 }
@@ -173,7 +172,7 @@ public:
     void AppliqueOrdre(const std::vector<int>& order)
     {
         for (auto& e : m_Tables) {
-            e.ApplyFilter(order);
+            e->ApplyFilter(order);
         }
     }
 
@@ -181,16 +180,16 @@ public:
     {
         int nbr_other_tabeles = other.m_Tables.size();
 
-        m_Tables.reserve(nbr_other_tabeles);
-        
-        for (int i = 0; i < nbr_other_tabeles; i++) {
-            m_Tables.emplace_back(std::move(other.m_Tables.at(i)));
-        }
+        m_Tables.reserve(m_Tables.size() + nbr_other_tabeles);
+        m_Tables.insert(
+            m_Tables.end(),
+            std::make_move_iterator(other.m_Tables.begin()),
+            std::make_move_iterator(other.m_Tables.end()));
 
         UpdateMetaTable();
     }
 
-    std::string GetName() { return m_Tables.at(0).GetName().GetMainName(); }
+    std::string GetName() { return m_Tables.at(0)->GetName().GetMainName(); }
 
     std::unique_ptr<std::vector<std::reference_wrapper<ColonneNamesSet>>> GetColumnNames()
     {
@@ -199,8 +198,8 @@ public:
         vec->reserve(m_MapColNameToTable.size());
 
         for (auto& t : m_Tables) {
-            for (auto& r : *t.GetColumns()) {
-                vec->emplace_back(r.GetName());
+            for (auto r : *t->GetColumns()) {
+                vec->emplace_back(r->GetName());
             }
         }
 

@@ -299,9 +299,10 @@ public:
     {
         if (std::holds_alternative<Parsing::BinaryExpression>(*m_Condition)) {
 
-            std::get<Parsing::BinaryExpression>(*m_Condition).FormatColumnName(table_name);
+            auto &temp = std::get<Parsing::BinaryExpression>(*m_Condition);
+            temp.FormatColumnName(table_name);
 
-            return std::get<Parsing::BinaryExpression>(*m_Condition).Column();
+            return temp.Column();
         } else {
             
             std::get<Parsing::Clause>(*m_Condition).FormatColumnName(table_name);

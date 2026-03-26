@@ -35,11 +35,11 @@ MetaTable* Join::ExecNaif(MetaTable* table1, MetaTable* table2)
 
     table2->AppliqueOrdre(*couple_valides.second.get());
 
-    auto& racineCol1 = table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
+    auto racineCol1 = table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
 
-    auto& racineCol2 = table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
+    auto racineCol2 = table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
 
-    racineCol1.AddName(racineCol2.GetName());
+    racineCol1->AddName(racineCol2->GetName());
 
     table2->GetTableByColName(m_ColumnName2).DeleteCol(m_ColumnName2);
 
@@ -98,11 +98,11 @@ MetaTable* Join::ExecTrier(MetaTable* table1, MetaTable* table2)
 
     table2->AppliqueOrdre(*couple_valides.second.get());
 
-    auto& racineCol1 = table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
+    auto racineCol1 = table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
 
-    auto& racineCol2 = table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
+    auto racineCol2 = table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
 
-    racineCol1.AddName(racineCol2.GetName());
+    racineCol1->AddName(racineCol2->GetName());
 
     table2->GetTableByColName(m_ColumnName2).DeleteCol(m_ColumnName2);
 
@@ -136,11 +136,11 @@ MetaTable* Join::ExecGrouByStyle(MetaTable* table1, MetaTable* table2)
 
     table2->AppliqueOrdre(*couple_valides.second.get());
 
-    auto& racineCol1 = table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
+    auto racineCol1 = table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
 
-    auto& racineCol2 = table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
+    auto racineCol2 = table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
 
-    racineCol1.AddName(racineCol2.GetName());
+    racineCol1->AddName(racineCol2->GetName());
 
     table2->GetTableByColName(m_ColumnName2).DeleteCol(m_ColumnName2);
 

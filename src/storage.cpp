@@ -54,7 +54,7 @@ std::variant<TypedColumn, Errors::Error> Store::DB_GetColumn(int fd, DBTableInde
     case Database::DbElemType::DbString:
         return std::make_pair(type, Record::GetColumn<DbString>(fd, c, t->GetElementNumber()));
     default:
-        return Errors::Error(Errors::ErrorType::RuntimeError, "Unrecognized element type inside ColumnInfo.", 0, 0, Errors::ERROR_COLUMN_DOES_NOT_EXIST);
+        return Errors::Error(Errors::ErrorType::RuntimeError, "Unrecognized element type inside ColumnInfo.", 0, 0, Errors::ERROR_UNKNOWN_TYPE);
     }
 }
 

@@ -423,11 +423,11 @@ std::pair<ClauseMember, std::unique_ptr<QueryPlanning::ColonneNamesSet>> Clause:
 
         if (col_parsed_name->HaveTable()) {
 
-            auto table = std::make_unique<QueryPlanning::TableNamesSet>(QueryPlanning::TableNamesSet(col_parsed_name->GetTable()));
+            auto table = new QueryPlanning::TableNamesSet(QueryPlanning::TableNamesSet(col_parsed_name->GetTable()));
 
             column_used = std::make_unique<QueryPlanning::ColonneNamesSet>(col_parsed_name->getColumnName(),
                 col_parsed_name->GetAlias(),
-                *std::move(table));
+                *table);
         } else {
             column_used = std::make_unique<QueryPlanning::ColonneNamesSet>(QueryPlanning::ColonneNamesSet(
                 col_parsed_name->getColumnName(),
@@ -515,7 +515,7 @@ Clause* Clause::ParseClause(Lexing::Tokenizer* t)
 
     if (column_used_r != nullptr && column_used_r->GetMainName() != "")
         col_used->emplace(column_used_r.get());
-    auto temp =new  Clause(std::get<LogicalOperator>(op), std::move(lhs), std::move(rhs), std::move(col_used));
+    auto temp = new Clause(std::get<LogicalOperator>(op), std::move(lhs), std::move(rhs), std::move(col_used));
     return temp;
 }
 
@@ -619,7 +619,7 @@ BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer*
             if (!arg_pile.empty()) {
                 Condition* rhs = arg_pile.pop();
 
-                auto bexpr =new Condition( BinaryExpression(op_pile.pop(), lhs, rhs, MergeColumns(*lhs, *rhs).get()));
+                auto bexpr = new Condition(BinaryExpression(op_pile.pop(), lhs, rhs, MergeColumns(*lhs, *rhs)));
 
                 arg_pile.push(bexpr);
 
@@ -650,7 +650,7 @@ BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer*
                 throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected clause after AND/OR", 0, 0, Errors::ERROR_EXPECTED_KEYWORD);
             }
 
-            return  arg_pile.pop();
+            return arg_pile.pop();
         } break;
         }
     } while (nb_count_equal_zero != 2);
@@ -740,7 +740,7 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<Qu
                 NullifyLhs();
                 NullifyRhs();
 
-                return BinaryExpression(LogicalOperator::AND, left, right, MergeColumns(*left, *right).get());
+                return BinaryExpression(LogicalOperator::AND, left, right, MergeColumns(*left, *right));
             } else {
                 BinaryExpression::Condition* RecupADroite;
 
@@ -771,7 +771,7 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<Qu
                     return std::move(*temp);
                 } else {
                     // y'as des truc à droite donc on les regroupe et on renvoie ça
-                    return BinaryExpression(LogicalOperator::AND, RecupADroite, temp, MergeColumns(*RecupADroite, *temp).get());
+                    return BinaryExpression(LogicalOperator::AND, RecupADroite, temp, MergeColumns(*RecupADroite, *temp));
                 }
             }
         } else {
@@ -812,7 +812,7 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<Qu
                     // on a rien trouvé à gauche, donc on renvoie juste tout droite
                     return std::move(*temp);
                 } else { // y'as des truc à gauche donc on les regroupe et on renvoie ça
-                    return BinaryExpression(LogicalOperator::AND, RecupAGauche, temp, MergeColumns(*RecupAGauche, *temp).get());
+                    return BinaryExpression(LogicalOperator::AND, RecupAGauche, temp, MergeColumns(*RecupAGauche, *temp));
                 }
             } else { // On ne peut pas tout prendre à droite ni tout prendre à gauche
                 BinaryExpression::Condition* RecupADroite;
@@ -847,7 +847,7 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<Qu
                     if (RecupAGaucheEstVide) {
                         return std::move(*RecupADroite);
                     } else {
-                        return BinaryExpression(LogicalOperator::AND, RecupADroite, RecupAGauche, MergeColumns(*RecupADroite, *RecupAGauche).get());
+                        return BinaryExpression(LogicalOperator::AND, RecupADroite, RecupAGauche, MergeColumns(*RecupADroite, *RecupAGauche));
                     }
                 }
             }
@@ -985,7 +985,9 @@ void Clause::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
 // UUPO
 void BinaryExpression::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
 {
-    m_ColumnUsedBelow->clear();
+    if (m_ColumnUsedBelow->size() != 0) {
+        m_ColumnUsedBelow->clear();
+    }
 
     auto& left = m_Lhs;
 

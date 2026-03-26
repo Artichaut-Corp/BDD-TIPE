@@ -20,7 +20,7 @@ void AfficheResultat(QueryPlanning::MetaTable* table, std::unique_ptr<std::vecto
 
     noms.reserve(nb_cols);
 
-    std::vector<std::reference_wrapper<Database::QueryPlanning::Racine>> colonnes_a_afficher;
+    std::vector<Database::QueryPlanning::Racine*> colonnes_a_afficher;
 
     colonnes_a_afficher.reserve(nb_cols);
 
@@ -42,7 +42,7 @@ void AfficheResultat(QueryPlanning::MetaTable* table, std::unique_ptr<std::vecto
 
         const auto& col = colonnes_a_afficher[i];
 
-        if (col.get().size() != 0) {
+        if (col->size() != 0) {
             for (int j = 0; j < nb_lignes; j++) {
                 std::string val;
                 std::visit([&val](auto&& elem) {
@@ -53,7 +53,7 @@ void AfficheResultat(QueryPlanning::MetaTable* table, std::unique_ptr<std::vecto
                         val = std::to_string(elem);
                 },
 
-                    table->GetValue(col.get().GetName(), j));
+                    table->GetValue(col->GetName(), j));
 
                 max_width = std::max<int>(max_width, display_width(val));
             }
@@ -87,8 +87,8 @@ void AfficheResultat(QueryPlanning::MetaTable* table, std::unique_ptr<std::vecto
             const auto col = colonnes_a_afficher[i];
             std::string val;
 
-            if (col.get().size() != 0) {
-                const ColumnData& cd = table->GetValue(col.get().GetName(), j);
+            if (col->size() != 0) {
+                const ColumnData& cd = table->GetValue(col->GetName(), j);
 
                 std::visit([&val](auto&& elem) {
                     using T = std::decay_t<decltype(elem)>;

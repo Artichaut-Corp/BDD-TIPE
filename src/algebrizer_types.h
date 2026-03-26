@@ -1,7 +1,8 @@
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <stdexcept>
-#include <string>
+#include <type_traits>
 #include <variant>
 
 #include "storage/types.h"
@@ -19,8 +20,6 @@ inline void afficherColumnData(const ColumnData& col)
             using T = std::decay_t<decltype(arg)>;
             if constexpr (std::is_same_v<T, DbNull>) {
                 std::cout << "NULL";
-            } else if constexpr (std::is_same_v<T, DbInt>) {
-                std::cout << arg;
             } else if constexpr (std::is_same_v<T, DbString>) {
                 // Interpréter comme une chaîne terminée par '\0'
                 for (auto c : arg) {
@@ -28,28 +27,14 @@ inline void afficherColumnData(const ColumnData& col)
                         break; // fin de chaîne
                     std::cout << static_cast<char>(c);
                 }
+            } else {
+                std::cout << arg;
             }
         },
         col);
 }
 
-inline std::string getColumnTypeName(const ColumnData& col)
-{
-    return std::visit(
-        [](auto&& value) -> std::string {
-            using T = std::decay_t<decltype(value)>;
-            if constexpr (std::is_same_v<T, DbNull>) {
-                return "DbNull";
-            } else if constexpr (std::is_same_v<T, DbInt>) {
-                return "DbInt";
-            } else if constexpr (std::is_same_v<T, DbString>) {
-                return "DbString";
-            } else {
-                return "Type inconnu";
-            }
-        },
-        col);
-} // Convert string array to string_view (up to first '\0')
+// Convert string array to string_view (up to first '\0')
 inline std::string_view to_string_view(const DbString& arr)
 {
     int len = 0;
@@ -60,26 +45,30 @@ inline std::string_view to_string_view(const DbString& arr)
     return std::string_view(reinterpret_cast<const char*>(arr.data()), len);
 }
 
-
 inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
 {
     return std::visit([](const auto& a, const auto& b) -> bool {
         using A = std::decay_t<decltype(a)>;
         using B = std::decay_t<decltype(b)>;
 
-        if constexpr (is_numeric_v<A> && is_numeric_v<B>) {
+        if constexpr (is_signed_numeric_v<A> && is_signed_numeric_v<B>) {
             return static_cast<DbFloat64>(a) == static_cast<DbFloat64>(b);
-        }
-        else if constexpr (std::is_same_v<A, DbString> && std::is_same_v<B, DbString>) {
+        } else if constexpr (is_unsigned_numeric_v<A> && is_unsigned_numeric_v<B>) {
+            return static_cast<DbUInt64>(a) == static_cast<DbUInt64>(b);
+        } else if constexpr (is_float_numeric_v<A> && is_float_numeric_v<B>) {
+            return static_cast<DbFloat64>(a) == static_cast<DbFloat64>(b);
+        } else if constexpr (std::is_same_v<A, DbString> && std::is_same_v<B, DbString>) {
             return a == b;
-        }
-        else {
+        } else if constexpr (std::is_same_v<A, DbBool> && std::is_same_v<B, DbBool>) {
+            return a == b;
+        } else {
             return false;
         }
- }, lhs, rhs);
+    },
+        lhs, rhs);
 }
 
-// Compare two ColumnData 
+// Compare two ColumnData
 /*
 inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
 {
@@ -89,7 +78,7 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
         auto to_uint64 = [](const auto& v) -> uint64_t {
             return static_cast<uint64_t>(v);
         };
-        
+
           int i = lhs.index();
 
           if (lhs.index() == rhs.index()) {
@@ -147,7 +136,7 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
                       return 0;
                   }
               };
-        
+
         uint64_t left_value;
         uint64_t right_value;
 
@@ -181,12 +170,12 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
     throw std::runtime_error("Types incompatibles");
     return false;
 }
-*/ 
+*/
 
 // Less than
 /*
 inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
-{ 
+{
      if (lhs.index() == rhs.index()) {
          switch (lhs.index()) {
          case 0:
@@ -213,7 +202,7 @@ inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
              return to_string_view(std::get<10>(lhs)) < to_string_view(std::get<10>(rhs)); // DbString
          }
      }
- 
+
     // Si deux entiers différents
     auto is_integer = [](int idx) { return (idx >= 2 && idx <= 6); };
 
@@ -263,17 +252,19 @@ inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
         using A = std::decay_t<decltype(a)>;
         using B = std::decay_t<decltype(b)>;
 
-        if constexpr (is_numeric_v<A> && is_numeric_v<B>) {
+        if constexpr (is_signed_numeric_v<A> && is_signed_numeric_v<B>) {
+            return static_cast<DbInt64>(a) < static_cast<DbInt64>(b);
+        } else if constexpr (is_unsigned_numeric_v<A> && is_unsigned_numeric_v<B>) {
+            return static_cast<DbUInt64>(a) < static_cast<DbUInt64>(b);
+        } else if constexpr (is_float_numeric_v<A> && is_float_numeric_v<B>) {
             return static_cast<DbFloat64>(a) < static_cast<DbFloat64>(b);
-        }
-        else if constexpr (std::is_same_v<A, DbString> && std::is_same_v<B, DbString>) {
+        } else if constexpr (std::is_same_v<A, DbString> && std::is_same_v<B, DbString>) {
             return a < b;
-        }
-        else {
+        } else {
             return false;
         }
-
-    }, lhs, rhs);
+    },
+        lhs, rhs);
 }
 
 // Autres opérateurs dérivés
@@ -350,27 +341,52 @@ inline uint64_t mix64(uint64_t x) noexcept
 }
 
 // --- Hash d'une colonne ---
+
 inline uint64_t hashColumn(const Database::ColumnData& c) noexcept
 {
-    // All integers normalized to int64_t
-    if (std::holds_alternative<DbInt8>(c))
-        return mix64(static_cast<int64_t>(std::get<DbInt8>(c)));
-    if (std::holds_alternative<DbInt16>(c))
-        return mix64(static_cast<int64_t>(std::get<DbInt16>(c)));
-    if (std::holds_alternative<DbInt>(c))
-        return mix64(static_cast<int64_t>(std::get<DbInt>(c)));
-    if (std::holds_alternative<DbInt64>(c))
-        return mix64(std::get<DbInt64>(c));
+    return std::visit([](const auto& value) -> uint64_t {
+        using T = std::decay_t<decltype(value)>;
 
-    // Strings handled normally
-    const auto& s = std::get<DbString>(c);
-    uint64_t h = 0xcbf29ce484222325ULL;
-    for (uint8_t b : s) {
-        if (b == 0)
-            break;
-        h = (h ^ b) * 0x100000001b3ULL; // FNV-1a
-    }
-    return mix64(h);
+        // Normalize all signed integers to int64_t
+        if constexpr (
+            std::is_same_v<T, DbInt8> || std::is_same_v<T, DbInt16> || std::is_same_v<T, DbInt> || std::is_same_v<T, DbInt64>) {
+            return mix64(static_cast<int64_t>(value));
+        }
+
+        // Normalize all unsigned integers to uint64_t
+        else if constexpr (
+            std::is_same_v<T, DbUInt8> || std::is_same_v<T, DbUInt16> || std::is_same_v<T, DbUInt> || std::is_same_v<T, DbUInt64>) {
+            return mix64(static_cast<uint64_t>(value));
+        }
+
+        // Floating point
+        else if constexpr (
+            std::is_same_v<T, DbFloat> || std::is_same_v<T, DbFloat64>) {
+            uint64_t bits;
+            static_assert(sizeof(bits) >= sizeof(value));
+            memcpy(&bits, &value, sizeof(value));
+
+            return mix64(bits);
+        }
+
+        // String (FNV-1a)
+        else if constexpr (std::is_same_v<T, DbString>) {
+            uint64_t h = 0xcbf29ce484222325ULL;
+            for (uint8_t b : value) {
+                if (b == 0)
+                    break;
+                h = (h ^ b) * 0x100000001b3ULL;
+            }
+            return mix64(h);
+        }
+
+        // Safety net (should never happen)
+        else {
+            static_assert(always_false_v<T>, "Unhandled type in ColumnData");
+        }
+    },
+        c);
 }
+
 }
 #endif // !ALGEBRIZER_TYPES_H

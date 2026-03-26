@@ -325,11 +325,11 @@ private:
 
 public:
     // UUPO je sais pas à qui appartiennent les conditions
-    BinaryExpression(const LogicalOperator op, Condition* lhs, Condition* rhs, std::unordered_set<QueryPlanning::ColonneNamesSet*>* col_used)
+    BinaryExpression(const LogicalOperator op, Condition* lhs, Condition* rhs, std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>> col_used)
         : m_Op(op)
         , m_Lhs(std::move(lhs))
         , m_Rhs(std::move(rhs))
-        , m_ColumnUsedBelow(std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(col_used)) { };
+        , m_ColumnUsedBelow(std::move(col_used)) { };
 
     // Parsing utilities
     static std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>> MergeColumns(const Condition& lhs, const Condition& rhs);

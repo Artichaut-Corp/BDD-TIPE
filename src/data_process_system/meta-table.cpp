@@ -51,7 +51,7 @@ void MetaTable::Selection(const Parsing::BinaryExpression::Condition& pred, cons
 
     // quand on arrive ici, les élément dans valid_indices sont les positions vérifiant tout les prédicat dans les liste des colonnes, il faut alors les modifier ne garder que les bons
     for (auto& e : m_Tables) {
-        e.ApplyFilter(valid_indices);
+        e->ApplyFilter(valid_indices);
     }
 };
 
@@ -63,18 +63,18 @@ void MetaTable::Projection(std::unique_ptr<std::unordered_set<const ColonneNames
     for (auto& t : m_Tables) {
 
 
-        for (auto& r : *t.GetColumns()) {
+        for (auto& r : *t->GetColumns()) {
 
             bool to_delete = true;
 
             for (auto& s : *ColumnToSave) {
-                if (*s == r.GetName()) {
+                if (*s == r->GetName()) {
                     to_delete = false;
                     break;
                 }
             }
             if (to_delete) {
-                difference.push_back(&r.GetName());
+                difference.push_back(&r->GetName());
             }
         }
     }
@@ -95,7 +95,7 @@ void MetaTable::Sort(const ColonneNamesSet& ColonneToSortBy)
     auto res = table.Sort(ColonneToSortBy);
 
     for (auto& t : m_Tables) {
-        t.ApplyFilter(*res);
+        t->ApplyFilter(*res);
     }
 }
 

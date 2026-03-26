@@ -135,13 +135,17 @@ using IndexedColumn = std::pair<
         std::unique_ptr<std::vector<DbUInt64>>>,
     std::unique_ptr<std::vector<DbString>>>;
 
-template<typename T>
-constexpr bool is_numeric_v =
-    std::is_same_v<T, DbInt8>  || std::is_same_v<T, DbUInt8>  ||
-    std::is_same_v<T, DbInt16> || std::is_same_v<T, DbUInt16> ||
-    std::is_same_v<T, DbInt>   || std::is_same_v<T, DbUInt>   ||
-    std::is_same_v<T, DbInt64> || std::is_same_v<T, DbUInt64> ||
-    std::is_same_v<T, DbFloat> || std::is_same_v<T, DbFloat64>;
+template <typename T>
+constexpr bool is_signed_numeric_v = std::is_same_v<T, DbInt8> || std::is_same_v<T, DbInt16> || std::is_same_v<T, DbInt> || std::is_same_v<T, DbInt64>;
+
+template <typename T>
+constexpr bool is_unsigned_numeric_v = std::is_same_v<T, DbUInt8> || std::is_same_v<T, DbUInt16> || std::is_same_v<T, DbUInt> || std::is_same_v<T, DbUInt64>;
+
+template <typename T>
+constexpr bool is_float_numeric_v = std::is_same_v<T, DbFloat> || std::is_same_v<T, DbFloat64>;
+
+template <typename>
+inline constexpr bool always_false_v = false;
 
 using TypedColumn = std::pair<DbElemType, Column>;
 

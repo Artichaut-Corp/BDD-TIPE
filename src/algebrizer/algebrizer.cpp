@@ -27,7 +27,9 @@ ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, 
     ColonneNamesSet* standard_name = nullptr;
 
     if (colonne->HaveTable()) {
-
+        if (!variation_of_tablename_to_main_table_name.contains(colonne->GetTable())) {
+            throw Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table '{}' does not exist", colonne->GetTable()), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
+        }
         TableNamesSet* table = variation_of_tablename_to_main_table_name.at(colonne->GetTable());
 
         std::string full_name = colonne->getColumnName();
@@ -37,7 +39,6 @@ ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, 
     } else {
         // la colonne n'as pas de nom de table, on en conclut que c'est une colonne de la table principale, il faut donc rajouter le nom de cette table à son identifiant
 
-
         standard_name = new ColonneNamesSet(colonne->getColumnName(),
             colonne->GetAlias(),
             NomTablePrincipale);
@@ -45,7 +46,6 @@ ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, 
 
     return standard_name;
 }
-
 
 std::unique_ptr<TableNamesSet> ConvertToStandardTableName(Database::Parsing::TableName* Table, std::unordered_map<std::string, TableNamesSet*>& variation_of_tablename_to_main_table_name)
 {
@@ -106,14 +106,13 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 ColonneNamesSet* colonne_gauche = (ConvertToStandardColumnName(*TablePrincipaleNom, j.getLeftColumn(), *variation_of_tablename_to_main_table_name));
 
                 ColonneNamesSet* colonne_droite = (ConvertToStandardColumnName(*TablePrincipaleNom, j.getRightColumn(), *variation_of_tablename_to_main_table_name));
-                if(!TableNameToColumnList.contains(colonne_droite->GetTableSet()->GetMainName())){
-                    TableNameToColumnList.emplace(colonne_droite->GetTableSet()->GetMainName(), new std::unordered_set<ColonneNamesSet*> ());
+                if (!TableNameToColumnList.contains(colonne_droite->GetTableSet()->GetMainName())) {
+                    TableNameToColumnList.emplace(colonne_droite->GetTableSet()->GetMainName(), new std::unordered_set<ColonneNamesSet*>());
                 }
                 TableNameToColumnList.at(colonne_droite->GetTableSet()->GetMainName())->emplace(colonne_droite);
 
-
-                if(!TableNameToColumnList.contains(colonne_gauche->GetTableSet()->GetMainName())){
-                    TableNameToColumnList.emplace(colonne_gauche->GetTableSet()->GetMainName(),new std::unordered_set<ColonneNamesSet*> ());
+                if (!TableNameToColumnList.contains(colonne_gauche->GetTableSet()->GetMainName())) {
+                    TableNameToColumnList.emplace(colonne_gauche->GetTableSet()->GetMainName(), new std::unordered_set<ColonneNamesSet*>());
                 }
                 TableNameToColumnList.at(colonne_gauche->GetTableSet()->GetMainName())->emplace(colonne_gauche);
 
@@ -296,17 +295,25 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             // évite les doublons dans la projection finale et dans la création des tables
             if (!est_présent) {
 
-                std::unordered_set<ColonneNamesSet*>* s = TableNameToColumnList.at(NomColonne->GetTableSet()->GetMainName());
+                if (TableNameToColumnList.contains(NomColonne->GetTableSet()->GetMainName())) {
+                    std::unordered_set<ColonneNamesSet*>* s = TableNameToColumnList.at(NomColonne->GetTableSet()->GetMainName());
 
-                s->insert(NomColonne);
+                    s->insert(NomColonne);
+                }
+
+                else {
+
+                    throw Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table '{}' does not exist", NomColonne->GetTableSet()->GetMainName()), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
+
+                }
             }
         }
     }
 
     //  on doit creer la table principale, pour cela on doit creer les racines et les Colonnes
-    std::vector<Racine> Racines;
+    auto Racines_principale = std::make_unique<std::vector<Racine*>>();
 
-    Racines.reserve(TableNameToColumnList[TablePrincipaleNom->GetMainName()]->size());
+    Racines_principale->reserve(TableNameToColumnList[TablePrincipaleNom->GetMainName()]->size());
 
     std::unordered_set<ColonneNamesSet*> ColonneAlreadyCreate;
 
@@ -327,15 +334,15 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         }
 
         if (!est_déjà_ajouté) {
-
-            Racines.emplace_back(colonne_nom, File->Fd(), IndexGet);
+            auto rac = new Racine(colonne_nom, File->Fd(), IndexGet);
+            Racines_principale->emplace_back(rac);
 
             ColonneAlreadyCreate.emplace(colonne_nom);
         }
     }
 
     // Maintenant que l'on as tout pour la table Principale on la créer
-    std::unique_ptr<MetaTable> table_principale = std::make_unique<MetaTable>(Racines, *TablePrincipaleNom.get());
+    std::unique_ptr<MetaTable> table_principale = std::make_unique<MetaTable>(*Racines_principale.get(), *TablePrincipaleNom.get());
 
     std::cout << table_principale->Columnsize() << "\n";
 
@@ -351,26 +358,24 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     auto RacineMainTable = std::unique_ptr<Node>(RacineExec);
 
-    std::unique_ptr<Node> Node_Select;
+    Node* Node_Select;
 
-     // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
+    // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
     std::unordered_map<std::string, std::pair<Node*, bool>> TableToRootOfTableMap;
     TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>(RacineExec, true);
 
     // il faut maintenant récupérer les conditions càd les where
     if (where != NULL) {
         // une foit la racine de l'arbre d'éxécution définie, on peut lui ajouter une selection si nécessaire
-        auto temp =  std::move(cond);
+        auto temp = std::move(cond);
 
-        MainSelect = new Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>>(ConditionColumn),temp, *TablePrincipaleNom.get());
+        Node_Select = new Node(new Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>>(ConditionColumn), temp, *TablePrincipaleNom.get()));
 
-        Node_Select = std::make_unique<Node>(MainSelect);
+        RacineExec->AddChild(true, Node_Select);
 
-        RacineExec->AddChild(true, Node_Select.get());
-
-        TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>(Node_Select.get(), true);
-
+        TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>(Node_Select, true);
     }
+    std::unique_ptr<std::vector<Racine*>> Racines_secondaire = std::make_unique<std::vector<Racine*>>();
 
     if (!tables_secondaires.empty()) { // si il y as des join
         //  on doit creer les autres tables
@@ -378,14 +383,12 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
         for (int i = 0; i < tables_secondaires.size(); i++) {
 
-            std::vector<Racine> Racines;
 
-            Racines.reserve(TableNameToColumnList[tables_secondaires[i]->GetMainName()]->size());
+            Racines_secondaire->reserve(TableNameToColumnList[tables_secondaires[i]->GetMainName()]->size());
 
             ColonneAlreadyCreate.clear();
 
-            for (
-                auto& colonne_nom : *TableNameToColumnList[tables_secondaires[i]->GetMainName()]) {
+            for (auto& colonne_nom : *TableNameToColumnList[tables_secondaires[i]->GetMainName()]) {
 
                 bool est_déjà_ajouté = false;
 
@@ -399,15 +402,15 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 }
 
                 if (!est_déjà_ajouté) {
-
-                    Racines.emplace_back(colonne_nom, File->Fd(), IndexGet);
+                    auto rac = new Racine(colonne_nom, File->Fd(), IndexGet);
+                    Racines_secondaire->emplace_back(rac);
 
                     ColonneAlreadyCreate.emplace(colonne_nom);
                 }
             }
 
-            // Maintenant que l'on as tout pour la table Principale on la créer
-            std::unique_ptr<MetaTable> table_secondaire = std::make_unique<MetaTable>(Racines, *tables_secondaires[i].get());
+            // Maintenant que l'on as tout pour la table secondaire on la créer
+            std::unique_ptr<MetaTable> table_secondaire = std::make_unique<MetaTable>(*Racines_secondaire.get(), *tables_secondaires[i].get());
 
             Tables.push_back(std::move(table_secondaire));
 

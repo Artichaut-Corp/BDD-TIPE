@@ -26,34 +26,34 @@ private:
 
     // contient les noms de toute les colonnes présente dans la table (de manière unique) avec table étant la table originel
     // ( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
-    std::unique_ptr<std::vector<Racine>> m_Columns;
+    std::unique_ptr<std::vector<Racine*>> m_Columns;
 
     std::unique_ptr<std::vector<int>> m_Indices; // indices valides dans racine
 
 public:
-    Table(std::vector<Racine>& data, const TableNamesSet& name)
+    Table(std::vector<Racine*>& data, const TableNamesSet& name)
         : m_Name(std::move(name))
     {
         m_Map = std::make_unique<std::unordered_map<std::string, int>>();
 
-        m_Columns = std::make_unique<std::vector<Racine>>();
+        m_Columns = std::make_unique<std::vector<Racine*>>();
 
-        size_t data_size = data.at(0).size();
+        size_t data_size = data.at(0)->size();
 
         m_Map->reserve(data.size());
 
         m_Columns->reserve(data.size());
 
         for (int i = 0; i < data.size(); i++) {
-            auto e = std::move(data[i]);
+            auto e = data[i];
 
-            for (auto n : e.GetName().GetAllFullNames()) {
+            for (auto n : e->GetName().GetAllFullNames()) {
                 m_Map->insert({ n, i });
             }
 
-            m_Map->insert({ e.GetName().GetMainName(), i });
+            m_Map->insert({ e->GetName().GetMainName(), i });
 
-            m_Columns->push_back(std::move(e));
+            m_Columns->push_back(e);
         }
 
         auto temp = std::make_unique<std::vector<int>>();
@@ -90,7 +90,7 @@ public:
         return m_Indices->size();
     }
 
-    [[nodiscard]] inline Racine& GetRacineFromMap(int i) const
+    [[nodiscard]] inline Racine* GetRacineFromMap(int i) const
     {
         return m_Columns->at(i);
     }
@@ -101,9 +101,9 @@ public:
 
         int real_i = m_Indices->at(pos_ind);
 
-        Racine& rac = GetRacineFromMap(rac_pos);
+        Racine* rac = GetRacineFromMap(rac_pos);
 
-        return rac.GetValueAt(real_i);
+        return rac->GetValueAt(real_i);
     }
 
     inline bool DoColumnExists(const ColonneNamesSet& tested_key) const
@@ -112,20 +112,20 @@ public:
         return !(m_Map->end() == m_Map->find(tested_key.GetMainName()));
     }
 
-    [[nodiscard]] inline Racine& GetRacinePtr(const ColonneNamesSet& column_name) const
+    [[nodiscard]] inline Racine* GetRacinePtr(const ColonneNamesSet& column_name) const
     {
         int rac_pos = m_Map->at(column_name.GetMainName());
 
         return GetRacineFromMap(rac_pos);
     }
 
-    std::vector<Racine>* GetColumns() const { return m_Columns.get(); }
+    std::vector<Racine*>* GetColumns() const { return m_Columns.get(); }
 
     const TableNamesSet& GetName() const { return m_Name; }
 
     [[nodiscard]] std::unique_ptr<std::vector<int>> Sort(const ColonneNamesSet& column_to_sort) const
     {
-        auto& col = GetRacinePtr(column_to_sort);
+        auto* col = GetRacinePtr(column_to_sort);
 
         auto pos_to_sort = std::make_unique<std::vector<int>>();
 
@@ -156,7 +156,7 @@ public:
     {
         for (int i = 0; i < m_Columns->size(); i++) {
 
-            if (m_Columns->at(i).GetName() == col_to_delete) {
+            if (m_Columns->at(i)->GetName() == col_to_delete) {
 
                 for (auto s : col_to_delete.GetAllFullNames()) {
                     m_Map->erase(s);
@@ -177,9 +177,9 @@ public:
 
         for (int i = 0; i < m_Columns->size(); i++) {
 
-            auto& r = m_Columns->at(i);
+            auto r = m_Columns->at(i);
 
-            for (auto n : r.GetName().GetAllFullNames()) {
+            for (auto n : r->GetName().GetAllFullNames()) {
                 m_Map->insert({ n, i });
             }
         }
