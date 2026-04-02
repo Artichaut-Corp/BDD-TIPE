@@ -139,13 +139,13 @@ public:
         return pos_to_sort;
     }
 
-    void ApplyFilter(const std::vector<int>& new_ind)
+    void ApplyFilter(const std::vector<int>& permutation)
     {
         auto new_indices = std::make_unique<std::vector<int>>();
 
-        new_indices->reserve(new_ind.size());
+        new_indices->reserve(permutation.size());
 
-        for (auto e : new_ind) {
+        for (auto e : permutation) {
             new_indices->emplace_back(m_Indices->at(e));
         }
 
@@ -156,7 +156,7 @@ public:
     {
         for (int i = 0; i < m_Columns->size(); i++) {
 
-            if (m_Columns->at(i)->GetName() == col_to_delete) {
+            if (m_Columns->at(i)->GetName().GetMainName()==col_to_delete.GetMainName()) {
 
                 for (auto s : col_to_delete.GetAllFullNames()) {
                     m_Map->erase(s);

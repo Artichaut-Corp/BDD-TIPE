@@ -1,6 +1,6 @@
+#include "b+tree.h"
 #include "errors.h"
 #include "parser.h"
-#include "b+tree.h"
 #include "table.h"
 #include "types.h"
 
@@ -66,7 +66,7 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
@@ -95,7 +95,7 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
@@ -122,15 +122,26 @@ public:
         }
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
             // Ptêtre bound check quand même
             lseek(fd, iter->second.GetOffset() + e_size * e_numb,
                 SEEK_SET);
+            std::cout << data.at(iter->first) << std::endl;
+            const ColumnData& col = data.at(iter->first);
 
-            ret = write(fd, &data.at(iter->first), e_size);
+            std::visit([&](const auto& value) {
+                printf("Column: %s\n", iter->first.c_str());
+                printf("Expected size: %u\n", e_size);
+                printf("Actual size  : %zu\n", sizeof(value));
+            },
+                col);
+            ret = std::visit([&](const auto& value) -> int {
+                return write(fd, &value, e_size);
+            },
+                col);
 
             if (ret != e_size) {
                 return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Failed to write data in column {}", iter->first), 0, 0, Errors::ERROR_FAILED_IO);
@@ -145,7 +156,7 @@ public:
     static std::optional<Errors::Error> WriteIndex(int fd, TableInfo* info, const std::unordered_map<std::string, ColumnData>& data)
     {
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             if (iter->second.IsSorted()) {
                 DbInt64 offset = iter->second.GetIndexOffset();

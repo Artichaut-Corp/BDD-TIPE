@@ -383,7 +383,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
         for (int i = 0; i < tables_secondaires.size(); i++) {
 
-
+            Racines_secondaire->clear();
             Racines_secondaire->reserve(TableNameToColumnList[tables_secondaires[i]->GetMainName()]->size());
 
             ColonneAlreadyCreate.clear();

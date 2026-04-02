@@ -353,7 +353,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
             delete data;
 
             if (err.has_value()) {
-                throw err;
+                throw err.value();
             }
 
         } else {
@@ -493,7 +493,7 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
             if (compteur > 10000)
                 break;
 
-            std::cout<<query.str();
+            std::cout << query.str();
             DatabaseEngine::Eval(query.str());
             batch.clear();
         }
@@ -587,6 +587,9 @@ auto DatabaseEngine::PrintIndex(std::ostream& out) -> void
             out << "Reading info from column: " << c.first << "\n";
             out << "Found at offset: 0x" << c.second.GetOffset()
                 << "\n";
+            if (c.second.IsSorted()) {
+                out << "With Indexed offset: 0x" << c.second.GetIndexOffset() << "\n";
+            }
             out << "Element size: " << static_cast<int>(c.second.GetElementSize())
                 << "\n";
         }

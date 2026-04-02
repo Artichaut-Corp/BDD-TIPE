@@ -11,18 +11,18 @@
 
 namespace Database::QueryPlanning {
 
-MetaTable* Join::ExecNaif(MetaTable* table1, MetaTable* table2)
+MetaTable* Join::ExecNaif(MetaTable* meta_table1, MetaTable* meta_table2)
 {
     // stocke tout les couple de ligne valide
     auto couple_valides = std::make_pair(std::make_unique<std::vector<int>>(), std::make_unique<std::vector<int>>());
 
-    for (int i = 0; i < table1->Columnsize(); i++) {
+    for (int i = 0; i < meta_table1->Columnsize(); i++) {
 
-        auto val1 = table1->GetValue(m_ColumnName1, i);
+        auto val1 = meta_table1->GetValue(m_ColumnName1, i);
 
-        for (int j = 0; j < table2->Columnsize(); j++) {
+        for (int j = 0; j < meta_table2->Columnsize(); j++) {
 
-            auto val2 = table2->GetValue(m_ColumnName2, j);
+            auto val2 = meta_table2->GetValue(m_ColumnName2, j);
 
             if (m_Comps.Eval(val1, val2)) {
                 couple_valides.first->push_back(i);
@@ -31,61 +31,61 @@ MetaTable* Join::ExecNaif(MetaTable* table1, MetaTable* table2)
         }
     }
 
-    table1->AppliqueOrdre(*couple_valides.first.get());
+    meta_table1->AppliqueOrdre(*couple_valides.first.get());
 
-    table2->AppliqueOrdre(*couple_valides.second.get());
+    meta_table2->AppliqueOrdre(*couple_valides.second.get());
 
-    auto racineCol1 = table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
+    auto racineCol1 = meta_table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
 
-    auto racineCol2 = table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
+    auto racineCol2 = meta_table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
 
     racineCol1->AddName(racineCol2->GetName());
 
-    table2->GetTableByColName(m_ColumnName2).DeleteCol(m_ColumnName2);
+    meta_table2->GetTableByColName(m_ColumnName2).DeleteCol(m_ColumnName2);
 
-    table1->FusionMetaTable(*table2);
+    meta_table1->FusionMetaTable(*meta_table2);
 
-    return table1;
+    return meta_table1;
 }
 
 // do the same as above but presort each MetaTable
-MetaTable* Join::ExecTrier(MetaTable* table1, MetaTable* table2)
+MetaTable* Join::ExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
 {
     // stocke tout les couple de ligne valide
     auto couple_valides = std::make_pair(std::make_unique<std::vector<int>>(), std::make_unique<std::vector<int>>());
 
     // --- Étape 0 : Trier chacune des MetaTable en fonction de la colonne---
-    table1->Sort(m_ColumnName1);
+    meta_table1->Sort(m_ColumnName1);
 
-    table2->Sort(m_ColumnName2);
+    meta_table2->Sort(m_ColumnName2);
 
     int pos1 = 0;
 
     int pos2 = 0;
 
-    while (pos1 < table1->Columnsize() && pos2 < table2->Columnsize()) {
+    while (pos1 < meta_table1->Columnsize() && pos2 < meta_table2->Columnsize()) {
 
-        auto val1 = table1->GetValue(m_ColumnName1, pos1);
+        auto val1 = meta_table1->GetValue(m_ColumnName1, pos1);
 
-        auto val2 = table2->GetValue(m_ColumnName2, pos2);
+        auto val2 = meta_table2->GetValue(m_ColumnName2, pos2);
 
         if (val1 < val2) {
-            ++pos1;
+            pos1++;
         } else if (val1 > val2) {
-            ++pos2;
+            pos2++;
         } else {
             auto mainval = val1;
             int pos1deb = pos1;
             int pos2deb = pos2;
 
-            while (pos1 < table1->Columnsize() && table1->GetValue(m_ColumnName1, pos1) == mainval)
-                ++pos1;
-            while (pos2 < table2->Columnsize() && table2->GetValue(m_ColumnName2, pos2) == mainval)
-                ++pos2;
+            while (pos1 < meta_table1->Columnsize() && meta_table1->GetValue(m_ColumnName1, pos1) == mainval)
+                pos1++;
+            while (pos2 < meta_table2->Columnsize() && meta_table2->GetValue(m_ColumnName2, pos2) == mainval)
+                pos2++;
 
-            for (int i = pos1deb; i < pos1; ++i) {
+            for (int i = pos1deb; i < pos1; i++) {
 
-                for (int j = pos2deb; j < pos2; ++j) {
+                for (int j = pos2deb; j < pos2; j++) {
 
                     couple_valides.first->push_back(i);
                     couple_valides.second->push_back(j);
@@ -94,66 +94,68 @@ MetaTable* Join::ExecTrier(MetaTable* table1, MetaTable* table2)
         }
     }
 
-    table1->AppliqueOrdre(*couple_valides.first.get());
+    meta_table1->AppliqueOrdre(*couple_valides.first.get());
 
-    table2->AppliqueOrdre(*couple_valides.second.get());
+    meta_table2->AppliqueOrdre(*couple_valides.second.get());
 
-    auto racineCol1 = table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
+    auto racineCol1 = meta_table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
 
-    auto racineCol2 = table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
+    auto racineCol2 = meta_table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
 
     racineCol1->AddName(racineCol2->GetName());
 
-    table2->GetTableByColName(m_ColumnName2).DeleteCol(m_ColumnName2);
+    meta_table2->GetTableByColName(m_ColumnName2).DeleteCol(m_ColumnName2);
 
-    table1->FusionMetaTable(*table2);
+    meta_table2->UpdateMetaTable();
 
-    return table1;
+    meta_table1->FusionMetaTable(*meta_table2);
+
+    return meta_table1;
 }
 
 // do the same as above but presort each MetaTable
-MetaTable* Join::ExecGrouByStyle(MetaTable* table1, MetaTable* table2)
+MetaTable* Join::ExecGrouByStyle(MetaTable* meta_table1, MetaTable* meta_table2)
 {
     // stocke tout les couple de ligne valide
     auto couple_valides = std::make_pair(std::make_unique<std::vector<int>>(), std::make_unique<std::vector<int>>());
 
     std::unordered_map<ColumnData, std::vector<int>> map_col;
 
-    for (int i = 0; i < table1->Columnsize(); i++) {
-        map_col[table1->GetValue(m_ColumnName1, i)].push_back(i);
+    for (int i = 0; i < meta_table1->Columnsize(); i++) {
+        map_col[meta_table1->GetValue(m_ColumnName1, i)].push_back(i);
     }
 
-    for (int i = 0; i < table2->Columnsize(); i++) {
+    for (int i = 0; i < meta_table2->Columnsize(); i++) {
 
-        for (auto j : map_col[table2->GetValue(m_ColumnName2, i)]) {
+        for (auto j : map_col[meta_table2->GetValue(m_ColumnName2, i)]) {
 
             couple_valides.first->push_back(j);
             couple_valides.second->push_back(i);
         }
     }
 
-    table1->AppliqueOrdre(*couple_valides.first.get());
+    meta_table1->AppliqueOrdre(*couple_valides.first.get());
 
-    table2->AppliqueOrdre(*couple_valides.second.get());
+    meta_table2->AppliqueOrdre(*couple_valides.second.get());
 
-    auto racineCol1 = table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
+    auto racineCol1 = meta_table1->GetTableByColName(m_ColumnName1).GetRacinePtr(m_ColumnName1);
 
-    auto racineCol2 = table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
+    auto racineCol2 = meta_table2->GetTableByColName(m_ColumnName2).GetRacinePtr(m_ColumnName2);
 
     racineCol1->AddName(racineCol2->GetName());
 
-    table2->GetTableByColName(m_ColumnName2).DeleteCol(m_ColumnName2);
+    meta_table2->GetTableByColName(m_ColumnName2).DeleteCol(m_ColumnName2);
 
-    table1->FusionMetaTable(*table2);
+    meta_table1->FusionMetaTable(*meta_table2);
 
-    return table1;
+    return meta_table1;
 }
 
-int Join::CardExecNaif(MetaTable* table1, MetaTable* table2)
+int Join::CardExecNaif(MetaTable* meta_table1, MetaTable* meta_table2)
 {
-    auto Sample1 = table1->GetSampleFromColumn(m_ColumnName1);
+    auto Sample1 = meta_table1->GetSampleFromColumn(m_ColumnName1);
 
-    auto Sample2 = table2->GetSampleFromColumn(m_ColumnName2);
+    auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2);
 
     int nbr_match = 0;
 
@@ -174,11 +176,11 @@ int Join::CardExecNaif(MetaTable* table1, MetaTable* table2)
     return nbr_match;
 }
 
-int Join::CardExecTrier(MetaTable* table1, MetaTable* table2)
+int Join::CardExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
 {
-    auto Sample1 = table1->GetSampleFromColumn(m_ColumnName1);
+    auto Sample1 = meta_table1->GetSampleFromColumn(m_ColumnName1);
 
-    auto Sample2 = table2->GetSampleFromColumn(m_ColumnName2);
+    auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2);
 
     sort(Sample1->begin(), Sample1->end());
 
@@ -213,11 +215,11 @@ int Join::CardExecTrier(MetaTable* table1, MetaTable* table2)
     return nbr_match;
 }
 
-int Join::CardExecGrouByStyle(MetaTable* table1, MetaTable* table2)
+int Join::CardExecGrouByStyle(MetaTable* meta_table1, MetaTable* meta_table2)
 {
-    auto Sample1 = table1->GetSampleFromColumn(m_ColumnName1);
+    auto Sample1 = meta_table1->GetSampleFromColumn(m_ColumnName1);
 
-    auto Sample2 = table2->GetSampleFromColumn(m_ColumnName2);
+    auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2);
 
     int nbr_match = 0;
 

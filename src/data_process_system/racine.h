@@ -40,6 +40,11 @@ public:
         TypedColumn col = std::move(std::get<TypedColumn>(result));
 
         m_DataType = col.first;
+        int var =  std::visit([](auto const& vecPtr) -> int {
+            return vecPtr ? vecPtr->size() : 0;
+        },
+            col.second);
+        std::cout<< column_name << " de taille :" <<var<<std::endl;
         m_Data = std::move(col.second);
     }
 

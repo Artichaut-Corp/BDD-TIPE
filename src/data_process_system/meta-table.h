@@ -67,7 +67,6 @@ public:
                 m_MapColNameToTable.insert({ r, 0 });
             }
         }
-
     }
 
     void Selection(const Parsing::BinaryExpression::Condition& pred, const std::unique_ptr<std::unordered_set<ColonneNamesSet*>> name_columns);
@@ -149,11 +148,8 @@ public:
 
             if (m_Tables.at(i)->size() == 0) {
                 // if we delete a Table, we change the size and move all the vector to the left by 1 there fore we need to compensate it
-                m_Tables.erase(m_Tables.begin()
-                    + i);
-
+                m_Tables.erase(m_Tables.begin() + i);
                 i--;
-
             } else {
 
                 for (auto n : m_Tables.at(i)->GetName().GetAllNames()) {
@@ -170,7 +166,7 @@ public:
     }
 
     void AppliqueOrdre(const std::vector<int>& order)
-    {
+    {   
         for (auto& e : m_Tables) {
             e->ApplyFilter(order);
         }
@@ -178,9 +174,9 @@ public:
 
     void FusionMetaTable(MetaTable& other)
     {
-        int nbr_other_tabeles = other.m_Tables.size();
+        int nbr_other_tables = other.m_Tables.size();
 
-        m_Tables.reserve(m_Tables.size() + nbr_other_tabeles);
+        m_Tables.reserve(m_Tables.size() + nbr_other_tables);
         m_Tables.insert(
             m_Tables.end(),
             std::make_move_iterator(other.m_Tables.begin()),
