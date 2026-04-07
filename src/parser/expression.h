@@ -45,7 +45,8 @@ enum class AggrFuncType {
 };
 
 enum class ColumnType { NULL_C,
-    INTEGER_C,
+    UNSIGNED_INTEGER_C,
+    SIGNED_INTEGER_C,
     FLOAT_C,
     TEXT_C };
 

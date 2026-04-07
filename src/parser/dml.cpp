@@ -379,9 +379,9 @@ std::variant<OrderByClause*, Errors::Error> OrderByClause::ParseOrderBy(Lexing::
 WhereClause* WhereClause::ParseWhere(Lexing::Tokenizer* t)
 {
 
-    auto tok = t->peek();  
+    auto tok = t->peek();
 
-    return std::move( new WhereClause(BinaryExpression::ParseCondition(t)));
+    return std::move(new WhereClause(BinaryExpression::ParseCondition(t)));
 }
 
 DeleteStmt* DeleteStmt::ParseDelete(Lexing::Tokenizer* t)
@@ -534,7 +534,8 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
                 data->emplace_back(val);
 
             } else {
-                auto val = LitteralValue<std::string>(ColumnType::INTEGER_C, next.m_Value);
+                // Wish to be able to predict which type of int this is
+                auto val = LitteralValue<std::string>(ColumnType::SIGNED_INTEGER_C, next.m_Value);
 
                 data->emplace_back(val);
             }
@@ -585,7 +586,7 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
 
                 data->push_back(val);
             } else {
-                auto val = LitteralValue<std::string>(ColumnType::INTEGER_C, next.m_Value);
+                auto val = LitteralValue<std::string>(ColumnType::SIGNED_INTEGER_C, next.m_Value);
 
                 data->push_back(val);
             }
@@ -870,7 +871,7 @@ Transaction* Transaction::ParseTransaction(Lexing::Tokenizer* t)
 
                 data->push_back(val);
             } else {
-                auto val = LitteralValue<std::string>(ColumnType::INTEGER_C, next.m_Value);
+                auto val = LitteralValue<std::string>(ColumnType::SIGNED_INTEGER_C, next.m_Value);
 
                 data->emplace_back(val);
             }
