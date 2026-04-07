@@ -344,7 +344,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     // Maintenant que l'on as tout pour la table Principale on la créer
     std::unique_ptr<MetaTable> table_principale = std::make_unique<MetaTable>(*Racines_principale.get(), *TablePrincipaleNom.get());
 
-    std::cout << table_principale->Columnsize() << "\n";
 
     // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
     Node* RacineExec = new Node(new Proj(std::move(UsefullColumnForAggrAndOutput), *TablePrincipaleNom.get()));
@@ -352,7 +351,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     std::vector<std::unique_ptr<MetaTable>> Tables;
 
     // on enregiste la table principale
-    std::cout << table_principale->Columnsize() << std::endl;
 
     Tables.push_back(std::move(table_principale));
 
@@ -467,7 +465,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
                     const std::unordered_set<ColonneNamesSet*>& usefull_col = op->Getm_Cols();
 
-                    auto colToValList = std::make_unique<std::unordered_map<std::string, std::vector<ColumnData>*>>();
+                    auto colToValList = std::make_unique<std::unordered_map<std::string, std::unique_ptr<std::vector<ColumnData>>>>();
 
                     int nbr_ligne_mini = -1;
 
@@ -479,14 +477,14 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                             nbr_ligne_mini = (*temp).size();
                         }
 
-                        colToValList->insert({ e->GetMainName(), temp.get() });
+                        colToValList->insert({ e->GetMainName(), std::move(temp) });
                     }
 
                     auto CombinaisonATester = std::make_unique<std::unordered_map<std::string, ColumnData>>();
 
                     for (int ligne = 0; ligne < nbr_ligne_mini; ligne++) {
                         for (auto& e : usefull_col) {
-                            (*CombinaisonATester)[e->GetMainName()] = (*(*colToValList)[e->GetMainName()])[ligne];
+                            CombinaisonATester->insert({e->GetMainName() , (*(*colToValList)[e->GetMainName()])[ligne]});
                         }
 
                         auto temp = cond.EstimeSelectivite(CombinaisonATester.get());

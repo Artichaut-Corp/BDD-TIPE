@@ -807,7 +807,6 @@ BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<Qu
                 NullifyRhs();
 
                 // il faut tester si on n'as pas eu des truc à gauche
-                //
                 if (RecupAGaucheEstVide) {
                     // on a rien trouvé à gauche, donc on renvoie juste tout droite
                     return std::move(*temp);

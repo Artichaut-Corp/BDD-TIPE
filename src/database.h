@@ -315,6 +315,7 @@ public:
                 } else if (input == ".insert_data") {
                     std::cout << "Insertion des data\n";
                     import_all_csv();
+                    std::cout<<std::endl;
                 } else if (input == ".print_table_layout") {
                     PrintIndex(std::cout);
                 } else {

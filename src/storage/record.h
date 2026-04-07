@@ -129,19 +129,8 @@ public:
             // Ptêtre bound check quand même
             lseek(fd, iter->second.GetOffset() + e_size * e_numb,
                 SEEK_SET);
-            std::cout << data.at(iter->first) << std::endl;
-            const ColumnData& col = data.at(iter->first);
 
-            std::visit([&](const auto& value) {
-                printf("Column: %s\n", iter->first.c_str());
-                printf("Expected size: %u\n", e_size);
-                printf("Actual size  : %zu\n", sizeof(value));
-            },
-                col);
-            ret = std::visit([&](const auto& value) -> int {
-                return write(fd, &value, e_size);
-            },
-                col);
+            ret = write(fd, &data.at(iter->first), e_size);
 
             if (ret != e_size) {
                 return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Failed to write data in column {}", iter->first), 0, 0, Errors::ERROR_FAILED_IO);
@@ -190,7 +179,7 @@ public:
             } else if (column_data->at(i).getColumnType() == Parsing::ColumnType::FLOAT_C) {
 
                 res->insert(
-                    { column_order->at(i).getColumnName(), static_cast<DbFloat>(std::stof(column_data->at(i).getData())) });
+                    { column_order->at(i).getColumnName(), static_cast<DbFloat64>(std::stof(column_data->at(i).getData())) });
             } else {
 
                 res->insert(

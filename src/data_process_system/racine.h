@@ -44,7 +44,6 @@ public:
             return vecPtr ? vecPtr->size() : 0;
         },
             col.second);
-        std::cout<< column_name << " de taille :" <<var<<std::endl;
         m_Data = std::move(col.second);
     }
 
