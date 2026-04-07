@@ -11,7 +11,7 @@ target_include_directories(bdd_tipe_lib
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(bdd_tipe_lib PUBLIC tomlplusplus::tomlplusplus)
+target_link_libraries(bdd_tipe_lib PUBLIC tomlplusplus::tomlplusplus )
 
 add_executable(bdd_tipe main.cpp)
 

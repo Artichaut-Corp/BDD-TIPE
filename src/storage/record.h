@@ -66,7 +66,7 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-             ++iter) {
+            ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
@@ -95,7 +95,7 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-             ++iter) {
+            ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
@@ -122,26 +122,15 @@ public:
         }
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-             ++iter) {
+            ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
             // Ptêtre bound check quand même
             lseek(fd, iter->second.GetOffset() + e_size * e_numb,
                 SEEK_SET);
-            std::cout << data.at(iter->first) << std::endl;
-            const ColumnData& col = data.at(iter->first);
 
-            std::visit([&](const auto& value) {
-                printf("Column: %s\n", iter->first.c_str());
-                printf("Expected size: %u\n", e_size);
-                printf("Actual size  : %zu\n", sizeof(value));
-            },
-                col);
-            ret = std::visit([&](const auto& value) -> int {
-                return write(fd, &value, e_size);
-            },
-                col);
+            ret = write(fd, &data.at(iter->first), e_size);
 
             if (ret != e_size) {
                 return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Failed to write data in column {}", iter->first), 0, 0, Errors::ERROR_FAILED_IO);
@@ -156,7 +145,7 @@ public:
     static std::optional<Errors::Error> WriteIndex(int fd, TableInfo* info, const std::unordered_map<std::string, ColumnData>& data)
     {
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-             ++iter) {
+            ++iter) {
 
             if (iter->second.IsSorted()) {
                 DbInt64 offset = iter->second.GetIndexOffset();
@@ -184,9 +173,12 @@ public:
         // Solution not optimal -> would not make any difference between signed and unsigned ints
         for (int i = 0; i < column_order->size(); i++) {
 
-            if (column_data->at(i).getColumnType() == Parsing::ColumnType::INTEGER_C) {
+            if (column_data->at(i).getColumnType() == Parsing::ColumnType::SIGNED_INTEGER_C) {
                 res->insert(
-                    { column_order->at(i).getColumnName(), static_cast<DbInt>(std::stoi(column_data->at(i).getData())) });
+                    { column_order->at(i).getColumnName(), static_cast<DbInt64>(std::stol(column_data->at(i).getData())) });
+            } else if (column_data->at(i).getColumnType() == Parsing::ColumnType::UNSIGNED_INTEGER_C) {
+                res->insert(
+                    { column_order->at(i).getColumnName(), static_cast<DbUInt64>(std::stol(column_data->at(i).getData())) });
             } else if (column_data->at(i).getColumnType() == Parsing::ColumnType::FLOAT_C) {
 
                 res->insert(
@@ -212,9 +204,12 @@ public:
         // TODO: Not functionnal till types are not casted rigth
         for (int i = 0; i < column_order->size(); i++) {
 
-            if (column_data[i].getColumnType() == Parsing::ColumnType::INTEGER_C) {
+            if (column_data[i].getColumnType() == Parsing::ColumnType::SIGNED_INTEGER_C) {
                 res->insert(
-                    { column_order->at(i).getColumnName(), static_cast<DbInt>(std::stoi(column_data[i].getData())) });
+                    { column_order->at(i).getColumnName(), static_cast<DbInt64>(std::stol(column_data[i].getData())) });
+            } else if (column_data[i].getColumnType() == Parsing::ColumnType::UNSIGNED_INTEGER_C) {
+                res->insert(
+                    { column_order->at(i).getColumnName(), static_cast<DbUInt64>(std::stol(column_data[i].getData())) });
             } else if (column_data[i].getColumnType() == Parsing::ColumnType::FLOAT_C) {
 
                 res->insert(

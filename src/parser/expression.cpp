@@ -409,7 +409,7 @@ std::pair<ClauseMember, std::unique_ptr<QueryPlanning::ColonneNamesSet>> Clause:
         break;
     }
     case Lexing::NUM_LITT_T: {
-        member = Convert::intToColumnData(LitteralValue<int>(ColumnType::INTEGER_C, std::stoi(next.m_Value)).getData());
+        member = Convert::intToColumnData(LitteralValue<int>(ColumnType::SIGNED_INTEGER_C, std::stol(next.m_Value)).getData());
         t->next();
         break;
     }
