@@ -2,12 +2,10 @@ Ce fichier résume les erreur connues, les idées d'améliorations à implément
 
 Erreur : 
     -lors d'une requête, l'usage d'un Alias sur le dernier select ne passe pas dans le parser , exemple : "Select date as jour_de_lannee from calendrier" est faux pour le parser
-    -
+    - message d'erreir quand rien après le where
 bdd-tipe> select id, from revisions where id > 10 limit 10;
 ERROR [[ 9 ]] - ����������@����:
 Expected Column Names or Aggregate Functions after 'SELECT' statement
- - peut pas faire deux requête d'affilé :(
-Program received signal SIGSEGV, Segmentation fault.
 
 limitation de l'implémentation actuelle comparé à un SGBD classique :
     - le seul type de join traité est le full, aucun autre n'est implémenter

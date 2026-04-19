@@ -52,15 +52,38 @@ inline bool column_equal(const ColumnData& lhs, const ColumnData& rhs)
         using B = std::decay_t<decltype(b)>;
 
         if constexpr (is_signed_numeric_v<A> && is_signed_numeric_v<B>) {
-            return static_cast<DbFloat64>(a) == static_cast<DbFloat64>(b);
+            return static_cast<DbInt64>(a) == static_cast<DbInt64>(b);
+
         } else if constexpr (is_unsigned_numeric_v<A> && is_unsigned_numeric_v<B>) {
             return static_cast<DbUInt64>(a) == static_cast<DbUInt64>(b);
+
         } else if constexpr (is_float_numeric_v<A> && is_float_numeric_v<B>) {
             return static_cast<DbFloat64>(a) == static_cast<DbFloat64>(b);
+
+        } else if constexpr (is_signed_numeric_v<A> && is_unsigned_numeric_v<B>) {
+            if (a < 0)
+                return false;
+            return static_cast<DbUInt64>(a) == static_cast<DbUInt64>(b);
+
+        } else if constexpr (is_unsigned_numeric_v<A> && is_signed_numeric_v<B>) {
+            if (b < 0)
+                return false;
+            return static_cast<DbUInt64>(a) == static_cast<DbUInt64>(b);
+
+        } else if constexpr (is_float_numeric_v<A> && (is_signed_numeric_v<B> || is_unsigned_numeric_v<B>)) {
+            return static_cast<DbFloat64>(a) == static_cast<DbFloat64>(b);
+
+        } else if constexpr ((is_signed_numeric_v<A> || is_unsigned_numeric_v<A>) && is_float_numeric_v<B>) {
+            return static_cast<DbFloat64>(a) == static_cast<DbFloat64>(b);
+
+            // String
         } else if constexpr (std::is_same_v<A, DbString> && std::is_same_v<B, DbString>) {
             return a == b;
+
+            // Bool
         } else if constexpr (std::is_same_v<A, DbBool> && std::is_same_v<B, DbBool>) {
             return a == b;
+
         } else {
             return false;
         }
@@ -257,6 +280,18 @@ inline bool column_less(const ColumnData& lhs, const ColumnData& rhs)
         } else if constexpr (is_unsigned_numeric_v<A> && is_unsigned_numeric_v<B>) {
             return static_cast<DbUInt64>(a) < static_cast<DbUInt64>(b);
         } else if constexpr (is_float_numeric_v<A> && is_float_numeric_v<B>) {
+            return static_cast<DbFloat64>(a) < static_cast<DbFloat64>(b);
+        } else if constexpr (is_signed_numeric_v<A> && is_unsigned_numeric_v<B>) {
+            if (a < 0)
+                return true; // négatif est toujours < unsigned
+            return static_cast<DbUInt64>(a) < static_cast<DbUInt64>(b);
+        } else if constexpr (is_unsigned_numeric_v<A> && is_signed_numeric_v<B>) {
+            if (b < 0)
+                return false; // unsigned >= 0, donc jamais < négatif
+            return static_cast<DbUInt64>(a) < static_cast<DbUInt64>(b);
+        } else if constexpr (is_float_numeric_v<A> && (is_signed_numeric_v<B> || is_unsigned_numeric_v<B>)) {
+            return static_cast<DbFloat64>(a) < static_cast<DbFloat64>(b);
+        } else if constexpr ((is_signed_numeric_v<A> || is_unsigned_numeric_v<A>) && is_float_numeric_v<B>) {
             return static_cast<DbFloat64>(a) < static_cast<DbFloat64>(b);
         } else if constexpr (std::is_same_v<A, DbString> && std::is_same_v<B, DbString>) {
             return a < b;

@@ -286,14 +286,14 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
                 ColumnNameToValues->at(ColName.GetMainName())->push_back(t);
             } else {
                 if (m_Limite.has_value()) {
-                    for (int i = m_Limite->first; i < std::min(table->Columnsize(), m_Limite->second+m_Limite->first); ++i) {
+                    for (int i = m_Limite->first; i < std::min(table->Columnsize(), m_Limite->second + m_Limite->first); ++i) {
                         ColumnNameToValues->at(ColName.GetMainName())->push_back(table->GetValue(ColName, i));
                     }
                 } else {
                     for (int i = 0; i < table->Columnsize(); ++i) {
                         ColumnNameToValues->at(ColName.GetMainName())->push_back(table->GetValue(ColName, i));
                     }
-                }   
+                }
             }
         }
     }
@@ -301,10 +301,7 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
     auto OrdreIndice = std::make_unique<std::vector<int>>();
 
     OrdreIndice->reserve(ColumnNameToValues->at(ColumnNameToValues->begin()->first)->size());
-
-    for (int i = 0; i < ColumnNameToValues->at(ColumnNameToValues->begin()->first)->size(); i++) {
-        OrdreIndice->push_back(i);
-    }
+    std::iota(OrdreIndice->begin(), OrdreIndice->end(), 0);
 
     if (m_OrderByCol.has_value() && (OrdreIndice->size() > 2)) {
         TrierListe(ColumnNameToValues.get(), OrdreIndice.get());
@@ -344,7 +341,7 @@ bool Final::CompareDeuxIndices(std::unordered_map<std::string, std::unique_ptr<s
 
         bool estCroissant = e.second;
 
-        // si les deux valeurs sont egale on passe à la condition suivante
+        // si les deux valeurs sont égale on passe à la condition suivante
 
         ColumnData lhs = ColumnNameToValues->at(ColonneCompared.GetMainName())->at(ind1);
         ColumnData rhs = ColumnNameToValues->at(ColonneCompared.GetMainName())->at(ind2);
@@ -359,7 +356,7 @@ bool Final::CompareDeuxIndices(std::unordered_map<std::string, std::unique_ptr<s
                 F        |     T      |    F
                 F        |     F      |    T
 
-            Cette table correspond à ce qui est renvoye
+            Cette table correspond à ce qui est renvoyé
 
             */
         }
