@@ -271,18 +271,17 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     Parsing::WhereClause* where = Selection->getWhere();
 
-    Select* MainSelect;
 
     std::unordered_set<ColonneNamesSet*>* ConditionColumn;
 
-    Parsing::BinaryExpression::Condition* cond; // those variable are used two times,
+    std::unique_ptr<Parsing::BinaryExpression::Condition> cond; // those variable are used two times,
 
     // il faut ajouter les colonnes utilisé dans la conditions avant de créer la table principale
     if (where != nullptr) {
 
         ConditionColumn = where->GetConditionColumnNames(TablePrincipaleNom.get());
 
-        cond = where->m_Condition;
+        cond = std::move(where->m_Condition);
         for (auto& NomColonne : *ConditionColumn) {
 
             bool est_présent = false;
@@ -361,13 +360,14 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
     std::unordered_map<std::string, std::pair<Node*, bool>> TableToRootOfTableMap;
     TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>(RacineExec, true);
-
+    //usefull variable for Select Descent   
+    Select * MainSelect;
     // il faut maintenant récupérer les conditions càd les where
     if (where != NULL) {
         // une foit la racine de l'arbre d'éxécution définie, on peut lui ajouter une selection si nécessaire
-        auto temp = std::move(cond);
-
-        Node_Select = new Node(new Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>>(ConditionColumn), temp, *TablePrincipaleNom.get()));
+        
+        MainSelect = new Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>>(ConditionColumn), std::move(cond), *TablePrincipaleNom.get());
+        Node_Select = new Node(MainSelect);
 
         RacineExec->AddChild(true, Node_Select);
 
@@ -447,21 +447,20 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     if (where != NULL and optimize_BinaryExpr == 1) {
 
-        auto SelectNode = RacineExec->GetLeftPtr();
 
-        if (SelectNode == nullptr) {
+        if (Node_Select == nullptr) {
             std::cout << "Absurdité, where n'est pas null mais aucun select n'est présent\n"
                       << std::endl; // erreur
         } else {
-            auto SelectAct = SelectNode->GetAction();
+            auto SelectAct = Node_Select->GetAction();
 
             if (std::holds_alternative<Select*>(SelectAct)) {
                 Select* op = std::get<Select*>(SelectAct);
 
                 // if the cond is a clause or a tautology, we can't otpimize it
-                if (std::holds_alternative<Parsing::BinaryExpression>(op->GetCond().get())) {
+                if (std::holds_alternative<Parsing::BinaryExpression>(*op->GetCond())) {
 
-                    Parsing::BinaryExpression& cond = std::get<Database::Parsing::BinaryExpression>(op->GetCond().get());
+                    Parsing::BinaryExpression& cond = std::get<Database::Parsing::BinaryExpression>(*op->GetCond());
 
                     const std::unordered_set<ColonneNamesSet*>& usefull_col = op->Getm_Cols();
 

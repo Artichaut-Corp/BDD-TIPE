@@ -1,4 +1,5 @@
 #include <format>
+#include <memory>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -361,7 +362,7 @@ public:
 
     auto NullifyLhs() -> void
     {
-        m_Lhs = std::make_unique<Condition>(std::monostate {});
+        m_Lhs = std::make_unique<Condition>(std::monostate ());
 
         switch (m_Rhs->index()) {
         case 0: {
@@ -404,10 +405,11 @@ public:
     }
 
     auto Column() const -> std::unordered_set<QueryPlanning::ColonneNamesSet*>* { return m_ColumnUsedBelow.get(); }
+    auto MoveColumn() ->std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>> { return std::move(m_ColumnUsedBelow); }
 
     // Evaluation methods
 
-    Condition ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire);
+    std::unique_ptr<Condition> ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire);
 
     bool Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATester) const;
 

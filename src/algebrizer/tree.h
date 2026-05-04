@@ -29,7 +29,10 @@ public:
         : m_Type(type)
     {
     }
-
+    Node(std::unique_ptr<NodeType> type)
+        : m_Type(*type)
+    {
+    }
     void AddChild(bool left, Node* child)
     {
         if (left)

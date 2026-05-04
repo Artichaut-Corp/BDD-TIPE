@@ -703,156 +703,151 @@ void BinaryExpression::PrintCondition(std::ostream& out)
     out << std::endl;
 }
 
-BinaryExpression::Condition BinaryExpression::ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire)
+std::unique_ptr<BinaryExpression::Condition> BinaryExpression::ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire)
 {
     if (BinaryExpression::Op() == LogicalOperator::AND) { // on ne peut pas couper un OR
 
-        auto left_col = std::make_unique<std::unordered_set<QueryPlanning::ColonneNamesSet*>>();
+        auto left_col = new std::unordered_set<QueryPlanning::ColonneNamesSet*> ();
 
-        auto left = m_Lhs.get();
+        auto left_cond = m_Lhs.get();
 
-        if (std::holds_alternative<std::monostate>(*left)) {
+        std::unique_ptr<Condition> extracted_left = nullptr;
+        if (std::holds_alternative<std::monostate>(*left_cond)) {
             left_col = {};
-        } else if (std::holds_alternative<Clause>(*left)) {
-            left_col = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(std::get<Clause>(*left).Column());
+        } else if (std::holds_alternative<Clause>(*left_cond)) {
+            left_col = std::get<Clause>(*left_cond).Column();
         } else {
-            left_col = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(std::get<BinaryExpression>(*left).Column());
+            left_col = std::get<BinaryExpression>(*left_cond).Column();
         }
 
-        auto right_col = std::make_unique<std::unordered_set<QueryPlanning::ColonneNamesSet*>>();
+        auto right_col =new std::unordered_set<QueryPlanning::ColonneNamesSet*> ();
 
-        auto right = m_Rhs.get();
+        auto right_cond = m_Rhs.get();
 
-        if (std::holds_alternative<std::monostate>(*right)) {
+        std::unique_ptr<Condition> extracted_right = nullptr;
+
+        if (std::holds_alternative<std::monostate>(*right_cond)) {
             right_col = {};
-        } else if (std::holds_alternative<Clause>(*right)) {
-            right_col = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(std::get<Clause>(*right).Column());
+        } else if (std::holds_alternative<Clause>(*right_cond)) {
+            right_col = std::get<Clause>(*right_cond).Column();
         } else {
-            right_col = std::unique_ptr<std::unordered_set<QueryPlanning::ColonneNamesSet*>>(std::get<BinaryExpression>(*right).Column());
+            right_col = std::get<BinaryExpression>(*right_cond).Column();
         }
 
         // je peut prendre tout gauche
-        if (Utils::is_subset(left_col.get(), ColonnesAExtraire)) {
+        if (Utils::is_subset(left_col, ColonnesAExtraire)) {
 
             // il faut tester si on ne peut pas avoir des truc à droite
-            if (Utils::is_subset(right_col.get(), ColonnesAExtraire)) { // on peut tout prendre à droite et à gauche
+            if (Utils::is_subset(right_col, ColonnesAExtraire)) { // on peut tout prendre à droite et à gauche
+                extracted_left = std::move(m_Lhs);
 
                 NullifyLhs();
+
+                extracted_right = std::move(m_Rhs);
+
                 NullifyRhs();
-
-                return BinaryExpression(LogicalOperator::AND, left, right, MergeColumns(*left, *right));
+                return std::make_unique<Condition>(Condition(BinaryExpression(LogicalOperator::AND, extracted_left.get(), extracted_right.get(), MergeColumns(*extracted_left, *extracted_right))));
             } else {
-                BinaryExpression::Condition* RecupADroite;
 
-                if (std::holds_alternative<std::monostate>(*right)) {
-                    *RecupADroite = std::monostate {};
-                } else if (std::holds_alternative<Clause>(*right)) {
+                if (std::holds_alternative<std::monostate>(*right_cond)) {
+                    extracted_right = std::make_unique<Condition>(Condition(std::monostate()));
+                } else if (std::holds_alternative<Clause>(*right_cond)) {
 
                     // techniqument impossible, car on serais allé dans le cas où on peut tout prendre à droite
-                    if (Utils::is_subset(std::get<Clause>(*right).Column(), ColonnesAExtraire)) {
+
+                    if (Utils::is_subset(right_col, ColonnesAExtraire)) {
+                        extracted_right = std::move(m_Rhs);
                         NullifyRhs();
-                        RecupADroite = right;
                     } else {
                         // on ne peut pas découper une clause, donc on renvoie rien
-                        *RecupADroite = std::monostate {};
+                        extracted_right = std::make_unique<Condition>(Condition(std::monostate()));
                     }
                 } else {
-                    *RecupADroite = std::get<BinaryExpression>(*right).ExtraireCond(ColonnesAExtraire);
+                    extracted_right = std::move(std::get<BinaryExpression>(*right_cond).ExtraireCond(ColonnesAExtraire));
                 }
 
-                bool RecupADroiteEstVide = IsEmpty(*RecupADroite);
-
-                Condition* temp = left;
+                extracted_left = std::move(m_Lhs);
 
                 NullifyLhs();
 
-                if (RecupADroiteEstVide) {
+                if (std::holds_alternative<std::monostate>(*extracted_right)) {
                     // on a rien trouvé à droite, donc on renvoie juste tout gauche
-                    return std::move(*temp);
+                    return extracted_left;
                 } else {
                     // y'as des truc à droite donc on les regroupe et on renvoie ça
-                    return BinaryExpression(LogicalOperator::AND, RecupADroite, temp, MergeColumns(*RecupADroite, *temp));
+                    return std::make_unique<Condition>(Condition(BinaryExpression(LogicalOperator::AND, extracted_left.get(), extracted_right.get(), MergeColumns(*extracted_left, *extracted_right))));
                 }
             }
         } else {
 
             // on ne peut pas tout prendre à gauche, donc on teste à droite et on prend un max à gauche
-            BinaryExpression::Condition* RecupAGauche;
 
-            if (std::holds_alternative<std::monostate>(*left)) {
-                *RecupAGauche = std::monostate {};
-            } else if (std::holds_alternative<Clause>(*left)) {
+            if (std::holds_alternative<std::monostate>(*left_cond)) {
+                extracted_left = std::make_unique<Condition>(Condition(std::monostate()));
+            } else if (std::holds_alternative<Clause>(*left_cond)) {
                 // techniqument impossible, car on serais allé dans le cas où on peut tout prendre à droite
-                if (Utils::is_subset(std::get<Clause>(*left).Column(), ColonnesAExtraire)) {
+                if (Utils::is_subset(left_col, ColonnesAExtraire)) {
+                    extracted_left = std::move(m_Lhs);
 
-                    NullifyRhs();
-
-                    RecupAGauche = left;
+                    NullifyLhs();
 
                 } else {
                     // on ne peut pas découper une clause, donc on renvoie rien
-                    *RecupAGauche = std::monostate {};
+                    std::make_unique<Condition>(Condition(std::monostate()));
                 }
             } else {
-                *RecupAGauche = std::get<BinaryExpression>(*left).ExtraireCond(ColonnesAExtraire);
+                extracted_left = std::get<BinaryExpression>(*left_cond).ExtraireCond(ColonnesAExtraire);
             }
 
-            bool RecupAGaucheEstVide = IsEmpty(*RecupAGauche);
-
             // je peut tout prendre à droite
-            if (Utils::is_subset(right_col.get(), ColonnesAExtraire)) {
-
-                Condition* temp = right;
+            if (Utils::is_subset(right_col, ColonnesAExtraire)) {
+                extracted_right = std::move(m_Rhs);
 
                 NullifyRhs();
 
                 // il faut tester si on n'as pas eu des truc à gauche
-                if (RecupAGaucheEstVide) {
+                if (std::holds_alternative<std::monostate>(*extracted_left)) {
                     // on a rien trouvé à gauche, donc on renvoie juste tout droite
-                    return std::move(*temp);
+                    return extracted_right;
                 } else { // y'as des truc à gauche donc on les regroupe et on renvoie ça
-                    return BinaryExpression(LogicalOperator::AND, RecupAGauche, temp, MergeColumns(*RecupAGauche, *temp));
+                    return std::make_unique<Condition>(Condition(BinaryExpression(LogicalOperator::AND, extracted_left.get(), extracted_right.get(), MergeColumns(*extracted_left, *extracted_right))));
                 }
             } else { // On ne peut pas tout prendre à droite ni tout prendre à gauche
-                BinaryExpression::Condition* RecupADroite;
 
-                if (std::holds_alternative<std::monostate>(*right)) {
+                if (std::holds_alternative<std::monostate>(*right_cond)) {
+                    extracted_right = std::make_unique<Condition>(Condition(std::monostate()));
+                } else if (std::holds_alternative<Clause>(*right_cond)) {
 
-                    *RecupADroite = std::monostate {};
-
-                } else if (std::holds_alternative<Clause>(*right)) {
                     // techniqument impossible, car on serais allé dans le cas où on peut tout prendre à droite
-                    if (Utils::is_subset(std::get<Clause>(*right).Column(), ColonnesAExtraire)) {
 
+                    if (Utils::is_subset(right_col, ColonnesAExtraire)) {
+                        extracted_right = std::move(m_Rhs);
                         NullifyRhs();
-                        RecupADroite = right;
-
                     } else {
-                        *RecupADroite = std::monostate {}; // on ne peut pas découper une clause, donc on renvoie rien
+                        // on ne peut pas découper une clause, donc on renvoie rien
+                        extracted_right = std::make_unique<Condition>(Condition(std::monostate()));
                     }
                 } else {
-                    *RecupADroite = std::get<BinaryExpression>(*right).ExtraireCond(ColonnesAExtraire);
+                    extracted_right = std::get<BinaryExpression>(*right_cond).ExtraireCond(ColonnesAExtraire);
                 }
 
-                bool RecupADroiteEstVide = IsEmpty(*RecupADroite);
-
-                if (RecupADroiteEstVide) {
-                    if (RecupAGaucheEstVide) {
-                        return std::monostate {};
+                if (std::holds_alternative<std::monostate>(*extracted_right)) {
+                    if (std::holds_alternative<std::monostate>(*extracted_left)) {
+                        return std::make_unique<Condition>(Condition(std::monostate()));
                     } else {
-                        return std::move(*RecupAGauche);
+                        return extracted_left;
                     }
                 } else {
-                    if (RecupAGaucheEstVide) {
-                        return std::move(*RecupADroite);
+                    if (std::holds_alternative<std::monostate>(*extracted_left)) {
+                        return extracted_right;
                     } else {
-                        return BinaryExpression(LogicalOperator::AND, RecupADroite, RecupAGauche, MergeColumns(*RecupADroite, *RecupAGauche));
+                        return std::make_unique<Condition>(Condition(BinaryExpression(LogicalOperator::AND, extracted_left.get(), extracted_right.get(), MergeColumns(*extracted_left, *extracted_right))));
                     }
                 }
             }
         }
     } else {
-        return std::monostate {};
+        return std::make_unique<Condition>(Condition(std::monostate()));
     }
 }
 
