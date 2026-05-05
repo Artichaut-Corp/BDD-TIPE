@@ -9,6 +9,9 @@ namespace Database::Utils {
 
 inline bool is_subset(std::unordered_set<QueryPlanning::ColonneNamesSet*>* A, std::unordered_set<QueryPlanning::ColonneNamesSet*>* B)
 {
+    if (A == nullptr) {
+        return false;
+    }
     for (auto& elemC : *A) {
         bool est_trouve = false;
         for (auto& elemT : *B) {

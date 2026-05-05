@@ -286,7 +286,7 @@ public:
 
 class WhereClause {
 public:
-    BinaryExpression::Condition* m_Condition;
+    std::unique_ptr<BinaryExpression::Condition> m_Condition;
 
     WhereClause(BinaryExpression::Condition* cond)
         : m_Condition(cond)

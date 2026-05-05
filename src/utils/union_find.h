@@ -15,21 +15,17 @@ private:
 public:
     UnionFind()
     {
-        std::unordered_map<std::string, std::string> parent = std::unordered_map<std::string, std::string>();
-        std::unordered_map<std::string, Database::QueryPlanning::Node*> TableToNode = std::unordered_map<std::string, Database::QueryPlanning::Node*>();
-
-        std::unordered_map<std::string, int> rang = std::unordered_map<std::string, int>();
     }
 
     Database::QueryPlanning::Node* AddElem(Database::QueryPlanning::Join* join)
     {
-        auto parenttableL = trouver(join->GetLTable().GetMainName());
+        auto parentTableL = trouver(join->GetLTable().GetMainName());
 
-        auto NodeL = TableToNode[parenttableL];
+        auto NodeL = TableToNode[parentTableL];
 
-        auto parenttableR = trouver(join->GetRTable().GetMainName());
+        auto parentTableR = trouver(join->GetRTable().GetMainName());
 
-        auto NodeR = TableToNode[parenttableR];
+        auto NodeR = TableToNode[parentTableR];
 
         auto node = new Database::QueryPlanning::Node(join);
 
@@ -40,7 +36,7 @@ public:
 
         return node;
     }
-    std::string trouver(std::string table)
+    std::string trouver(const std::string table)
     {
         if (parent.contains(table)) {
             auto parent_table = parent[table];
@@ -60,10 +56,10 @@ public:
     }
     void unir(std::string tableL, std::string tableR, Database::QueryPlanning::Node* node)
     {
-        TableToNode[tableL] = node;
-        TableToNode[tableR] = node;
         auto parent_tableL = trouver(tableL);
         auto parent_tableR = trouver(tableR);
+        TableToNode[parent_tableL] = node;
+        TableToNode[parent_tableR] = node;
         if (parent_tableL != parent_tableR) {
             auto rangL = rang[parent_tableL];
             auto rangR = rang[parent_tableR];

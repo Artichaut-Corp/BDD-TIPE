@@ -26,7 +26,7 @@ Database::ColumnData ReturnType::AppliqueOperation(std::unique_ptr<std::set<Data
 
     if (std::holds_alternative<Database::DbString>(*Values->begin())) {
         if (m_Operation == Parsing::AggrFuncType::COUNT_F) {
-            return static_cast<Database::DbInt>(Values->size());
+            return Values->size();
         } else {
             throw Errors::Error(
                 Errors::ErrorType::RuntimeError,
@@ -38,20 +38,14 @@ Database::ColumnData ReturnType::AppliqueOperation(std::unique_ptr<std::set<Data
 
     // Pour les types numeriques
     if (m_Operation == Parsing::AggrFuncType::AVG_F || m_Operation == Parsing::AggrFuncType::SUM_F) {
-        uint64_t sum = 0;
-        size_t count = 0;
+        int n = Values->size();
+        ColumnData sum = 0;
         for (const auto& e : *Values) {
-            if (std::holds_alternative<Database::DbInt>(e)) {
-                sum += std::get<Database::DbInt>(e);
-                ++count;
-            } else if (std::holds_alternative<Database::DbInt64>(e)) {
-                sum += std::get<Database::DbInt64>(e);
-                ++count;
-            }
+            sum = sum + e;
         }
         if (m_Operation == Parsing::AggrFuncType::AVG_F)
-            return static_cast<Database::DbInt>(sum / count);
-        return static_cast<Database::DbInt>(sum);
+            return sum / n;
+        return sum;
     }
 
     if (m_Operation == Parsing::AggrFuncType::MIN_F || m_Operation == Parsing::AggrFuncType::MAX_F) {
@@ -68,7 +62,7 @@ Database::ColumnData ReturnType::AppliqueOperation(std::unique_ptr<std::set<Data
     }
 
     if (m_Operation == Parsing::AggrFuncType::COUNT_F)
-        return static_cast<Database::DbInt>(Values->size());
+        return Values->size();
 
     throw std::runtime_error(
         "Une Agregation a ete tentee alors qu'aucune fonction d'agregation n'a ete definie pour cette colonne");
@@ -81,14 +75,14 @@ Database::ColumnData ReturnType::AppliqueOperationOnCol(const ColonneNamesSet& C
 
     int n = table->Columnsize();
     if (n == 0)
-        return static_cast<Database::DbInt>(0); // safeguard pour table vide
+        return 0; // safeguard pour table vide
 
-    // Sur les string, on ne peut count car max et min ne sont pas defini tout comme AVG et Sum
-    ColumnData firstValue = table->GetValue(ColName, 0);
+    // Sur les string, on ne peut que count car max et min ne sont pas defini tout comme AVG et SUM
+    Database::ColumnData firstValue = table->GetValue(ColName, 0);
 
     if (std::holds_alternative<Database::DbString>(firstValue)) {
         if (m_Operation == Parsing::AggrFuncType::COUNT_F) {
-            return static_cast<Database::DbInt>(n);
+            return n;
         } else {
             throw Errors::Error(
                 Errors::ErrorType::RuntimeError,
@@ -98,20 +92,16 @@ Database::ColumnData ReturnType::AppliqueOperationOnCol(const ColonneNamesSet& C
         }
     }
 
-    // Pour les types numeriques
+    // Pour les types numériques
     if (m_Operation == Parsing::AggrFuncType::SUM_F || m_Operation == Parsing::AggrFuncType::AVG_F) {
-        uint64_t sum = 0;
+        ColumnData sum = 0;
         for (int i = 0; i < n; ++i) {
-            ColumnData val = table->GetValue(ColName, i);
-            if (std::holds_alternative<Database::DbInt>(val)) {
-                sum += std::get<Database::DbInt>(val);
-            } else if (std::holds_alternative<Database::DbInt64>(val)) {
-                sum += std::get<Database::DbInt64>(val);
-            }
+            Database::ColumnData val = table->GetValue(ColName, i);
+            sum = sum + val;
         }
         if (m_Operation == Parsing::AggrFuncType::AVG_F)
-            return static_cast<Database::DbInt>(sum / n);
-        return static_cast<Database::DbInt>(sum);
+            return sum / n;
+        return sum;
     }
 
     if (m_Operation == Parsing::AggrFuncType::MIN_F || m_Operation == Parsing::AggrFuncType::MAX_F) {
@@ -127,7 +117,7 @@ Database::ColumnData ReturnType::AppliqueOperationOnCol(const ColonneNamesSet& C
     }
 
     if (m_Operation == Parsing::AggrFuncType::COUNT_F)
-        return static_cast<Database::DbInt>(n);
+        return n;
 
     throw std::runtime_error(
         "Une Agregation a ete tentee alors qu'aucune fonction d'agregation n'a ete definie pour cette colonne");
@@ -166,20 +156,20 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
 
     if (m_ColumnsToGroupBy.has_value()) {
 
-        // les colonne à garder sont celle qui ne sont pas group by et celle qui sont dans le group by mais dont ce sert après
+        // les colonne à garder sont celle qui ne sont pas group by et celle qui sont dans le group by mais dont on se sert après
 
         // on recupère les colonnes dont on doit garder les valeurs pour après donc celle qu'on affiche et celle qu'on order by
 
-        auto UsefullColNotInGroup = std::make_unique<std::vector<ReturnType>>();
+        auto UsefullColNotInGroup = std::vector<ReturnType*>();
 
-        auto UsefullColInGroup = std::make_unique<std::vector<ReturnType>>();
+        auto UsefullColInGroup = std::vector<ReturnType*>();
 
-        auto ColInfoToKeyOrValueAndPos = std::make_unique<std::unordered_map<ReturnType*, int>>();
+        auto ColInfoToKeyOrValueAndPos = std::unordered_map<ReturnType*, int>();
 
         int PosInValue = 0;
 
-        for (auto& Pc : *PrintableColumnAndOrderByColumn) {
-
+        for (size_t i = 0; i < PrintableColumnAndOrderByColumn->size(); ++i) {
+            auto& Pc = (*PrintableColumnAndOrderByColumn)[i];
             int PosInkey = 0;
             bool est_group_by = false;
 
@@ -187,17 +177,17 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
 
                 if (Gb == Pc.GetColonne()) {
                     est_group_by = true;
-                    UsefullColInGroup->push_back(Pc);
+                    UsefullColInGroup.push_back(&Pc);
 
-                    ColInfoToKeyOrValueAndPos->at(&Pc) = PosInkey;
+                    ColInfoToKeyOrValueAndPos[&Pc] = PosInkey;
                 }
 
                 PosInkey++;
             }
 
             if (!est_group_by) {
-                UsefullColNotInGroup->push_back(Pc);
-                ColInfoToKeyOrValueAndPos->at(&Pc) = PosInValue;
+                UsefullColNotInGroup.push_back(&Pc);
+                ColInfoToKeyOrValueAndPos[&Pc] = PosInValue;
                 PosInValue++;
             }
         }
@@ -217,17 +207,17 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
             }
 
             // pour chaque colonne on l'ajoute dans la map associe
-            for (auto& e : *UsefullColNotInGroup) {
+            for (auto& e : UsefullColNotInGroup) {
 
-                auto temp = table->GetValue(e.GetColonne(), i);
+                auto temp = table->GetValue(e->GetColonne(), i);
 
-                Utils::Hash::addValue(AgregMap, KeyVec, temp, ColInfoToKeyOrValueAndPos->at(&e));
+                Utils::Hash::addValue(AgregMap, KeyVec, temp, ColInfoToKeyOrValueAndPos.at(e));
             }
         }
 
         // creer l'endoit ou seront stocke les valeur utile après
         for (auto& ColName : *PrintableColumnAndOrderByColumn) {
-            ColumnNameToValues->at(ColName.GetColonne().GetMainName()) = std::make_unique<std::vector<ColumnData>>();
+            (*ColumnNameToValues)[ColName.GetColonne().GetMainName()] = std::make_unique<std::vector<ColumnData>>();
         }
 
         // pour toute les combi de clef possible
@@ -238,33 +228,33 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
             auto keys = it->first;
 
             // on applique les agregat
-            for (auto& Return : *UsefullColNotInGroup) {
-                auto& ColName = Return.GetColonne();
+            for (auto Return : UsefullColNotInGroup) {
+                auto& ColName = Return->GetColonne();
 
                 // dans colonneinfo il y a aussi les colonne qu'on retourne sans rien faire
-                if (Return.GetType() != Parsing::AggrFuncType::NOTHING_F) {
+                if (Return->GetType() != Parsing::AggrFuncType::NOTHING_F) {
                     // performe l'm_Operation
 
-                    auto y = ColInfoToKeyOrValueAndPos->at(&Return);
+                    auto y = ColInfoToKeyOrValueAndPos.at(Return);
 
                     auto r = std::make_unique<std::set<ColumnData>>(values.at(y));
 
-                    ColumnData temp = Return.AppliqueOperation(std::move(r));
+                    ColumnData temp = Return->AppliqueOperation(std::move(r));
 
                     ColumnNameToValues->at(ColName.GetMainName())->push_back(temp);
                 } else {
-                    auto PosInValue = ColInfoToKeyOrValueAndPos->at(&Return);
+                    auto PosInValue = ColInfoToKeyOrValueAndPos.at(Return);
 
                     ColumnNameToValues->at(ColName.GetMainName())->push_back(*values[PosInValue].begin());
                 }
             }
 
             // on applique les agregat
-            for (auto& Return : *UsefullColInGroup) {
+            for (auto Return : UsefullColInGroup) {
 
-                auto& ColName = Return.GetColonne();
+                auto& ColName = Return->GetColonne();
 
-                auto PosInValue = ColInfoToKeyOrValueAndPos->at(&Return);
+                auto PosInValue = ColInfoToKeyOrValueAndPos.at(Return);
 
                 ColumnNameToValues->at(ColName.GetMainName())->push_back(keys.GetValAt(PosInValue));
             }
@@ -300,10 +290,10 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
 
     auto OrdreIndice = std::make_unique<std::vector<int>>();
 
-    OrdreIndice->reserve(ColumnNameToValues->at(ColumnNameToValues->begin()->first)->size());
+    OrdreIndice->resize(ColumnNameToValues->at(ColumnNameToValues->begin()->first)->size());
     std::iota(OrdreIndice->begin(), OrdreIndice->end(), 0);
 
-    if (m_OrderByCol.has_value() && (OrdreIndice->size() > 2)) {
+    if (m_OrderByCol.has_value() && (OrdreIndice->capacity() > 2)) {
         TrierListe(ColumnNameToValues.get(), OrdreIndice.get());
     }
 

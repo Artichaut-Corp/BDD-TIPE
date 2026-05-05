@@ -705,9 +705,9 @@ void BinaryExpression::PrintCondition(std::ostream& out)
 
 std::unique_ptr<BinaryExpression::Condition> BinaryExpression::ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire)
 {
-    if (BinaryExpression::Op() == LogicalOperator::AND) { // on ne peut pas couper un OR
+    if (BinaryExpression::Op() == LogicalOperator::AND || ColonnesAExtraire != nullptr) { // on ne peut pas couper un OR
 
-        auto left_col = new std::unordered_set<QueryPlanning::ColonneNamesSet*> ();
+        auto left_col = new std::unordered_set<QueryPlanning::ColonneNamesSet*>();
 
         auto left_cond = m_Lhs.get();
 
@@ -720,7 +720,7 @@ std::unique_ptr<BinaryExpression::Condition> BinaryExpression::ExtraireCond(std:
             left_col = std::get<BinaryExpression>(*left_cond).Column();
         }
 
-        auto right_col =new std::unordered_set<QueryPlanning::ColonneNamesSet*> ();
+        auto right_col = new std::unordered_set<QueryPlanning::ColonneNamesSet*>();
 
         auto right_cond = m_Rhs.get();
 
@@ -793,7 +793,7 @@ std::unique_ptr<BinaryExpression::Condition> BinaryExpression::ExtraireCond(std:
 
                 } else {
                     // on ne peut pas découper une clause, donc on renvoie rien
-                    std::make_unique<Condition>(Condition(std::monostate()));
+                    extracted_left = std::make_unique<Condition>(Condition(std::monostate()));
                 }
             } else {
                 extracted_left = std::get<BinaryExpression>(*left_cond).ExtraireCond(ColonnesAExtraire);
@@ -1158,11 +1158,11 @@ float BinaryExpression::OptimiseBinaryExpression()
     }
     if ((Op() == LogicalOperator::OR && RatioDroite > RatioGauche) || (Op() == LogicalOperator::AND && RatioDroite < RatioGauche)) {
         // si on as un Or, on passe en premier sur celle qui a le plus de chance de passer, si on a un and, on passe en premier sur celle qui a les plus de chance d'être fausse et donc d'éviter les execution inutile
-        Condition* temp = m_Lhs.get();
+        auto temp = std::move(m_Lhs);
 
         m_Lhs = std::move(m_Rhs);
 
-        m_Rhs = std::unique_ptr<Condition>(temp);
+        m_Rhs = std::move(temp);
     }
 
     return m_InfoSelectivité.second / m_InfoSelectivité.first;

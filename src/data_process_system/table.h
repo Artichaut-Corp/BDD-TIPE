@@ -173,7 +173,7 @@ public:
 
     void Update() const
     {
-        m_Map->erase(m_Map->begin(), m_Map->end());
+        m_Map->clear();
 
         for (int i = 0; i < m_Columns->size(); i++) {
 

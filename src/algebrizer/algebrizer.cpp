@@ -271,7 +271,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     Parsing::WhereClause* where = Selection->getWhere();
 
-
     std::unordered_set<ColonneNamesSet*>* ConditionColumn;
 
     std::unique_ptr<Parsing::BinaryExpression::Condition> cond; // those variable are used two times,
@@ -303,7 +302,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 else {
 
                     throw Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table '{}' does not exist", NomColonne->GetTableSet()->GetMainName()), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
-
                 }
             }
         }
@@ -343,7 +341,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     // Maintenant que l'on as tout pour la table Principale on la créer
     std::unique_ptr<MetaTable> table_principale = std::make_unique<MetaTable>(*Racines_principale.get(), *TablePrincipaleNom.get());
 
-
     // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
     Node* RacineExec = new Node(new Proj(std::move(UsefullColumnForAggrAndOutput), *TablePrincipaleNom.get()));
 
@@ -360,12 +357,12 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     // envoie l'endroit du plus petit noeud dans le plan d'éxécution où cette table est attendu (le booléen est là pour savoir si en cas de join, la table est le nom de droite ou de gauche)
     std::unordered_map<std::string, std::pair<Node*, bool>> TableToRootOfTableMap;
     TableToRootOfTableMap[TablePrincipaleNom->GetMainName()] = std::pair<Node*, bool>(RacineExec, true);
-    //usefull variable for Select Descent   
-    Select * MainSelect;
+    // usefull variable for Select Descent
+    Select* MainSelect;
     // il faut maintenant récupérer les conditions càd les where
     if (where != NULL) {
         // une foit la racine de l'arbre d'éxécution définie, on peut lui ajouter une selection si nécessaire
-        
+
         MainSelect = new Select(std::unique_ptr<std::unordered_set<ColonneNamesSet*>>(ConditionColumn), std::move(cond), *TablePrincipaleNom.get());
         Node_Select = new Node(MainSelect);
 
@@ -393,7 +390,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 for (auto& e : ColonneAlreadyCreate) {
                     if (*colonne_nom == *e) {
                         est_déjà_ajouté = true;
-
                         colonne_nom->FusionColumn(*e);
                         break;
                     }
@@ -447,7 +443,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     if (where != NULL and optimize_BinaryExpr == 1) {
 
-
         if (Node_Select == nullptr) {
             std::cout << "Absurdité, where n'est pas null mais aucun select n'est présent\n"
                       << std::endl; // erreur
@@ -483,7 +478,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
                     for (int ligne = 0; ligne < nbr_ligne_mini; ligne++) {
                         for (auto& e : usefull_col) {
-                            CombinaisonATester->insert({e->GetMainName() , (*(*colToValList)[e->GetMainName()])[ligne]});
+                            CombinaisonATester->insert({ e->GetMainName(), (*(*colToValList)[e->GetMainName()])[ligne] });
                         }
 
                         auto temp = cond.EstimeSelectivite(CombinaisonATester.get());
@@ -520,9 +515,9 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             JoinAndRCs.push_back(std::make_pair(Join, Join->calculeRC(Magasin->GetTableByName(Join->GetLTable()), Magasin->GetTableByName(Join->GetRTable()), type_of_join)));
         }
         std::sort(JoinAndRCs.begin(), JoinAndRCs.end(),
-            [&](std::pair<Join*, float> a, std::pair<Join*, float> b) { return a.second < b.second; });
+            [&](const std::pair<Join*, float>& a,const std::pair<Join*, float>& b) { return a.second < b.second; });
 
-        Node* last;
+        Node* last = nullptr;
         Utils::UnionFind uf = Utils::UnionFind();
         for (auto joinandrc : JoinAndRCs) {
             if (benchmarking == 0) {
@@ -531,7 +526,11 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             }
             last = uf.AddElem(joinandrc.first);
         }
-
+        if (where != NULL) {
+            Node_Select->AddChild(true, last);
+        } else {
+            RacineExec->AddChild(true, last);
+        }
         if (benchmarking == 0) {
             std::cout << "\n en Optimisant le plan en fonction des RC on a : \n";
 
@@ -549,9 +548,9 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     }
 
     if (InserProj == 1) {
-        auto ColumnToKeep = std::make_unique<std::unordered_set<const ColonneNamesSet*>>();
+        auto ColumnToKeep = std::unordered_set<const ColonneNamesSet*> {};
 
-        RacineExec->InsertProj(ColumnToKeep.get());
+        RacineExec->InsertProj(&ColumnToKeep);
 
         if (benchmarking == 0) {
             std::cout << "\n en insérant des Projections là où il faut : \n";

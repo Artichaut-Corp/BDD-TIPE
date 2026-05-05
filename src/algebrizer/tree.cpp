@@ -164,7 +164,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                 // identification des colonnes encore existante dans la condition
                 std::unordered_set<ColonneNamesSet*>* ColumnInCond;
 
-                Parsing::BinaryExpression::Condition * MainCond = MainSelect->GetCond();
+                Parsing::BinaryExpression::Condition* MainCond = MainSelect->GetCond();
 
                 if (std::holds_alternative<Parsing::Clause>(*MainCond)) {
                     ColumnInCond = std::get<Parsing::Clause>(*MainCond).Column();
@@ -177,7 +177,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                     auto CondADescendre = MainSelect->ExtractCond();
                     auto temp = std::move(m_Fg),
 
-                    m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), std::move(CondADescendre), jointure->GetLTable()));
+                         m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), std::move(CondADescendre), jointure->GetLTable()));
 
                     // on insère la selection entre ce noeud, et le noeud d'en dessous
                     m_Fg->AddChild(true, temp.get());
@@ -268,7 +268,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                         ColumnUsedInCondDroit = {};
                     } else {
 
-                        RecupDroit = std::get<Parsing::BinaryExpression>(*MainCond).ExtraireCond(SFg);
+                        RecupDroit = std::get<Parsing::BinaryExpression>(*MainCond).ExtraireCond(SFd);
 
                         if (std::holds_alternative<std::monostate>(*RecupDroit)) {
                             ColumnUsedInCondDroit = {};
@@ -325,7 +325,6 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
 
                     if (Utils::is_subset(ColumnInCond, SFg)) { // on peut tout mettre en bas à gauche
                         auto CondADescendre = MainSelect->ExtractCond();
-
 
                         m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnInCond), std::move(CondADescendre), jointure->GetLTable()));
 
@@ -397,7 +396,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                             RecupDroit = std::make_unique<Parsing::BinaryExpression::Condition>(Parsing::BinaryExpression::Condition(std::monostate())); // on ne peut pas couper une clause
                             ColumnUsedInCondDroit = {};
                         } else {
-                            RecupDroit = std::get<Parsing::BinaryExpression>(*MainCond).ExtraireCond(SFg);
+                            RecupDroit = std::get<Parsing::BinaryExpression>(*MainCond).ExtraireCond(SFd);
                             if (std::holds_alternative<std::monostate>(*RecupDroit)) {
                                 ColumnUsedInCondDroit = {};
                             } else if (std::holds_alternative<Parsing::Clause>(*RecupDroit)) {
@@ -408,7 +407,7 @@ std::unordered_set<ColonneNamesSet*>* Node::SelectionDescent(Ikea* Tables, Selec
                         }
 
                         if (!std::holds_alternative<std::monostate>(*RecupDroit)) { // ce qu'on as extrait n'est pas vide
-                            m_Fg = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondDroit), std::move(RecupDroit), jointure->GetLTable()));
+                            m_Fd = std::make_unique<Node>(new Select(std::make_unique<std::unordered_set<ColonneNamesSet*>>(*ColumnUsedInCondDroit), std::move(RecupDroit), jointure->GetRTable()));
                         }
                     }
                 }
@@ -443,38 +442,33 @@ void Node::InsertProj(std::unordered_set<const ColonneNamesSet*>* ColumnToKeep)
 
         auto op = std::get<Join*>(m_Type);
 
+        ColumnToKeep->insert(&op->GetLCol());
         ColumnToKeep->insert(&op->GetRCol());
-        ColumnToKeep->insert(&op->GetRCol());
 
-        auto ColumnD = std::make_unique<std::unordered_set<const ColonneNamesSet*>>();
-        auto ColumnG = std::make_unique<std::unordered_set<const ColonneNamesSet*>>();
-
-        *ColumnD.get() = *ColumnToKeep;
-        *ColumnG.get() = *ColumnToKeep;
-
+        auto ColumnD = std::make_unique<std::unordered_set<const ColonneNamesSet*>>(*ColumnToKeep);
+        auto ColumnG = std::make_unique<std::unordered_set<const ColonneNamesSet*>>(*ColumnToKeep);
         // if the left side have something (i.e, is not an "entry point")
         if (m_Fg) {
             m_Fg->InsertProj(ColumnG.get());
+            auto ProjSetG = std::make_unique<std::unordered_set<const ColonneNamesSet*>>(*ColumnToKeep);
+            auto Proj_G = std::make_unique<Node>(new Proj(std::move(ProjSetG), op->GetLTable()));
 
-            Node* Proj_G = new Node(new Proj(std::unique_ptr<std::unordered_set<const ColonneNamesSet*>>(ColumnToKeep), op->GetLTable()));
+            auto TempG = std::move(m_Fg);
 
-            auto& TempG = m_Fg;
+            m_Fg = std::move(Proj_G);
 
-            m_Fg = std::unique_ptr<Node>(Proj_G);
-
-            m_Fg->AddChild(true, TempG.get());
+            m_Fg->AddChildUnique(true, std::move(TempG));
         }
         if (m_Fd) {
-
             m_Fd->InsertProj(ColumnD.get());
+            auto ProjSetD = std::make_unique<std::unordered_set<const ColonneNamesSet*>>(*ColumnToKeep);
+            auto Proj_D = std::make_unique<Node>(new Proj(std::move(ProjSetD), op->GetRTable()));
 
-            Node* Proj_D = new Node(new Proj(std::unique_ptr<std::unordered_set<const ColonneNamesSet*>>(ColumnToKeep), op->GetRTable()));
+            auto TempD = std::move(m_Fd);
 
-            auto& TempD = m_Fd;
+            m_Fd = std::move(Proj_D);
 
-            m_Fd = std::unique_ptr<Node>(Proj_D);
-
-            m_Fd->AddChild(true, TempD.get());
+            m_Fd->AddChildUnique(true, std::move(TempD));
         }
     } else if (std::holds_alternative<Proj*>(m_Type)) {
         auto op = std::get<Proj*>(m_Type);
@@ -490,16 +484,19 @@ void Node::InsertProj(std::unordered_set<const ColonneNamesSet*>* ColumnToKeep)
         if (!std::holds_alternative<std::monostate>(*op->GetCond())) {
 
             ColumnToKeep->insert(op->Getm_Cols().begin(), op->Getm_Cols().end());
+            auto ColumnRec = std::make_unique<std::unordered_set<const ColonneNamesSet*>>(*ColumnToKeep);
 
             // if the left side have something (i.e, is not an "entry point")
             if (m_Fg) {
-                m_Fg->InsertProj(ColumnToKeep);
+                m_Fg->InsertProj(ColumnRec.get());
+                auto ProjSetG = std::make_unique<std::unordered_set<const ColonneNamesSet*>>(*ColumnToKeep);
+                auto Proj_G = std::make_unique<Node>(new Proj(std::move(ProjSetG), op->GetTableName()));
 
-                auto& TempG = m_Fg;
+                auto TempG = std::move(m_Fg);
 
-                m_Fg = std::make_unique<Node>(new Proj(std::unique_ptr<std::unordered_set<const ColonneNamesSet*>>(ColumnToKeep), op->GetTableName()));
+                m_Fg = std::move(Proj_G);
 
-                m_Fg->AddChild(true, TempG.get());
+                m_Fg->AddChildUnique(true, std::move(TempG));
             }
         } else {
             if (m_Fg) {

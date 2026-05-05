@@ -139,15 +139,20 @@ public:
 
     void UpdateMetaTable()
     {
-        m_MapTableNameToTable.erase(m_MapTableNameToTable.begin(), m_MapTableNameToTable.end());
+        m_MapTableNameToTable.clear();
 
-        m_MapColNameToTable.erase(m_MapColNameToTable.begin(), m_MapColNameToTable.end());
+        m_MapColNameToTable.clear();
 
         for (int i = 0; i < m_Tables.size(); i++) {
+            if (!m_Tables.at(i)) {
+                m_Tables.erase(m_Tables.begin() + i);
+                i--;
+                continue;
+            }
+
             m_Tables.at(i)->Update();
 
             if (m_Tables.at(i)->size() == 0) {
-                // if we delete a Table, we change the size and move all the vector to the left by 1 there fore we need to compensate it
                 m_Tables.erase(m_Tables.begin() + i);
                 i--;
             } else {
@@ -166,7 +171,7 @@ public:
     }
 
     void AppliqueOrdre(const std::vector<int>& order)
-    {   
+    {
         for (auto& e : m_Tables) {
             e->ApplyFilter(order);
         }
@@ -201,7 +206,7 @@ public:
 
         return vec;
     }
-};
+}; 
 
 } // Database::QueryPlanning
 //

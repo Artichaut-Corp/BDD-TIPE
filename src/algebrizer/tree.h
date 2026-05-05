@@ -39,7 +39,14 @@ public:
             m_Fg = std::unique_ptr<Node>(child);
         else
             m_Fd = std::unique_ptr<Node>(child);
+    }void AddChildUnique(bool left, std::unique_ptr<Node> child)
+    {
+        if (left)
+            m_Fg = std::move(child);
+        else
+            m_Fd = std::move(child);
     }
+
 
     MetaTable* Pronf(Ikea* Tables, int type_of_join);
 

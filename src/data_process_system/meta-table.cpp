@@ -61,7 +61,9 @@ void MetaTable::Projection(std::unique_ptr<std::unordered_set<const ColonneNames
     std::vector<ColonneNamesSet*> difference;
 
     for (auto& t : m_Tables) {
-
+        if (!t) {
+            throw std::runtime_error("MetaTable contient une table NULL");
+        }
 
         for (auto& r : *t->GetColumns()) {
 

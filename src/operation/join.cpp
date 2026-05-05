@@ -106,8 +106,6 @@ MetaTable* Join::ExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
 
     meta_table2->GetTableByColName(m_ColumnName2).DeleteCol(m_ColumnName2);
 
-    meta_table2->UpdateMetaTable();
-
     meta_table1->FusionMetaTable(*meta_table2);
 
     return meta_table1;
