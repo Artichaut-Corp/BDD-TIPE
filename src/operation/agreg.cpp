@@ -3,7 +3,6 @@
 #include "utils/hashmap.h"
 #include "utils/printing_utils.h"
 
-#include <gperftools/heap-profiler.h>
 #include <memory>
 #include <set>
 #include <span>
@@ -123,7 +122,7 @@ Database::ColumnData ReturnType::AppliqueOperationOnCol(const ColonneNamesSet& C
         "Une Agregation a ete tentee alors qu'aucune fonction d'agregation n'a ete definie pour cette colonne");
 }
 
-std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(MetaTable* table, int benchmarking_INFO)
+std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(MetaTable* table, bool benchmarking_INFO)
 {
 
     auto ColumnNameToValues = std::make_unique<std::unordered_map<std::string, std::unique_ptr<std::vector<ColumnData>>>>();
@@ -301,14 +300,14 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
         std::span<int> sub = std::span<int>(*OrdreIndice).subspan(m_Limite->first, m_Limite->second);
 
         auto fin = std::chrono::high_resolution_clock::now();
-        if (benchmarking_INFO == 0) {
+        if (benchmarking_INFO) {
             Database::Utils::AfficheAgregSpan(std::move(ColumnNameToValues), &sub, std::move(PrintableColumnAndOrderByColumn));
         }
         return fin;
 
     } else {
         auto fin = std::chrono::high_resolution_clock::now();
-        if (benchmarking_INFO == 0) {
+        if (benchmarking_INFO) {
             Database::Utils::AfficheAgreg(std::move(ColumnNameToValues), std::move(OrdreIndice), std::move(PrintableColumnAndOrderByColumn));
         }
         return fin;

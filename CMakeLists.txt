@@ -14,6 +14,7 @@ enable_testing()
 add_subdirectory(lib/tomlplusplus)
 add_subdirectory(lib/googletest)
 add_subdirectory(lib/pybind11)
+add_subdirectory(lib/replxx)
 
 add_subdirectory(src)
 add_subdirectory(test)

@@ -4,12 +4,14 @@
 #include "server.h"
 #include "storage.h"
 
+#include <cstdint>
 #include <filesystem>
 #include <iostream>
 #include <ostream>
 #include <replxx.h>
-#include <stdexcept>
 #include <string>
+#include <toml++/impl/parse_error.hpp>
+#include <toml++/impl/parser.hpp>
 #include <vector>
 
 #ifndef DATABASE_H
@@ -20,19 +22,65 @@ namespace Database {
 
 struct DatabaseSetting {
 public:
+    // General Parameters
     bool m_Repl = true;
-    std::string m_Address;
+
     std::string m_FileName;
+
+    // Optimisation levels
+
+    // Either used or not
+    bool m_SelectionDescent = false;
+
+    // See Node::Pronf function in src/algebrizer/tree.cpp in order to understand what each number do, actually defined are 0,1,3
+    uint8_t m_ExecutionTreeTraversalMode = 0;
+
+    bool m_ProjectionInsertion = 0;
+
+    bool m_BinaryExpressionOptimization = 0;
+
+    bool m_QueryJoinOrdering = 0;
+
+    bool m_Benchmarking = 0;
 
     DatabaseSetting() = default;
 
-    DatabaseSetting(const std::string& fname)
-        : m_Repl(false)
-        , m_FileName(fname)
+    DatabaseSetting(const std::string& fname, uint8_t execution_tree_traversal_mode = 0,
+        bool projection_insertion = 0,
+        bool binary_expression_optimization = 0,
+        bool query_join_ordering = 0,
+        bool benchmarking = 0)
+        : m_FileName(fname)
+        , m_ExecutionTreeTraversalMode(execution_tree_traversal_mode)
+        , m_ProjectionInsertion(projection_insertion)
+        , m_BinaryExpressionOptimization(binary_expression_optimization)
+        , m_QueryJoinOrdering(query_join_ordering)
+        , m_Benchmarking(benchmarking)
     {
     }
 
-    DatabaseSetting(const std::string& addr, const std::string& fname);
+    DatabaseSetting(const std::string& fname, const std::string& config_fname)
+        : m_FileName(fname)
+    {
+        try {
+            auto tbl = toml::parse_file(config_fname);
+
+            m_SelectionDescent = tbl["SelectionDescent"].value_or(0);
+
+            m_ExecutionTreeTraversalMode = tbl["PronfMode"].value_or(0);
+
+            m_ProjectionInsertion = tbl["InsertProj"].value_or(0);
+
+            m_BinaryExpressionOptimization = tbl["OptimizeBinaryExpression"].value_or(0);
+            m_QueryJoinOrdering = tbl["OrderingQueryJoin"].value_or(0);
+
+            m_Benchmarking = tbl["Benchmarking"].value_or(0);
+
+        } catch (const toml::parse_error& err) {
+            std::cerr << "Error parsing config file: " << err.description() << std::endl;
+            std::cerr << "Using default values.\n";
+        }
+    }
 };
 
 class DatabaseEngine {
@@ -296,6 +344,7 @@ public:
     {
         std::string input;
 
+        // Decide if we either print the results to stdout or if the request's result needs to be handled by python
         if (Settings.m_Repl) {
             Replxx* rx = replxx_init();
 
@@ -313,7 +362,7 @@ public:
 
                     break;
                 } else if (input == ".insert_data") {
-                    std::cout << "Insertion des data\n";
+                    std::cout << "Insertion des données\n";
                     import_all_csv();
                     std::cout<<std::endl;
                 } else if (input == ".print_table_layout") {
@@ -330,40 +379,43 @@ public:
             replxx_end(rx);
         } else {
 
-            if (Settings.m_Address == "") {
-                throw Errors::Error(Errors::ErrorType::CLIArgument, "Use of --serve / -s requires an address", 0, 0, Errors::ERROR_UNGIVEN_ARGUMENT);
-            }
+            /*
+              if (Settings.m_Address == "") {
+                  throw Errors::Error(Errors::ErrorType::CLIArgument, "Use of --serve / -s requires an address", 0, 0, Errors::ERROR_UNGIVEN_ARGUMENT);
+              }
 
-            const std::string& delimiter = ":";
+              const std::string& delimiter = ":";
 
-            auto delimiter_position = Settings.m_Address.find(delimiter);
+              auto delimiter_position = Settings.m_Address.find(delimiter);
 
-            const std::string& address = Settings.m_Address.substr(0, delimiter_position);
+              const std::string& address = Settings.m_Address.substr(0, delimiter_position);
 
-            int port;
+              int port;
 
-            try {
-                port = std::stoi(Settings.m_Address.substr(delimiter_position + 1, Settings.m_Address.size()));
+              try {
+                  port = std::stoi(Settings.m_Address.substr(delimiter_position + 1, Settings.m_Address.size()));
 
-            } catch (const std::invalid_argument& e) {
+              } catch (const std::invalid_argument& e) {
 
-                throw Errors::Error(Errors::ErrorType::CLIArgument, "Was not able to parse port number", 0, 0, Errors::ERROR_UNKNOWN_ARGUMENT);
-            }
+                  throw Errors::Error(Errors::ErrorType::CLIArgument, "Was not able to parse port number", 0, 0, Errors::ERROR_UNKNOWN_ARGUMENT);
+              }
 
-            Utils::SocketOStream stream
-                = Utils::Server::ConnectTcpStream(address, port);
+              Utils::SocketOStream stream
+                  = Utils::Server::ConnectTcpStream(address, port);
 
-            for (;;) {
+              for (;;) {
 
-                input = Utils::Server::ReadStream(stream);
+                  input = Utils::Server::ReadStream(stream);
 
-                if (input == "\0") {
-                    std::cout << "Exiting...\n";
-                    break;
-                }
+                  if (input == "\0") {
+                      std::cout << "Exiting...\n";
+                      break;
+                  }
 
-                Utils::Server::PrintStream(stream, Eval(input));
-            }
+                  Utils::Server::PrintStream(stream, Eval(input));
+              }
+
+          */
         }
     }
 

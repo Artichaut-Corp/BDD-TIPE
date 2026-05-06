@@ -62,16 +62,9 @@ std::unique_ptr<TableNamesSet> ConvertToStandardTableName(Database::Parsing::Tab
     return standard_name;
 }
 
-void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::string, Database::Storing::TableInfo>* IndexGet, std::unique_ptr<std::vector<int>> param)
+void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::string, Database::Storing::TableInfo>* IndexGet, DatabaseSetting* params)
 {
     auto deb = std::chrono::high_resolution_clock::now();
-
-    int descend_select = param->at(0);
-    int type_of_join = param->at(1);
-    int InserProj = param->at(2);
-    int optimize_BinaryExpr = param->at(3);
-    int Ordering_Join = param->at(4);
-    int benchmarking = param->at(5);
 
     // Implémentation d'une conversion en arbre d'une query simple
     auto variation_of_tablename_to_main_table_name = std::make_unique<std::unordered_map<std::string, TableNamesSet*>>();
@@ -341,6 +334,10 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     // Maintenant que l'on as tout pour la table Principale on la créer
     std::unique_ptr<MetaTable> table_principale = std::make_unique<MetaTable>(*Racines_principale.get(), *TablePrincipaleNom.get());
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> f17ac50 (modified options implementation throught python)
     // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
     Node* RacineExec = new Node(new Proj(std::move(UsefullColumnForAggrAndOutput), *TablePrincipaleNom.get()));
 
@@ -437,11 +434,11 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     auto Magasin = std::make_unique<Ikea>(Tables);
 
-    if (benchmarking == 0) {
+    if (!params->m_Benchmarking) {
         RacineExec->printBT(std::cout);
     }
 
-    if (where != NULL and optimize_BinaryExpr == 1) {
+    if (where != NULL && params->m_BinaryExpressionOptimization) {
 
         if (Node_Select == nullptr) {
             std::cout << "Absurdité, where n'est pas null mais aucun select n'est présent\n"
@@ -484,7 +481,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                         auto temp = cond.EstimeSelectivite(CombinaisonATester.get());
                     }
 
-                    if (benchmarking == 0) {
+                    if (!params->m_Benchmarking) {
 
                         std::cout << "\n Voici la condition brute : \n";
 
@@ -495,24 +492,24 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
                     cond.OptimiseBinaryExpression();
 
-                    if (benchmarking == 0) {
+                    if (!params->m_Benchmarking) {
 
                         cond.PrintCondition(std::cout);
                     }
                 }
             } else {
-                if (benchmarking == 0) {
+                if (!params->m_Benchmarking) {
                     std::cout << "Il y as where mais aucun select après le projecteur principal\n"
                               << std::endl; // erreur
                 }
             }
         }
     }
-    if (Ordering_Join == 1 and join_list.size() >= 2) { // no need to optimize if there is just one join of no join at all
+    if (params->m_QueryJoinOrdering && join_list.size() >= 2) { // no need to optimize if there is just one join of no join at all
 
         std::vector<std::pair<Join*, float>> JoinAndRCs = std::vector<std::pair<Join*, float>>();
         for (auto Join : join_list) {
-            JoinAndRCs.push_back(std::make_pair(Join, Join->calculeRC(Magasin->GetTableByName(Join->GetLTable()), Magasin->GetTableByName(Join->GetRTable()), type_of_join)));
+            JoinAndRCs.push_back(std::make_pair(Join, Join->calculeRC(Magasin->GetTableByName(Join->GetLTable()), Magasin->GetTableByName(Join->GetRTable()), params->m_ExecutionTreeTraversalMode)));
         }
         std::sort(JoinAndRCs.begin(), JoinAndRCs.end(),
             [&](const std::pair<Join*, float>& a,const std::pair<Join*, float>& b) { return a.second < b.second; });
@@ -520,39 +517,49 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         Node* last = nullptr;
         Utils::UnionFind uf = Utils::UnionFind();
         for (auto joinandrc : JoinAndRCs) {
-            if (benchmarking == 0) {
+            if (!params->m_Benchmarking) {
 
                 std::cout << "Le Join entre " << joinandrc.first->GetLTable().GetMainName() << " et " << joinandrc.first->GetRTable().GetMainName() << " a une RC de :" << joinandrc.second << "\n";
             }
             last = uf.AddElem(joinandrc.first);
         }
+<<<<<<< HEAD
         if (where != NULL) {
             Node_Select->AddChild(true, last);
         } else {
             RacineExec->AddChild(true, last);
         }
         if (benchmarking == 0) {
+=======
+
+        if (!params->m_Benchmarking) {
+>>>>>>> f17ac50 (modified options implementation throught python)
             std::cout << "\n en Optimisant le plan en fonction des RC on a : \n";
 
             RacineExec->printBT(std::cout);
         }
     }
 
-    if (where != NULL and descend_select == 1) {
+    if (where != NULL and params->m_SelectionDescent) {
         RacineExec->SelectionDescent(Magasin.get(), MainSelect);
-        if (benchmarking == 0) {
+        if (!params->m_Benchmarking) {
             std::cout << "\n en descendant les sélections on a : \n";
 
             RacineExec->printBT(std::cout);
         }
     }
 
+<<<<<<< HEAD
     if (InserProj == 1) {
         auto ColumnToKeep = std::unordered_set<const ColonneNamesSet*> {};
+=======
+    if (params->m_ProjectionInsertion) {
+        auto ColumnToKeep = std::make_unique<std::unordered_set<const ColonneNamesSet*>>();
+>>>>>>> f17ac50 (modified options implementation throught python)
 
         RacineExec->InsertProj(&ColumnToKeep);
 
-        if (benchmarking == 0) {
+        if (!params->m_Benchmarking) {
             std::cout << "\n en insérant des Projections là où il faut : \n";
             RacineExec->printBT(std::cout);
         }
@@ -560,21 +567,21 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     std::chrono::high_resolution_clock::time_point fin;
 
-    MetaTable* Table_Finale = RacineExec->Pronf(Magasin.get(), type_of_join);
+    MetaTable* Table_Finale = RacineExec->Pronf(Magasin.get(), params->m_ExecutionTreeTraversalMode);
 
     auto endTime = std::chrono::high_resolution_clock::now();
 
     if (IsAgregate || IsOrderBy || IsLimite) { // la requete possède une agregation et donc un group by
-        fin = AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale, benchmarking);
+        fin = AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale, params->m_Benchmarking);
     } else {
         fin = std::chrono::high_resolution_clock::now();
 
-        if (benchmarking == 0) {
+        if (params->m_Benchmarking) {
             Utils::AfficheResultat(Table_Finale, std::move(colonnes_de_retour));
         }
     }
 
-    if (benchmarking == 1) {
+    if (params->m_Benchmarking) {
         std::ofstream file;
 
         file.open("../script/data.csv", std::ios::app);
@@ -582,7 +589,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         if (!file.is_open()) {
             std::cout << "Error: File not found or could not be opened." << std::endl;
         } else {
-            file << descend_select << ";" << type_of_join << ";" << InserProj << ";" << optimize_BinaryExpr << ";" << Ordering_Join << ";" << std::chrono::duration_cast<std::chrono::microseconds>(fin - deb).count() << ";" << tables_secondaires.size() << "\n";
+            file << params->m_SelectionDescent << ";" << params->m_ExecutionTreeTraversalMode << ";" << params->m_ProjectionInsertion << ";" << params->m_BinaryExpressionOptimization << ";" << params->m_QueryJoinOrdering << ";" << std::chrono::duration_cast<std::chrono::microseconds>(fin - deb).count() << ";" << tables_secondaires.size() << "\n";
             std::cout << "Requête parfaitement executée";
         }
         file.close();

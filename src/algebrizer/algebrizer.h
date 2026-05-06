@@ -7,7 +7,6 @@
 #include "operation/pred.h"
 #include "parser/dml.h"
 
-#include <vector>
 
 #ifndef ALGEBRIZER_H
 
@@ -19,7 +18,7 @@ ColonneNamesSet* ConvertToStandardColumnName(const TableNamesSet& NomTablePrinci
 
 TableNamesSet* ConvertToStandardTableName(Database::Parsing::TableName* Table, std::unordered_map<std::string, TableNamesSet*>* variation_of_tablename_to_main_table_name);
 
-void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::string, Database::Storing::TableInfo>* IndexGet, std::unique_ptr<std::vector<int>> param);
+void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Storing::File* File, std::unordered_map<std::string, Database::Storing::TableInfo>* IndexGet, DatabaseSetting* params);
 
 };
 

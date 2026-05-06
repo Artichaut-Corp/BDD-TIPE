@@ -6,16 +6,16 @@ int main(int argc, char* argv[])
 {
     DatabaseEngine database;
 
-    auto s = DatabaseEngine::ParseArguments(argc, argv);
+    DatabaseSetting* s = DatabaseEngine::ParseArguments(argc, argv);
 
     database.Init(s);
 
-  while (!database.m_Quit) {
-      try {
+    while (!database.m_Quit) {
+        try {
 
-          database.Run();
+            database.Run();
 
-      } catch (const Errors::Error& e) {
+        } catch (const Errors::Error& e) {
 
             if (s->m_Repl)
                 e.printAllInfo(std::cerr);

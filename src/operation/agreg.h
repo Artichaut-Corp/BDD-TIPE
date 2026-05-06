@@ -104,7 +104,7 @@ public:
             : 0;
     }
 
-    std::chrono::high_resolution_clock::time_point AppliqueAgregateAndPrint(MetaTable* table, int benchmarking_INFO);
+    std::chrono::high_resolution_clock::time_point AppliqueAgregateAndPrint(MetaTable* table, bool benchmarking_INFO);
 
     void TrierListe(std::unordered_map<std::string, std::unique_ptr<std::vector<ColumnData>>>* ColumnNameToValues, std::vector<int>* IndicesVierge);
 

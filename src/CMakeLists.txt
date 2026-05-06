@@ -11,11 +11,11 @@ target_include_directories(bdd_tipe_lib
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(bdd_tipe_lib PUBLIC tomlplusplus::tomlplusplus )
+target_link_libraries(bdd_tipe_lib PUBLIC tomlplusplus::tomlplusplus replxx)
 
 add_executable(bdd_tipe main.cpp)
 
-target_link_libraries(bdd_tipe PUBLIC bdd_tipe_lib replxx)
+target_link_libraries(bdd_tipe PUBLIC bdd_tipe_lib)
 
 target_compile_options(bdd_tipe PRIVATE -fsanitize=address -fno-omit-frame-pointer)
 target_link_options(bdd_tipe PRIVATE -fsanitize=address)

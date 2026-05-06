@@ -19,24 +19,24 @@ namespace Database {
 
 auto DatabaseEngine::ParseArguments(int argc, char** argv) -> DatabaseSetting*
 {
-    auto Settings = new DatabaseSetting();
+    bool repl;
+    std::string fname;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
         if (arg == "--serve" || arg == "-s") {
             if (i + 1 < argc) {
-                Settings->m_Repl = false;
-                Settings->m_Address = argv[++i];
+                repl = false;
             } else {
 
                 throw Errors::Error(Errors::ErrorType::CLIArgument, "Use of --serve / -s requires an address", 0, 0, Errors::ERROR_UNGIVEN_ARGUMENT);
             }
         } else if (arg == "--repl" || arg == "-r") {
-            Settings->m_Repl = true;
+            repl = true;
         } else if (arg == "--file" || arg == "-f") {
             if (i + 1 < argc) {
-                Settings->m_FileName = argv[++i];
+                fname = argv[++i];
             } else {
 
                 throw Errors::Error(Errors::ErrorType::CLIArgument, "Use of --file / -f requires a file name", 0, 0, Errors::ERROR_UNGIVEN_ARGUMENT);
@@ -46,7 +46,7 @@ auto DatabaseEngine::ParseArguments(int argc, char** argv) -> DatabaseSetting*
         }
     }
 
-    return Settings;
+    return new DatabaseSetting(fname, "../../../bdd-tipe/Parametre.toml");
 }
 
 auto DatabaseEngine::FindDBFile() -> const std::string
@@ -312,24 +312,9 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
         auto joins = select->getJoins();
 
-        auto param = std::make_unique<std::vector<int>>(6);
+        QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get(), &Settings);
 
-        try {
-            auto tbl = toml::parse_file("../../../bdd-tipe/Parametre.toml");
-            param->at(0) = tbl["SelectionDescent"].value_or(0); // if SelectionDescent set to 1, We use the Selection Descent optimisation
-            param->at(1) = tbl["PronfMode"].value_or(0); // see Node::Pronf function in tree.cpp in order to understand what each number do, actually defined are 0,1,3
-            param->at(2) = tbl["InsertProj"].value_or(0); // if InserProj set to 1
-            param->at(3) = tbl["OptimizeBinaryExpression"].value_or(0); // if OptimizeBinaryExpression set to 1
-            param->at(4) = tbl["OrderingQueryJoin"].value_or(0); // if OrderingQueryJoin set to 1
-            param->at(5) = tbl["Benchmarking"].value_or(0); // if Benchmarking set to 1
-
-        } catch (const toml::parse_error& err) {
-            std::cerr << "Error parsing config file: " << err.description() << std::endl;
-            std::cerr << "Using default values.\n";
-        }
-
-        QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get(), std::move(param));
-
+        output = "SELECT SUCESS";
     } else if (std::holds_alternative<Parsing::UpdateStmt*>(stmt)) {
         auto update = std::get<Parsing::UpdateStmt*>(stmt);
 
