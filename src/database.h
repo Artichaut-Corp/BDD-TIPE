@@ -45,12 +45,13 @@ public:
 
     DatabaseSetting() = default;
 
-    DatabaseSetting(const std::string& fname, uint8_t execution_tree_traversal_mode = 0,
+    DatabaseSetting(const std::string& fname, bool selectiondescent = 0, uint8_t execution_tree_traversal_mode = 0,
         bool projection_insertion = 0,
         bool binary_expression_optimization = 0,
         bool query_join_ordering = 0,
         bool benchmarking = 0)
         : m_FileName(fname)
+        , m_SelectionDescent(selectiondescent)
         , m_ExecutionTreeTraversalMode(execution_tree_traversal_mode)
         , m_ProjectionInsertion(projection_insertion)
         , m_BinaryExpressionOptimization(binary_expression_optimization)
@@ -320,10 +321,11 @@ public:
         if (!created_file) {
             FillIndex();
         }
-
+        if (!s->m_Benchmarking) {
 #ifdef _GLIBCXX_DEBUG_ONLY
-        PrintIndex(std::cout);
+            PrintIndex(std::cout);
 #endif
+        }
     }
 
     auto Exec(const std::string& req) -> std::string
@@ -364,7 +366,7 @@ public:
                 } else if (input == ".insert_data") {
                     std::cout << "Insertion des données\n";
                     import_all_csv();
-                    std::cout<<std::endl;
+                    std::cout << std::endl;
                 } else if (input == ".print_table_layout") {
                     PrintIndex(std::cout);
                 } else {
@@ -384,7 +386,7 @@ public:
                   throw Errors::Error(Errors::ErrorType::CLIArgument, "Use of --serve / -s requires an address", 0, 0, Errors::ERROR_UNGIVEN_ARGUMENT);
               }
 
-              const std::string& delimiter = ":";
+              const std::(string& delimiter = ":";
 
               auto delimiter_position = Settings.m_Address.find(delimiter);
 

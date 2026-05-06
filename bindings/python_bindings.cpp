@@ -9,7 +9,7 @@ PYBIND11_MODULE(py_bddtipe, m, py::mod_gil_not_used())
     py::class_<Database::DatabaseSetting>(m, "DatabaseSetting")
         .def(py::init<>())
         //.def(py::init<const std::string&, const std::string&>())
-        .def(py::init<const std::string&, uint8_t,
+        .def(py::init<const std::string&,bool, uint8_t,
             bool,
             bool,
             bool,

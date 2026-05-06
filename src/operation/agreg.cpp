@@ -40,7 +40,7 @@ Database::ColumnData ReturnType::AppliqueOperation(std::unique_ptr<std::set<Data
         int n = Values->size();
         ColumnData sum = 0;
         for (const auto& e : *Values) {
-            sum = sum + e;
+            sum = sum +  e;
         }
         if (m_Operation == Parsing::AggrFuncType::AVG_F)
             return sum / n;
@@ -300,14 +300,14 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
         std::span<int> sub = std::span<int>(*OrdreIndice).subspan(m_Limite->first, m_Limite->second);
 
         auto fin = std::chrono::high_resolution_clock::now();
-        if (benchmarking_INFO) {
+        if (!benchmarking_INFO) {
             Database::Utils::AfficheAgregSpan(std::move(ColumnNameToValues), &sub, std::move(PrintableColumnAndOrderByColumn));
         }
         return fin;
 
     } else {
         auto fin = std::chrono::high_resolution_clock::now();
-        if (benchmarking_INFO) {
+        if (!benchmarking_INFO) {
             Database::Utils::AfficheAgreg(std::move(ColumnNameToValues), std::move(OrdreIndice), std::move(PrintableColumnAndOrderByColumn));
         }
         return fin;

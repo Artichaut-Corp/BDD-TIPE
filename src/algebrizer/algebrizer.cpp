@@ -508,7 +508,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             JoinAndRCs.push_back(std::make_pair(Join, Join->calculeRC(Magasin->GetTableByName(Join->GetLTable()), Magasin->GetTableByName(Join->GetRTable()), params->m_ExecutionTreeTraversalMode)));
         }
         std::sort(JoinAndRCs.begin(), JoinAndRCs.end(),
-            [&](const std::pair<Join*, float>& a,const std::pair<Join*, float>& b) { return a.second < b.second; });
+            [&](const std::pair<Join*, float>& a, const std::pair<Join*, float>& b) { return a.second < b.second; });
 
         Node* last = nullptr;
         Utils::UnionFind uf = Utils::UnionFind();
@@ -562,22 +562,20 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         fin = AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale, params->m_Benchmarking);
     } else {
         fin = std::chrono::high_resolution_clock::now();
-
-        if (params->m_Benchmarking) {
-            Utils::AfficheResultat(Table_Finale, std::move(colonnes_de_retour));
-        }
+    }
+    if (!params->m_Benchmarking) {
+        Utils::AfficheResultat(Table_Finale, std::move(colonnes_de_retour));
     }
 
     if (params->m_Benchmarking) {
         std::ofstream file;
 
-        file.open("../script/data.csv", std::ios::app);
+        file.open("./script/data.csv", std::ios::app);
 
         if (!file.is_open()) {
             std::cout << "Error: File not found or could not be opened." << std::endl;
         } else {
-            file << params->m_SelectionDescent << ";" << params->m_ExecutionTreeTraversalMode << ";" << params->m_ProjectionInsertion << ";" << params->m_BinaryExpressionOptimization << ";" << params->m_QueryJoinOrdering << ";" << std::chrono::duration_cast<std::chrono::microseconds>(fin - deb).count() << ";" << tables_secondaires.size() << "\n";
-            std::cout << "Requête parfaitement executée";
+            file << params->m_SelectionDescent << ";" << (int)params->m_ExecutionTreeTraversalMode << ";" << params->m_ProjectionInsertion << ";" << params->m_BinaryExpressionOptimization << ";" << params->m_QueryJoinOrdering << ";" << std::chrono::duration_cast<std::chrono::microseconds>(fin - deb).count() << ";" << tables_secondaires.size() << "\n";
         }
         file.close();
     }
