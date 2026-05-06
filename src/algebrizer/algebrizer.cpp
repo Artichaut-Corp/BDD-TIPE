@@ -334,10 +334,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     // Maintenant que l'on as tout pour la table Principale on la créer
     std::unique_ptr<MetaTable> table_principale = std::make_unique<MetaTable>(*Racines_principale.get(), *TablePrincipaleNom.get());
 
-<<<<<<< HEAD
-=======
-
->>>>>>> f17ac50 (modified options implementation throught python)
     // le tout dernier élément vérifie que les valeur restante sont celle de retour, donc on projete sur le type de retour
     Node* RacineExec = new Node(new Proj(std::move(UsefullColumnForAggrAndOutput), *TablePrincipaleNom.get()));
 
@@ -523,17 +519,13 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             }
             last = uf.AddElem(joinandrc.first);
         }
-<<<<<<< HEAD
         if (where != NULL) {
             Node_Select->AddChild(true, last);
         } else {
             RacineExec->AddChild(true, last);
         }
-        if (benchmarking == 0) {
-=======
 
         if (!params->m_Benchmarking) {
->>>>>>> f17ac50 (modified options implementation throught python)
             std::cout << "\n en Optimisant le plan en fonction des RC on a : \n";
 
             RacineExec->printBT(std::cout);
@@ -549,13 +541,8 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         }
     }
 
-<<<<<<< HEAD
-    if (InserProj == 1) {
-        auto ColumnToKeep = std::unordered_set<const ColonneNamesSet*> {};
-=======
     if (params->m_ProjectionInsertion) {
-        auto ColumnToKeep = std::make_unique<std::unordered_set<const ColonneNamesSet*>>();
->>>>>>> f17ac50 (modified options implementation throught python)
+        auto ColumnToKeep = std::unordered_set<const ColonneNamesSet*> {};
 
         RacineExec->InsertProj(&ColumnToKeep);
 
