@@ -1,22 +1,26 @@
 #ifndef UNORDERED_SET_UTILS_H
 #define UNORDERED_SET_UTILS_H
 
-#include <memory>
+#include "data_process_system/namingsystem.h"
+
 #include <unordered_set>
-#include "../data_process_system/namingsystem.h"
+
 namespace Database::Utils {
 
-inline bool is_subset(const std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* A,const std::unordered_set<std::shared_ptr<QueryPlanning::ColonneNamesSet>>* B)
-{   
-    for ( auto elemC : *A) {
+inline bool is_subset(std::unordered_set<QueryPlanning::ColonneNamesSet*>* A, std::unordered_set<QueryPlanning::ColonneNamesSet*>* B)
+{
+    if (A == nullptr) {
+        return false;
+    }
+    for (auto& elemC : *A) {
         bool est_trouve = false;
-        for( auto elemT:*B){
-            if ((*elemC)==(*elemT)){
+        for (auto& elemT : *B) {
+            if ((*elemC) == (*elemT)) {
                 est_trouve = true;
                 break;
             }
         }
-        if(!est_trouve){
+        if (!est_trouve) {
             return false;
         }
     }
@@ -25,4 +29,4 @@ inline bool is_subset(const std::unordered_set<std::shared_ptr<QueryPlanning::Co
 
 } // namespace Database::Utils
 
-#endif //!UNORDERED_SET_UTILS_H
+#endif //! UNORDERED_SET_UTILS_H

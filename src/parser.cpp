@@ -21,6 +21,7 @@ std::variant<Statement, Errors::Error> Parser::Parse()
         return node;
     }
 
+
     try {
         switch (m_Tokenizer->peek().m_Token) {
 

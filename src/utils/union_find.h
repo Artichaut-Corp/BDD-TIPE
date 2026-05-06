@@ -1,6 +1,6 @@
 #ifndef UNION_FIND_UTILS_H
 #define UNION_FIND_UTILS_H
-#include "../algebrizer/tree.h"
+#include "algebrizer/tree.h"
 
 #include <string>
 #include <unordered_map>
@@ -15,26 +15,28 @@ private:
 public:
     UnionFind()
     {
-        std::unordered_map<std::string, std::string> parent = std::unordered_map<std::string, std::string>();
-        std::unordered_map<std::string, Database::QueryPlanning::Node*> TableToNode = std::unordered_map<std::string, Database::QueryPlanning::Node*>();
-
-        std::unordered_map<std::string, int> rang = std::unordered_map<std::string, int>();
     }
 
     Database::QueryPlanning::Node* AddElem(Database::QueryPlanning::Join* join)
     {
-        auto parenttableL = trouver(join->GetLTable()->GetMainName());
-        auto NodeL = TableToNode[parenttableL];
-        auto parenttableR = trouver(join->GetRTable()->GetMainName());
-        auto NodeR = TableToNode[parenttableR];
+        auto parentTableL = trouver(join->GetLTable().GetMainName());
+
+        auto NodeL = TableToNode[parentTableL];
+
+        auto parentTableR = trouver(join->GetRTable().GetMainName());
+
+        auto NodeR = TableToNode[parentTableR];
+
         auto node = new Database::QueryPlanning::Node(join);
+
         node->AddChild(true, NodeL);
         node->AddChild(false, NodeR);
 
-        unir(join->GetLTable()->GetMainName(), join->GetRTable()->GetMainName(), node);
+        unir(join->GetLTable().GetMainName(), join->GetRTable().GetMainName(), node);
+
         return node;
     }
-    std::string trouver(std::string table)
+    std::string trouver(const std::string table)
     {
         if (parent.contains(table)) {
             auto parent_table = parent[table];
@@ -54,10 +56,10 @@ public:
     }
     void unir(std::string tableL, std::string tableR, Database::QueryPlanning::Node* node)
     {
-        TableToNode[tableL] = node;
-        TableToNode[tableR] = node;
         auto parent_tableL = trouver(tableL);
         auto parent_tableR = trouver(tableR);
+        TableToNode[parent_tableL] = node;
+        TableToNode[parent_tableR] = node;
         if (parent_tableL != parent_tableR) {
             auto rangL = rang[parent_tableL];
             auto rangR = rang[parent_tableR];

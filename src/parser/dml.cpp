@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <sys/select.h>
+#include <utility>
 #include <variant>
 
 namespace Database::Parsing {
@@ -379,7 +380,8 @@ WhereClause* WhereClause::ParseWhere(Lexing::Tokenizer* t)
 {
 
     auto tok = t->peek();
-    return new WhereClause(BinaryExpression::ParseCondition(t));
+
+    return std::move(new WhereClause(BinaryExpression::ParseCondition(t)));
 }
 
 DeleteStmt* DeleteStmt::ParseDelete(Lexing::Tokenizer* t)
@@ -516,7 +518,7 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
         do {
             next = t->next();
 
-            if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T) {
+            if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T && next.m_Token != Lexing::FLOAT_LITT_T) {
 
                 throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected litteral values in 'INSERT' statement", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
             }
@@ -526,10 +528,14 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
                 auto val = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
 
                 data->emplace_back(val);
-            }
+            } else if (next.m_Token == Lexing::FLOAT_LITT_T) {
+                auto val = LitteralValue<std::string>(ColumnType::FLOAT_C, next.m_Value);
 
-            else {
-                auto val = LitteralValue<std::string>(ColumnType::INTEGER_C, next.m_Value);
+                data->emplace_back(val);
+
+            } else {
+                // Wish to be able to predict which type of int this is
+                auto val = LitteralValue<std::string>(ColumnType::SIGNED_INTEGER_C, next.m_Value);
 
                 data->emplace_back(val);
             }
@@ -566,20 +572,21 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
         do {
             next = t->next();
 
-            if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T) {
+            if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T && next.m_Token != Lexing::FLOAT_LITT_T) {
 
                 throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected litteral values in 'INSERT' statement", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
             }
 
             if (next.m_Token == Lexing::STRING_LITT_T) {
-
                 auto val = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
 
                 data->push_back(val);
-            }
+            } else if (next.m_Token == Lexing::FLOAT_LITT_T) {
+                auto val = LitteralValue<std::string>(ColumnType::FLOAT_C, next.m_Value);
 
-            else {
-                auto val = LitteralValue<std::string>(ColumnType::INTEGER_C, next.m_Value);
+                data->push_back(val);
+            } else {
+                auto val = LitteralValue<std::string>(ColumnType::SIGNED_INTEGER_C, next.m_Value);
 
                 data->push_back(val);
             }
@@ -849,7 +856,7 @@ Transaction* Transaction::ParseTransaction(Lexing::Tokenizer* t)
 
             next = t->next();
 
-            if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T) {
+            if (next.m_Token != Lexing::STRING_LITT_T && next.m_Token != Lexing::NUM_LITT_T && next.m_Token != Lexing::FLOAT_LITT_T) {
 
                 throw Errors::Error(Errors::ErrorType::SyntaxError, "Expected litteral values in 'TRANSACTION' statement.", 0, 0, Errors::ERROR_EXPECTED_IDENTIFIER);
             }
@@ -859,10 +866,12 @@ Transaction* Transaction::ParseTransaction(Lexing::Tokenizer* t)
                 auto val = LitteralValue<std::string>(ColumnType::TEXT_C, next.m_Value);
 
                 data->emplace_back(val);
-            }
+            } else if (next.m_Token == Lexing::FLOAT_LITT_T) {
+                auto val = LitteralValue<std::string>(ColumnType::FLOAT_C, next.m_Value);
 
-            else {
-                auto val = LitteralValue<std::string>(ColumnType::INTEGER_C, next.m_Value);
+                data->push_back(val);
+            } else {
+                auto val = LitteralValue<std::string>(ColumnType::SIGNED_INTEGER_C, next.m_Value);
 
                 data->emplace_back(val);
             }

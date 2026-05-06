@@ -1,6 +1,6 @@
 #include "file.h"
-#include "../storage.h"
-#include "../utils.h"
+#include "storage.h"
+#include "utils.h"
 #include "common.h"
 
 #include <cstdint>

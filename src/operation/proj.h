@@ -1,5 +1,5 @@
-#include "../algebrizer_types.h"
-#include "../data_process_system/meta-table.h"
+#include "algebrizer_types.h"
+#include "data_process_system/meta-table.h"
 
 #include <memory>
 #include <unordered_set>
@@ -12,27 +12,30 @@ namespace Database::QueryPlanning {
 
 class Proj {
 private:
-    std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> m_Cols; // all the column who stays once they got there
-    std::shared_ptr<TableNamesSet> TableNameToExec;
+    // all the column who stays once they got there
+    std::unique_ptr<std::unordered_set<const ColonneNamesSet*>> m_Cols;
+    const TableNamesSet& TableNameToExec;
 
 public:
-    Proj(std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> cols, std::shared_ptr<TableNamesSet> Table)
+    Proj(std::unique_ptr<std::unordered_set<const ColonneNamesSet*>> cols, const TableNamesSet& Table)
         : TableNameToExec(Table)
-        , m_Cols(cols)
+        , m_Cols(std::move(cols))
 
     {
     }
 
-    std::shared_ptr<MetaTable> Exec(std::shared_ptr<MetaTable> table)
+    MetaTable* Exec(MetaTable* table)
     {
-        auto temp = std::make_unique<std::unordered_set<std::shared_ptr<ColonneNamesSet>>>(*m_Cols);
+        auto temp = std::make_unique<std::unordered_set<const ColonneNamesSet*>>(*m_Cols);
+
         table->Projection(std::move(temp));
 
         return table;
     }
-    std::shared_ptr<TableNamesSet> GetTableName() { return TableNameToExec; }
 
-    std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> Getm_Cols() { return m_Cols; }
+    const TableNamesSet& GetTableName() { return TableNameToExec; }
+
+    std::unordered_set<const ColonneNamesSet*>& GetCols() { return *m_Cols.get(); }
 };
 
 } // Database::QueryPlanning

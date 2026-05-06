@@ -1,12 +1,12 @@
-#include "../data_process_system/meta-table.h"
-#include "../data_process_system/namingsystem.h"
-#include "../operation/join.h"
-#include "../operation/proj.h"
-#include "../operation/select.h"
-#include "../parser/expression.h"
+#include "data_process_system/meta-table.h"
+#include "data_process_system/namingsystem.h"
+#include "operation/join.h"
+#include "operation/proj.h"
+#include "operation/select.h"
+#include "parser/expression.h"
 
 #include "ikea.h"
-
+#include <memory>
 #include <unordered_set>
 #include <variant>
 
@@ -20,30 +20,41 @@ using NodeType = std::variant<Join*, Proj*, Select*>; // le type root est censé
 class Node {
 private:
     NodeType m_Type;
-    Node* m_Fg = nullptr;
-    Node* m_Fd = nullptr;
+
+    std::unique_ptr<Node> m_Fg = nullptr;
+    std::unique_ptr<Node> m_Fd = nullptr;
 
 public:
     Node(NodeType type)
         : m_Type(type)
     {
     }
-
+    Node(std::unique_ptr<NodeType> type)
+        : m_Type(*type)
+    {
+    }
     void AddChild(bool left, Node* child)
     {
         if (left)
-            m_Fg = child;
+            m_Fg = std::unique_ptr<Node>(child);
         else
-            m_Fd = child;
+            m_Fd = std::unique_ptr<Node>(child);
+    }void AddChildUnique(bool left, std::unique_ptr<Node> child)
+    {
+        if (left)
+            m_Fg = std::move(child);
+        else
+            m_Fd = std::move(child);
     }
 
-    std::shared_ptr<MetaTable> Pronf(Ikea* Tables, int type_of_join);
+
+    MetaTable* Pronf(Ikea* Tables, int type_of_join);
 
     void printBT(const std::string& prefix, const Node* node, bool isLeft, std::ostream& out);
 
     void printBT(std::ostream& out);
 
-    std::shared_ptr<TableNamesSet> GetTableUsedByCurrL()
+    const TableNamesSet& GetTableUsedByCurrL()
     {
         if (std::holds_alternative<Join*>(m_Type)) {
             auto op = std::get<Join*>(m_Type);
@@ -58,7 +69,8 @@ public:
             throw std::runtime_error("Unknown node type");
         }
     }
-    std::shared_ptr<TableNamesSet> GetTableUsedByCurrR()
+
+    const TableNamesSet& GetTableUsedByCurrR()
     {
         if (std::holds_alternative<Join*>(m_Type)) {
             auto op = std::get<Join*>(m_Type);
@@ -73,11 +85,12 @@ public:
             throw std::runtime_error("Unknown node type");
         }
     }
-    std::unordered_set<std::shared_ptr<ColonneNamesSet>>* SelectionDescent(Ikea* Tables, Select* MainSelect);
 
-    void InsertProj(std::shared_ptr<std::unordered_set<std::shared_ptr<ColonneNamesSet>>> ColumnToKeep);
+    std::unordered_set<ColonneNamesSet*>* SelectionDescent(Ikea* Tables, Select* MainSelect);
 
-    Node* GetLeftPtr() { return m_Fg; }
+    void InsertProj(std::unordered_set<const ColonneNamesSet*>* ColumnToKeep);
+
+    Node* GetLeftPtr() { return m_Fg.get(); }
 
     NodeType GetAction() { return m_Type; }
 };

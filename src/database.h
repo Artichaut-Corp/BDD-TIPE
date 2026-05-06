@@ -4,16 +4,15 @@
 #include "server.h"
 #include "storage.h"
 
+#include <cstdint>
 #include <filesystem>
-#include <format>
 #include <iostream>
-#include <memory>
 #include <ostream>
 #include <replxx.h>
-#include <stdexcept>
 #include <string>
+#include <toml++/impl/parse_error.hpp>
+#include <toml++/impl/parser.hpp>
 #include <vector>
-
 
 #ifndef DATABASE_H
 
@@ -21,18 +20,73 @@
 
 namespace Database {
 
+struct DatabaseSetting {
+public:
+    // General Parameters
+    bool m_Repl = true;
+
+    std::string m_FileName;
+
+    // Optimisation levels
+
+    // Either used or not
+    bool m_SelectionDescent = false;
+
+    // See Node::Pronf function in src/algebrizer/tree.cpp in order to understand what each number do, actually defined are 0,1,3
+    uint8_t m_ExecutionTreeTraversalMode = 0;
+
+    bool m_ProjectionInsertion = 0;
+
+    bool m_BinaryExpressionOptimization = 0;
+
+    bool m_QueryJoinOrdering = 0;
+
+    bool m_Benchmarking = 0;
+
+    DatabaseSetting() = default;
+
+    DatabaseSetting(const std::string& fname, bool selectiondescent = 0, uint8_t execution_tree_traversal_mode = 0,
+        bool projection_insertion = 0,
+        bool binary_expression_optimization = 0,
+        bool query_join_ordering = 0,
+        bool benchmarking = 0)
+        : m_FileName(fname)
+        , m_SelectionDescent(selectiondescent)
+        , m_ExecutionTreeTraversalMode(execution_tree_traversal_mode)
+        , m_ProjectionInsertion(projection_insertion)
+        , m_BinaryExpressionOptimization(binary_expression_optimization)
+        , m_QueryJoinOrdering(query_join_ordering)
+        , m_Benchmarking(benchmarking)
+    {
+    }
+
+    DatabaseSetting(const std::string& fname, const std::string& config_fname)
+        : m_FileName(fname)
+    {
+        try {
+            auto tbl = toml::parse_file(config_fname);
+
+            m_SelectionDescent = tbl["SelectionDescent"].value_or(0);
+
+            m_ExecutionTreeTraversalMode = tbl["PronfMode"].value_or(0);
+
+            m_ProjectionInsertion = tbl["InsertProj"].value_or(0);
+
+            m_BinaryExpressionOptimization = tbl["OptimizeBinaryExpression"].value_or(0);
+            m_QueryJoinOrdering = tbl["OrderingQueryJoin"].value_or(0);
+
+            m_Benchmarking = tbl["Benchmarking"].value_or(0);
+
+        } catch (const toml::parse_error& err) {
+            std::cerr << "Error parsing config file: " << err.description() << std::endl;
+            std::cerr << "Using default values.\n";
+        }
+    }
+};
+
 class DatabaseEngine {
 
 private:
-    class DatabaseSetting {
-    public:
-        bool m_Repl = true;
-        std::string m_Address;
-        std::string m_FileName;
-
-        DatabaseSetting() = default;
-    };
-
     std::unique_ptr<Storing::DBTableIndex> Index;
 
     Storing::DBTableOrder TableOrder = {};
@@ -88,7 +142,7 @@ private:
 
             buffer = tables_element_count[i];
 
-            int bytes_written = write(fd, &buffer, DB_INT_SIZE);
+            int bytes_written = write(fd, &buffer, DB_UINT_SIZE);
         }
 
         close(fd);
@@ -138,10 +192,9 @@ public:
                 // Text name
                 // Int pop
 
-                ColumnInfo country_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo country_name = ColumnInfo(DbElemType::DbString, false);
 
-                ColumnInfo country_pop = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-                    DB_INT_SIZE, false);
+                ColumnInfo country_pop = ColumnInfo(DbElemType::DbUInt, false);
 
                 auto country_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "name", country_name }, { "pop", country_pop }
@@ -156,13 +209,13 @@ public:
                 // Int pop
                 // Text country
 
-                ColumnInfo city_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo city_name = ColumnInfo(DbElemType::DbString, false);
 
-                ColumnInfo city_pop = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-                    DB_INT_SIZE, false);
+                ColumnInfo city_pop = ColumnInfo(
+                    DbElemType::DbUInt, false);
 
-                ColumnInfo city_country = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE),
-                    DB_STRING_SIZE, false);
+                ColumnInfo city_country = ColumnInfo(
+                    DbElemType::DbString, false);
 
                 auto city_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "name", city_name }, { "pop", city_pop }, { "country", city_country }
@@ -178,14 +231,14 @@ public:
                 // Text country
                 // Int mandate_beginning
 
-                ColumnInfo pres_first_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo pres_first_name = ColumnInfo(DbElemType::DbString, false);
 
-                ColumnInfo pres_last_name = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo pres_last_name = ColumnInfo(DbElemType::DbString, false);
 
-                ColumnInfo pres_mandate_beg = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_INT_SIZE),
-                    DB_INT_SIZE, false);
+                ColumnInfo pres_mandate_beg = ColumnInfo(
+                    DbElemType::DbUInt, false);
 
-                ColumnInfo pres_country = ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_STRING_SIZE), DB_STRING_SIZE, false);
+                ColumnInfo pres_country = ColumnInfo(DbElemType::DbString, false);
 
                 auto pres_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "first_name", pres_first_name }, { "last_name", pres_last_name }, { "country", pres_country }, { "mandate_beginning", pres_mandate_beg }
@@ -195,13 +248,13 @@ public:
 
                 CreateTable(fd, "president", president);
 
-                auto page_id = ColumnInfo(DB_INT_SIZE, false);
+                auto page_id = ColumnInfo(DbElemType::DbUInt, false);
 
-                auto page_ns = ColumnInfo(DB_INT8_SIZE, false);
+                auto page_ns = ColumnInfo(DbElemType::DbUInt8, false);
 
-                auto page_title = ColumnInfo(DB_STRING_SIZE, false);
+                auto page_title = ColumnInfo(DbElemType::DbString, false);
 
-                auto page_revision_id = ColumnInfo(DB_INT_SIZE, false);
+                auto page_revision_id = ColumnInfo(DbElemType::DbUInt, false);
 
                 auto page_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "id", page_id }, { "ns", page_ns }, { "title", page_title }, { "revision_id", page_revision_id }
@@ -211,13 +264,13 @@ public:
 
                 CreateTable(fd, "pages", pages);
 
-                auto revision_id = ColumnInfo(DB_INT_SIZE, false);
+                auto revision_id = ColumnInfo(DbElemType::DbUInt, false);
 
-                auto revision_parent_id = ColumnInfo(DB_INT_SIZE, false);
+                auto revision_parent_id = ColumnInfo(DbElemType::DbUInt, false);
 
-                auto revision_timestamp = ColumnInfo(DB_INT64_SIZE, false);
+                auto revision_timestamp = ColumnInfo(DbElemType::DbUInt64, false);
 
-                auto revision_contributor_id = ColumnInfo(DB_INT_SIZE, false);
+                auto revision_contributor_id = ColumnInfo(DbElemType::DbUInt, false);
 
                 auto revision_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "id", revision_id },
@@ -230,9 +283,9 @@ public:
 
                 CreateTable(fd, "revisions", revisions);
 
-                auto contr_id = ColumnInfo(DB_INT_SIZE, false);
+                auto contr_id = ColumnInfo(DbElemType::DbUInt, false);
 
-                auto contr_username = ColumnInfo(DB_STRING_SIZE, false);
+                auto contr_username = ColumnInfo(DbElemType::DbString, false);
 
                 auto contr_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "id", contr_id },
@@ -243,9 +296,9 @@ public:
 
                 CreateTable(fd, "contributors", contributors);
 
-                auto ns_key = ColumnInfo(DB_INT_SIZE, false);
+                auto ns_key = ColumnInfo(DbElemType::DbUInt, false);
 
-                auto ns_name = ColumnInfo(DB_STRING_SIZE, false);
+                auto ns_name = ColumnInfo(DbElemType::DbString, false);
 
                 auto ns_columns = std::vector<std::pair<std::string, ColumnInfo>> {
                     { "key", ns_key },
@@ -255,7 +308,6 @@ public:
                 auto ns = TableInfo(false, 2, 0, ns_columns);
 
                 CreateTable(fd, "namespaces", ns);
-
 
                 // Clean up and close
                 close(fd);
@@ -269,16 +321,32 @@ public:
         if (!created_file) {
             FillIndex();
         }
-
+        if (!s->m_Benchmarking) {
 #ifdef _GLIBCXX_DEBUG_ONLY
-        PrintIndex(std::cout);
+            PrintIndex(std::cout);
 #endif
+        }
+    }
+
+    auto Exec(const std::string& req) -> std::string
+    {
+        // Should sanitize input
+        std::string result;
+
+        try {
+            result = Eval(req);
+        } catch (const Errors::Error& e) {
+            result = e.formatErrorInfo();
+        }
+
+        return result;
     }
 
     auto Run() -> void
     {
         std::string input;
 
+        // Decide if we either print the results to stdout or if the request's result needs to be handled by python
         if (Settings.m_Repl) {
             Replxx* rx = replxx_init();
 
@@ -296,8 +364,9 @@ public:
 
                     break;
                 } else if (input == ".insert_data") {
-                    std::cout << "Insertion des data\n";
+                    std::cout << "Insertion des données\n";
                     import_all_csv();
+                    std::cout << std::endl;
                 } else if (input == ".print_table_layout") {
                     PrintIndex(std::cout);
                 } else {
@@ -308,42 +377,47 @@ public:
                 // Add to history
                 replxx_history_add(rx, input.c_str());
             }
+
+            replxx_end(rx);
         } else {
 
-            if (Settings.m_Address == "") {
-                throw Errors::Error(Errors::ErrorType::CLIArgument, "Use of --serve / -s requires an address", 0, 0, Errors::ERROR_UNGIVEN_ARGUMENT);
-            }
+            /*
+              if (Settings.m_Address == "") {
+                  throw Errors::Error(Errors::ErrorType::CLIArgument, "Use of --serve / -s requires an address", 0, 0, Errors::ERROR_UNGIVEN_ARGUMENT);
+              }
 
-            const std::string& delimiter = ":";
+              const std::(string& delimiter = ":";
 
-            auto delimiter_position = Settings.m_Address.find(delimiter);
+              auto delimiter_position = Settings.m_Address.find(delimiter);
 
-            const std::string& address = Settings.m_Address.substr(0, delimiter_position);
+              const std::string& address = Settings.m_Address.substr(0, delimiter_position);
 
-            int port;
+              int port;
 
-            try {
-                port = std::stoi(Settings.m_Address.substr(delimiter_position + 1, Settings.m_Address.size()));
+              try {
+                  port = std::stoi(Settings.m_Address.substr(delimiter_position + 1, Settings.m_Address.size()));
 
-            } catch (const std::invalid_argument& e) {
+              } catch (const std::invalid_argument& e) {
 
-                throw Errors::Error(Errors::ErrorType::CLIArgument, "Was not able to parse port number", 0, 0, Errors::ERROR_UNKNOWN_ARGUMENT);
-            }
+                  throw Errors::Error(Errors::ErrorType::CLIArgument, "Was not able to parse port number", 0, 0, Errors::ERROR_UNKNOWN_ARGUMENT);
+              }
 
-            Utils::SocketOStream stream
-                = Utils::Server::ConnectTcpStream(address, port);
+              Utils::SocketOStream stream
+                  = Utils::Server::ConnectTcpStream(address, port);
 
-            for (;;) {
+              for (;;) {
 
-                input = Utils::Server::ReadStream(stream);
+                  input = Utils::Server::ReadStream(stream);
 
-                if (input == "\0") {
-                    std::cout << "Exiting...\n";
-                    break;
-                }
+                  if (input == "\0") {
+                      std::cout << "Exiting...\n";
+                      break;
+                  }
 
-                Utils::Server::PrintStream(stream, Eval(input));
-            }
+                  Utils::Server::PrintStream(stream, Eval(input));
+              }
+
+          */
         }
     }
 

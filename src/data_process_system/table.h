@@ -1,117 +1,186 @@
-#include <cmath>
+#include <cassert>
 #include <memory>
 #include <numeric>
+#include <string>
+#include <sys/wait.h>
 #include <unordered_map>
 #include <vector>
 
-#include "../algebrizer_types.h"
+#include "algebrizer_types.h"
+
 #include "namingsystem.h"
 #include "racine.h"
-#ifndef TABLE_OP
 
-#define TABLE_OP
+#ifndef TABLE_OP_H
+
+#define TABLE_OP_H
 
 namespace Database::QueryPlanning {
 
 class Table {
 private:
-    std::unordered_map<std::string, std::shared_ptr<Racine>> m_Map; // permet de trouver la position d'une colonne à partir de son nom
-    std::vector<std::shared_ptr<Racine>> m_Colonnes; // contient les noms de toute les colonnes présente dans la table (de manière unique) avec table étant la table originel( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
-    std::vector<int> m_Indices; // indices valides dans racine
-    std::shared_ptr<TableNamesSet> m_Name;
+    const TableNamesSet& m_Name;
+
+    // permet de trouver la position d'une colonne à partir de son nom
+    std::unique_ptr<std::unordered_map<std::string, int>> m_Map;
+
+    // contient les noms de toute les colonnes présente dans la table (de manière unique) avec table étant la table originel
+    // ( pas la table qui est crée par le progamme mais celle qui est présent en mémoire) et la colonne associé à celle-ci
+    std::unique_ptr<std::vector<Racine*>> m_Columns;
+
+    std::unique_ptr<std::vector<int>> m_Indices; // indices valides dans racine
 
 public:
-    Table(std::vector<std::shared_ptr<Racine>>* data_, std::shared_ptr<TableNamesSet> name_)
-        : m_Name(std::move(name_))
+    Table(std::vector<Racine*>& data, const TableNamesSet& name)
+        : m_Name(std::move(name))
     {
-        for (auto e : *data_) {
-            for (auto n : e->get_name()->GetAllFullNames()) {
-                m_Map[n] = e;
+        m_Map = std::make_unique<std::unordered_map<std::string, int>>();
+
+        m_Columns = std::make_unique<std::vector<Racine*>>();
+
+        size_t data_size = data.at(0)->size();
+
+        m_Map->reserve(data.size());
+
+        m_Columns->reserve(data.size());
+
+        for (int i = 0; i < data.size(); i++) {
+            auto e = data[i];
+
+            for (auto n : e->GetName().GetAllFullNames()) {
+                m_Map->insert({ n, i });
             }
-            m_Map[e->get_name()->GetMainName()] = e;
-            m_Colonnes.push_back(e);
+
+            m_Map->insert({ e->GetName().GetMainName(), i });
+
+            m_Columns->push_back(e);
         }
-        std::vector<int> temp;
-        temp.reserve((*data_)[0]->size());
-        for (int i = 0; i < (*data_)[0]->size(); i++) {
-            temp.push_back(i);
+
+        auto temp = std::make_unique<std::vector<int>>();
+
+        temp->reserve(data_size);
+
+        for (int i = 0; i < data_size; i++) {
+            temp->emplace_back(i);
         }
-        m_Indices = temp;
+
+        m_Indices = std::move(temp);
     }
 
-    int size()
+    Table(const Table& other)
+        : m_Name(other.m_Name)
+
     {
-        return m_Map.size();
-    }
-    int Columnsize()
-    {
-        return m_Indices.size();
+        assert(other.m_Columns == nullptr);
     }
 
-    ColumnData get_value_dans_table(std::shared_ptr<ColonneNamesSet> column_name, int pos_ind)
+    const Table&
+    operator=(const Table& other)
     {
-        return m_Map[column_name->GetMainName()]->get_value_dans_ptr(m_Indices[pos_ind]);
+        return other;
     }
 
-    
-
-    bool colonne_exist(std::shared_ptr<ColonneNamesSet> clef_testé)
+    int size() const
     {
-        return !(m_Map.end() == m_Map.find(clef_testé->GetMainName())); // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
-    }
-    std::shared_ptr<Racine> getRacinePtr(std::shared_ptr<ColonneNamesSet> colname)
-    {
-        return m_Map[colname->GetMainName()];
-    };
-
-    
-    std::vector<std::shared_ptr<Racine>>* GetColumns() { return &m_Colonnes; }
-
-    std::shared_ptr<TableNamesSet> get_name() { return m_Name; }
-
-    std::vector<int>* Sort(std::shared_ptr<ColonneNamesSet> ColonneToSortBy)
-    {
-        auto ColonneSorting = m_Map[ColonneToSortBy->GetMainName()];
-
-        std::vector<int>* PosInColonneToSortBy = new std::vector<int>(m_Indices.size());
-        std::iota(PosInColonneToSortBy->begin(), PosInColonneToSortBy->end(), 0);
-
-        std::sort(PosInColonneToSortBy->begin(), PosInColonneToSortBy->end(),
-            [&](int a, int b) {
-                return this->get_value_dans_table(ColonneToSortBy,a ) < this->get_value_dans_table(ColonneToSortBy, b); });
-        return PosInColonneToSortBy;
+        return m_Map->size();
     }
 
-    void AppliqueFiltre(std::vector<int>* new_ind)
+    int Columnsize() const
     {
-        std::vector<int> new_indices;
-        new_indices.reserve(new_ind->size());
-        for (auto e : *new_ind) {
-            new_indices.push_back(m_Indices[e]);
+        return m_Indices->size();
+    }
+
+    [[nodiscard]] inline Racine* GetRacineFromMap(int i) const
+    {
+        return m_Columns->at(i);
+    }
+
+    [[nodiscard]] inline ColumnData GetValueFromTable(const ColonneNamesSet& column_name, int pos_ind) const
+    {
+        int rac_pos = m_Map->at(column_name.GetMainName());
+
+        int real_i = m_Indices->at(pos_ind);
+
+        Racine* rac = GetRacineFromMap(rac_pos);
+
+        return rac->GetValueAt(real_i);
+    }
+
+    inline bool DoColumnExists(const ColonneNamesSet& tested_key) const
+    {
+        // this test if a colonne is already registered in a table, return true if the colonne exists and false if it doesn't
+        return !(m_Map->end() == m_Map->find(tested_key.GetMainName()));
+    }
+
+    [[nodiscard]] inline Racine* GetRacinePtr(const ColonneNamesSet& column_name) const
+    {
+        int rac_pos = m_Map->at(column_name.GetMainName());
+
+        return GetRacineFromMap(rac_pos);
+    }
+
+    std::vector<Racine*>* GetColumns() const { return m_Columns.get(); }
+
+    const TableNamesSet& GetName() const { return m_Name; }
+
+    [[nodiscard]] std::unique_ptr<std::vector<int>> Sort(const ColonneNamesSet& column_to_sort) const
+    {
+        auto* col = GetRacinePtr(column_to_sort);
+
+        auto pos_to_sort = std::make_unique<std::vector<int>>();
+
+        pos_to_sort->resize(m_Indices->size());
+
+        std::iota(pos_to_sort->begin(), pos_to_sort->end(), 0);
+
+        std::sort(pos_to_sort->begin(), pos_to_sort->end(),
+            [&](int a, int b) { return this->GetValueFromTable(column_to_sort, a) < this->GetValueFromTable(column_to_sort, b); });
+
+        return pos_to_sort;
+    }
+
+    void ApplyFilter(const std::vector<int>& permutation)
+    {
+        auto new_indices = std::make_unique<std::vector<int>>();
+
+        new_indices->reserve(permutation.size());
+
+        for (auto e : permutation) {
+            new_indices->emplace_back(m_Indices->at(e));
         }
-        m_Indices = new_indices;
+
+        m_Indices = std::move(new_indices);
     }
 
-    void DeleteCol(std::shared_ptr<ColonneNamesSet> DeletedCol)
+    void DeleteCol(const ColonneNamesSet& col_to_delete) const
     {
-        for (int i = 0; i < m_Colonnes.size(); i++) {
-            if (*m_Colonnes[i]->get_name() == *DeletedCol) {
-                for (auto s : DeletedCol->GetAllFullNames()) {
-                    m_Map.erase(s);
+        for (int i = 0; i < m_Columns->size(); i++) {
+
+            if (m_Columns->at(i)->GetName().GetMainName()==col_to_delete.GetMainName()) {
+
+                for (auto s : col_to_delete.GetAllFullNames()) {
+                    m_Map->erase(s);
                 }
-                m_Colonnes.erase(m_Colonnes.begin() + i);
+
+                m_Columns->erase(m_Columns->begin() + i);
+
                 break;
             }
         }
-        update();
-    }
-    void update()
-    {
-        m_Map.erase(m_Map.begin(), m_Map.end());
 
-        for (auto r : m_Colonnes) {
-            for (auto n : r->get_name()->GetAllFullNames()) {
-                m_Map[n] = r;
+        Update();
+    }
+
+    void Update() const
+    {
+        m_Map->clear();
+
+        for (int i = 0; i < m_Columns->size(); i++) {
+
+            auto r = m_Columns->at(i);
+
+            for (auto n : r->GetName().GetAllFullNames()) {
+                m_Map->insert({ n, i });
             }
         }
     }

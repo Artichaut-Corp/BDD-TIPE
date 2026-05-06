@@ -1,4 +1,5 @@
 #include "database.h"
+
 #include "algebrizer/algebrizer.h"
 #include "data_process_system/racine.h"
 #include "storage/record.h"
@@ -18,24 +19,24 @@ namespace Database {
 
 auto DatabaseEngine::ParseArguments(int argc, char** argv) -> DatabaseSetting*
 {
-    auto Settings = new DatabaseSetting();
+    bool repl;
+    std::string fname;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
         if (arg == "--serve" || arg == "-s") {
             if (i + 1 < argc) {
-                Settings->m_Repl = false;
-                Settings->m_Address = argv[++i];
+                repl = false;
             } else {
 
                 throw Errors::Error(Errors::ErrorType::CLIArgument, "Use of --serve / -s requires an address", 0, 0, Errors::ERROR_UNGIVEN_ARGUMENT);
             }
         } else if (arg == "--repl" || arg == "-r") {
-            Settings->m_Repl = true;
+            repl = true;
         } else if (arg == "--file" || arg == "-f") {
             if (i + 1 < argc) {
-                Settings->m_FileName = argv[++i];
+                fname = argv[++i];
             } else {
 
                 throw Errors::Error(Errors::ErrorType::CLIArgument, "Use of --file / -f requires a file name", 0, 0, Errors::ERROR_UNGIVEN_ARGUMENT);
@@ -45,7 +46,7 @@ auto DatabaseEngine::ParseArguments(int argc, char** argv) -> DatabaseSetting*
         }
     }
 
-    return Settings;
+    return new DatabaseSetting(fname, "../../../bdd-tipe/Parametre.toml");
 }
 
 auto DatabaseEngine::FindDBFile() -> const std::string
@@ -78,25 +79,25 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
     // -- Schema Table --
     // Text name ->  name ('table')
     // Bool is_sys
-    // Int16 current_element_nb
-    // Int8 column_number
-    // Int column_offset -> first column offset (assuming they are all aligned)
+    // UInt16 current_element_nb
+    // UInt8 column_number
+    // UInt column_offset -> first column offset (assuming they are all aligned)
 
     uint32_t first_schema_table_offset = Cursor::MoveOffset(MAX_TABLE * DB_STRING_SIZE);
 
-    ColumnInfo* t_name = new ColumnInfo(first_schema_table_offset, DB_STRING_SIZE, false);
+    ColumnInfo* t_name = new ColumnInfo(first_schema_table_offset, DbElemType::DbString, false);
 
     ColumnInfo* is_sys = new ColumnInfo(
-        Cursor::MoveOffset(MAX_TABLE * DB_BOOL_SIZE), DB_BOOL_SIZE, false);
+        Cursor::MoveOffset(MAX_TABLE * DB_BOOL_SIZE), DbElemType::DbBool, false);
 
     ColumnInfo* current_element_nb = new ColumnInfo(
-        Cursor::MoveOffset(MAX_TABLE * DB_INT_SIZE), DB_INT_SIZE, false);
+        Cursor::MoveOffset(MAX_TABLE * DB_UINT_SIZE), DbElemType::DbUInt, false);
 
     ColumnInfo* column_number = new ColumnInfo(
-        Cursor::MoveOffset(MAX_TABLE * DB_INT8_SIZE), DB_INT8_SIZE, false);
+        Cursor::MoveOffset(MAX_TABLE * DB_UINT8_SIZE), DbElemType::DbUInt8, false);
 
     ColumnInfo* column_offset = new ColumnInfo(
-        Cursor::MoveOffset(MAX_TABLE * DB_INT_SIZE), DB_INT_SIZE, false);
+        Cursor::MoveOffset(MAX_TABLE * DB_UINT_SIZE), DbElemType::DbUInt, false);
 
     auto table_args = std::vector<std::pair<std::string, ColumnInfo>> {
         { "name", *t_name },
@@ -111,8 +112,8 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
 
     // -- Schema Column --
     // Text name ->  name ('column')
-    // Int offset -> col's beginning location in memory
-    // Int8 element_size -> size of an element
+    // UInt offset -> col's beginning location in memory
+    // UInt8 type
     // Bool is_sortable
     // Bool is_sorted
     // Bool is_compressable
@@ -120,38 +121,43 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
 
     // Keeping the first offset to initialise the TableInfo class later
     uint32_t first_schema_column_offset = Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_STRING_SIZE);
-    ColumnInfo* name = new ColumnInfo(first_schema_column_offset, DB_STRING_SIZE, false);
+    ColumnInfo* name = new ColumnInfo(first_schema_column_offset, DbElemType::DbString, false);
 
     ColumnInfo offset = ColumnInfo(
-        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_INT_SIZE),
-        DB_INT_SIZE, false);
+        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_UINT_SIZE),
+        DbElemType::DbUInt, false);
 
-    ColumnInfo element_size = ColumnInfo(
-        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_INT8_SIZE),
-        DB_INT8_SIZE, false);
+    ColumnInfo type = ColumnInfo(
+        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_UINT8_SIZE),
+        DbElemType::DbUInt8, false);
 
     ColumnInfo is_sortable = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_BOOL_SIZE),
-        DB_BOOL_SIZE, false);
+        DbElemType::DbBool, false);
 
     ColumnInfo is_sorted = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_BOOL_SIZE),
-        DB_BOOL_SIZE, false);
+        DbElemType::DbBool, false);
+
+    ColumnInfo index_offset = ColumnInfo(
+        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_UINT64_SIZE),
+        DbElemType::DbUInt64, false);
 
     ColumnInfo is_compressable = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_BOOL_SIZE),
-        DB_BOOL_SIZE, false);
+        DbElemType::DbBool, false);
 
     ColumnInfo is_compressed = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_BOOL_SIZE),
-        DB_BOOL_SIZE, false);
+        DbElemType::DbBool, false);
 
     auto column_args = std::vector<std::pair<std::string, ColumnInfo>> {
         { "name", *name },
         { "offset", offset },
-        { "element_size", element_size },
+        { "type", type },
         { "sortable", is_sortable },
         { "sorted", is_sorted },
+        { "index_offset", index_offset },
         { "compressable", is_compressable },
         { "compressed", is_compressed }
     };
@@ -216,7 +222,6 @@ auto DatabaseEngine::CreateTable(int fd, const std::string& name, Storing::Table
     Record::Write(fd, &Index->at("schema_table"), &t, name);
 
     TableOrder.push_back(name);
-
     File::IncrTableCount(fd);
 }
 
@@ -240,13 +245,7 @@ auto DatabaseEngine::FillIndex() -> void
 
     std::cout << "Allocating index memory...\n";
 
-    name.reserve(table_number);
-    is_sys.reserve(table_number);
-    current_element_nb.reserve(table_number);
-    col_num.reserve(table_number);
-    col_offsets.reserve(table_number);
-
-    int offset = SCHEMA_TABLE_OFFSET;
+    DbUInt64 offset = SCHEMA_TABLE_OFFSET;
 
     FileInterface::ReadVec(fd, name, &offset, DB_STRING_SIZE, table_number);
 
@@ -256,15 +255,15 @@ auto DatabaseEngine::FillIndex() -> void
 
     offset += (MAX_TABLE - table_number) * DB_BOOL_SIZE;
 
-    FileInterface::ReadVec(fd, current_element_nb, &offset, DB_INT_SIZE, table_number);
+    FileInterface::ReadVec(fd, current_element_nb, &offset, DB_UINT_SIZE, table_number);
 
-    offset += (MAX_TABLE - table_number) * DB_INT_SIZE;
+    offset += (MAX_TABLE - table_number) * DB_UINT_SIZE;
 
-    FileInterface::ReadVec(fd, col_num, &offset, DB_INT8_SIZE, table_number);
+    FileInterface::ReadVec(fd, col_num, &offset, DB_UINT8_SIZE, table_number);
 
-    offset += (MAX_TABLE - table_number) * DB_INT8_SIZE;
+    offset += (MAX_TABLE - table_number) * DB_UINT8_SIZE;
 
-    FileInterface::ReadVec(fd, col_offsets, &offset, DB_INT_SIZE, table_number);
+    FileInterface::ReadVec(fd, col_offsets, &offset, DB_UINT_SIZE, table_number);
 
     auto column_data = ColumnInfo::GetColumnsData(
         fd, std::accumulate(col_num.begin(), col_num.end(), 0));
@@ -295,7 +294,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
     std::string output = "";
 
-    std::shared_ptr<Parsing::Parser> parser = std::make_shared<Parsing::Parser>(input);
+    std::unique_ptr<Parsing::Parser> parser = std::make_unique<Parsing::Parser>(input);
 
     std::variant<Parsing::Statement, Errors::Error> n = parser->Parse();
 
@@ -313,21 +312,9 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
         auto joins = select->getJoins();
 
-        std::shared_ptr<std::vector<int>> param = std::make_shared<std::vector<int>>(6);
-        try {
-            auto tbl = toml::parse_file("../../../bdd-tipe/Parametre.toml");
-            (*param)[0] = tbl["SelectionDescent"].value_or(0); // if SelectionDescent set to 1, We use the Selection Descent optimisation
-            (*param)[1] = tbl["PronfMode"].value_or(0); // see Node::Pronf function in tree.cpp in order to understand what each number do, actually defined are 0,1,3
-            (*param)[2] = tbl["InsertProj"].value_or(0); // if InserProj set to 1
-            (*param)[3] = tbl["OptimizeBinaryExpression"].value_or(0); // if OptimizeBinaryExpression set to 1
-            (*param)[4] = tbl["OrderingQueryJoin"].value_or(0); // if OrderingQueryJoin set to 1
-            (*param)[5] = tbl["Benchmarking"].value_or(0); // if Benchmarking set to 1
+        QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get(), &Settings);
 
-        } catch (const toml::parse_error& err) {
-            std::cerr << "Error parsing config file: " << err.description() << std::endl;
-            std::cerr << "Using default values.\n";
-        }
-        QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get(), param);
+        output = "SELECT SUCESS";
     } else if (std::holds_alternative<Parsing::UpdateStmt*>(stmt)) {
         auto update = std::get<Parsing::UpdateStmt*>(stmt);
 
@@ -346,12 +333,12 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
             std::unordered_map<std::string, ColumnData>* data = Storing::Record::GetMapFromData(insert->getData()->get(), insert->getOrder()->get());
 
-            auto err = Storing::Store::SetData(File->Fd(), Index.get(), name, *data);
+            auto err = Storing::Store::DB_SetData(File->Fd(), Index.get(), name, *data);
 
             delete data;
 
             if (err.has_value()) {
-                throw err;
+                throw err.value();
             }
 
         } else {
@@ -378,16 +365,17 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
         size_t record_number = col_data->size();
 
         std::unordered_map<std::string, ColumnData>* data;
+
         for (size_t i = 0; i < record_number / col_number; i++) {
 
             data = Storing::Record::GetMapFromData(
                 std::span(col_data->begin() + col_number * i, col_data->begin() + (col_number * i + col_number)),
                 col_order);
 
-            auto err = Storing::Store::SetData(File->Fd(), Index.get(), name, *data);
+            auto err = Storing::Store::DB_SetData(File->Fd(), Index.get(), name, *data);
 
             if (err.has_value()) {
-                throw err;
+                throw err.value();
             }
         }
 
@@ -413,7 +401,8 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
 void DatabaseEngine::process_csv_streaming(const std::string& path, const std::string& table, const std::vector<std::string>& columns)
 {
-    constexpr int MAX_ROWS_PER_TRANSACTION = 50;
+    constexpr int MAX_ROWS_PER_TRANSACTION = 100;
+
     const size_t ncols = columns.size();
     int compteur = 0;
 
@@ -489,6 +478,7 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
             if (compteur > 10000)
                 break;
 
+            std::cout << query.str();
             DatabaseEngine::Eval(query.str());
             batch.clear();
         }
@@ -582,6 +572,9 @@ auto DatabaseEngine::PrintIndex(std::ostream& out) -> void
             out << "Reading info from column: " << c.first << "\n";
             out << "Found at offset: 0x" << c.second.GetOffset()
                 << "\n";
+            if (c.second.IsSorted()) {
+                out << "With Indexed offset: 0x" << c.second.GetIndexOffset() << "\n";
+            }
             out << "Element size: " << static_cast<int>(c.second.GetElementSize())
                 << "\n";
         }
