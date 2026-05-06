@@ -1,14 +1,24 @@
 # Sources
 file(GLOB_RECURSE SOURCES LIST_DIRECTORIES true *.h *.cpp)
 
+list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp")
+
 # Library + executable
 add_library(bdd_tipe_lib STATIC ${SOURCES})
 
-target_link_libraries(bdd_tipe_lib PUBLIC tomlplusplus::tomlplusplus)
+target_include_directories(bdd_tipe_lib 
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
-add_executable(bdd_tipe ${SOURCES})
+target_link_libraries(bdd_tipe_lib PUBLIC tomlplusplus::tomlplusplus replxx)
 
-target_link_libraries(bdd_tipe PUBLIC bdd_tipe_lib tomlplusplus::tomlplusplus replxx)
+add_executable(bdd_tipe main.cpp)
+
+target_link_libraries(bdd_tipe PUBLIC bdd_tipe_lib)
+
+target_compile_options(bdd_tipe PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+target_link_options(bdd_tipe PRIVATE -fsanitize=address)
 
 # Enable gperftools profiling
 option(USE_GPERFTOOLS "Use Google Performance Tools" ON)
@@ -24,3 +34,5 @@ if(USE_GPERFTOOLS)
         message(WARNING "gperftools libraries not found → Profiling disabled")
     endif()
 endif()
+
+

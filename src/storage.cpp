@@ -1,8 +1,11 @@
 #include "storage.h"
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace Database::Storing {
 
-std::variant<Column, Errors::Error> Store::GetDBColumn(int fd, DBTableIndex* Index, const std::string& table_name, const std::string& column_name)
+std::variant<TypedColumn, Errors::Error> Store::DB_GetColumn(int fd, DBTableIndex* Index, const std::string& table_name, const std::string& column_name)
 {
 
     TableInfo* t;
@@ -25,24 +28,38 @@ std::variant<Column, Errors::Error> Store::GetDBColumn(int fd, DBTableIndex* Ind
         return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Column '{}' does not exist in table '{}'", column_name, table_name), 0, 0, Errors::ERROR_COLUMN_DOES_NOT_EXIST);
     }
 
-    switch (c.GetElementSize()) {
-    case 1:
-        return Record::GetColumn<DbInt8>(fd, c, t->GetElementNumber());
-    case 2:
-        return Record::GetColumn<DbInt16>(fd, c, t->GetElementNumber());
-    case 4:
-        return Record::GetColumn<DbInt>(fd, c, t->GetElementNumber());
-    case 8:
-        return Record::GetColumn<DbInt64>(fd, c, t->GetElementNumber());
-    case 255:
-        return Record::GetColumn<DbString>(fd, c, t->GetElementNumber());
+    Database::DbElemType type = c.GetType();
+
+    switch (type) {
+    case Database::DbElemType::DbInt8:
+        return std::make_pair(type, Record::GetColumn<DbInt8>(fd, c, t->GetElementNumber()));
+    case Database::DbElemType::DbUInt8:
+        return std::make_pair(type, Record::GetColumn<DbUInt8>(fd, c, t->GetElementNumber()));
+    case Database::DbElemType::DbInt16:
+        return std::make_pair(type, Record::GetColumn<DbInt16>(fd, c, t->GetElementNumber()));
+    case Database::DbElemType::DbUInt16:
+        return std::make_pair(type, Record::GetColumn<DbUInt16>(fd, c, t->GetElementNumber()));
+    case Database::DbElemType::DbInt:
+        return std::make_pair(type, Record::GetColumn<DbInt>(fd, c, t->GetElementNumber()));
+    case Database::DbElemType::DbUInt:
+        return std::make_pair(type, Record::GetColumn<DbUInt>(fd, c, t->GetElementNumber()));
+    case Database::DbElemType::DbInt64:
+        return std::make_pair(type, Record::GetColumn<DbInt64>(fd, c, t->GetElementNumber()));
+    case Database::DbElemType::DbUInt64:
+        return std::make_pair(type, Record::GetColumn<DbUInt64>(fd, c, t->GetElementNumber()));
+    case Database::DbElemType::DbFloat:
+        return std::make_pair(type, Record::GetColumn<DbFloat>(fd, c, t->GetElementNumber()));
+    case Database::DbElemType::DbFloat64:
+        return std::make_pair(type, Record::GetColumn<DbFloat64>(fd, c, t->GetElementNumber()));
+    case Database::DbElemType::DbString:
+        return std::make_pair(type, Record::GetColumn<DbString>(fd, c, t->GetElementNumber()));
     default:
-        throw std::runtime_error("Unrecognized element size inside ColumnInfo.");
+        return Errors::Error(Errors::ErrorType::RuntimeError, "Unrecognized element type inside ColumnInfo.", 0, 0, Errors::ERROR_UNKNOWN_TYPE);
     }
 }
 
 template <typename R>
-std::optional<Errors::Error> Store::SetRecord(int fd, DBTableIndex* Index, const std::string& table_name, R* record)
+std::optional<Errors::Error> Store::DB_SetRecord(int fd, DBTableIndex* Index, const std::string& table_name, R* record)
 {
     TableInfo* t;
 
@@ -57,7 +74,7 @@ std::optional<Errors::Error> Store::SetRecord(int fd, DBTableIndex* Index, const
     return std::nullopt;
 }
 
-std::optional<Errors::Error> Store::SetData(int fd, DBTableIndex* Index, const std::string& table_name, const std::unordered_map<std::string, ColumnData>& data)
+std::optional<Errors::Error> Store::DB_SetData(int fd, DBTableIndex* Index, const std::string& table_name, const std::unordered_map<std::string, ColumnData>& data)
 {
     TableInfo* t;
 
@@ -67,7 +84,11 @@ std::optional<Errors::Error> Store::SetData(int fd, DBTableIndex* Index, const s
         return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table '{}' does not exist", table_name), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
     }
 
-    Record::Write(fd, t, data);
+    auto write_result = Record::Write(fd, t, data);
+
+    if (write_result.has_value()) {
+        return write_result.value();
+    }
 
     return std::nullopt;
 }

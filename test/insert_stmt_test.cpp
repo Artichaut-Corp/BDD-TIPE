@@ -29,7 +29,7 @@ TEST(InsertStmtTest, SimpleValues)
     data->reserve(3);
 
     data->emplace_back(LitteralValue<std::string>(ColumnType::TEXT_C, "Vannes"));
-    data->emplace_back(LitteralValue<std::string>(ColumnType::INTEGER_C, "54420"));
+    data->emplace_back(LitteralValue<std::string>(ColumnType::SIGNED_INTEGER_C, "54420"));
     data->emplace_back(LitteralValue<std::string>(ColumnType::TEXT_C, "Bretagne"));
 
     auto name = new TableName("Ville", {});

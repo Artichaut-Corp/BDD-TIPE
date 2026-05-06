@@ -6,13 +6,13 @@ void Cursor::GotoBeginning(int fd) { m_CurrOffset = HEADER_OFFSET; }
 
 void Cursor::GotoColumn(int fd, std::string column_key) { }
 
-void Cursor::SetOffset(uint64_t size) { m_CurrOffset = size; }
+void Cursor::SetOffset(DbUInt64 size) { m_CurrOffset = size; }
 
-uint64_t Cursor::CurrentOffset() { return m_CurrOffset; }
+DbUInt64 Cursor::CurrentOffset() { return m_CurrOffset; }
 
-uint64_t Cursor::MoveOffset(uint64_t size)
+DbUInt64 Cursor::MoveOffset(DbUInt64 size)
 {
-    uint64_t current = m_CurrOffset;
+    DbUInt64 current = m_CurrOffset;
 
     m_CurrOffset += size;
 

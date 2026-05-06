@@ -79,6 +79,7 @@ enum TokenType {
     // Expression
     STRING_LITT_T,
     NUM_LITT_T,
+    FLOAT_LITT_T,
 
     // Identifiers
     VAR_NAME_T,

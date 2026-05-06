@@ -1,0 +1,15 @@
+[0] Config.pm:328> INFO - This is Biber 2.21
+[0] Config.pm:331> INFO - Logfile is 'mcot.blg'
+[82] biber:342> INFO - === Wed Jan  7, 2026, 21:31:04
+[98] Biber.pm:421> INFO - Reading 'mcot.bcf'
+[146] Biber.pm:1002> INFO - Found 8 citekeys in bib section 0
+[161] Biber.pm:4487> INFO - Processing section 0
+[169] Biber.pm:4678> INFO - Looking for bibtex file 'biblio.bib' for section 0
+[173] bibtex.pm:1713> INFO - LaTeX decoding ...
+[181] bibtex.pm:1519> INFO - Found BibTeX data source 'biblio.bib'
+[307] UCollate.pm:68> INFO - Overriding locale 'nil' defaults 'variable = shifted' with 'variable = non-ignorable'
+[308] UCollate.pm:68> INFO - Overriding locale 'nil' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[309] Biber.pm:4307> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'nil'
+[309] Biber.pm:4313> INFO - No sort tailoring available for locale 'nil'
+[328] bbl.pm:676> INFO - Writing 'mcot.bbl' with encoding 'UTF-8'
+[335] bbl.pm:779> INFO - Output to mcot.bbl

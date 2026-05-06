@@ -1,0 +1,396 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{none/global//global/global/global}
+    \entry{abadi_design_2013}{article}{}{}
+      \name{author}{5}{}{%
+        {{hash=7f2a4d6d7d7a93ccacddb011cfd8fe52}{%
+           family={Abadi},
+           familyi={A\bibinitperiod},
+           given={Daniel},
+           giveni={D\bibinitperiod}}}%
+        {{hash=9a9b1ccfbe3e81e38a1c1136ca101f64}{%
+           family={Boncz},
+           familyi={B\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+        {{hash=aa7a2165bb118da575a8234a0b8be713}{%
+           family={Harizopoulos},
+           familyi={H\bibinitperiod},
+           given={Stavros},
+           giveni={S\bibinitperiod}}}%
+        {{hash=a0528fbf86972d447525db3b37c0677e}{%
+           family={Idreos},
+           familyi={I\bibinitperiod},
+           given={Stratos},
+           giveni={S\bibinitperiod}}}%
+        {{hash=8b530348ffa5a0cfb0b9827772f501e9}{%
+           family={Madden},
+           familyi={M\bibinitperiod},
+           given={Samuel},
+           giveni={S\bibinitperiod}}}%
+      }
+      \strng{namehash}{7379e233d003cfdd8180a2720d81b4ba}
+      \strng{fullhash}{a2b5e7393f774a6b4424fa5995941f5e}
+      \strng{fullhashraw}{a2b5e7393f774a6b4424fa5995941f5e}
+      \strng{bibnamehash}{7379e233d003cfdd8180a2720d81b4ba}
+      \strng{authorbibnamehash}{7379e233d003cfdd8180a2720d81b4ba}
+      \strng{authornamehash}{7379e233d003cfdd8180a2720d81b4ba}
+      \strng{authorfullhash}{a2b5e7393f774a6b4424fa5995941f5e}
+      \strng{authorfullhashraw}{a2b5e7393f774a6b4424fa5995941f5e}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Foundations and Trends in Databases}
+      \field{title}{\href{\thefield{url}}{The Design and Implementation of Modern Column-Oriented Database Systems}}
+      \field{volume}{5}
+      \field{year}{2013}
+      \verb{urlraw}
+      \verb https://stratos.seas.harvard.edu/publications/design-and-implementation-modern-column-oriented-database-systems
+      \endverb
+      \verb{url}
+      \verb https://stratos.seas.harvard.edu/publications/design-and-implementation-modern-column-oriented-database-systems
+      \endverb
+    \endentry
+    \entry{abadi_zstonebraker_c_store_2005}{article}{}{}
+      \name{author}{14}{}{%
+        {{hash=fe90ed72bd75a3ded3a2dd4b715b214b}{%
+           family={Stonebraker},
+           familyi={S\bibinitperiod},
+           given={Mike},
+           giveni={M\bibinitperiod}}}%
+        {{hash=4021173586d17fa00db6ea86148c1130}{%
+           family={Abadi},
+           familyi={A\bibinitperiod},
+           given={Daniel\bibnamedelima J.},
+           giveni={D\bibinitperiod\bibinitdelim J\bibinitperiod}}}%
+        {{hash=339f189028cf5c094515c6deb33371da}{%
+           family={Batkin},
+           familyi={B\bibinitperiod},
+           given={Adam},
+           giveni={A\bibinitperiod}}}%
+        {{hash=205bef65e0a5c59f4ee86815a5c95a13}{%
+           family={Chen},
+           familyi={C\bibinitperiod},
+           given={Xuedong},
+           giveni={X\bibinitperiod}}}%
+        {{hash=5af078892bdea1a4ee89aa291e8aa82c}{%
+           family={Cherniack},
+           familyi={C\bibinitperiod},
+           given={Mitch},
+           giveni={M\bibinitperiod}}}%
+        {{hash=b53e0de7f98b9ad01e43cabd66810e51}{%
+           family={Ferreira},
+           familyi={F\bibinitperiod},
+           given={Miguel},
+           giveni={M\bibinitperiod}}}%
+        {{hash=a445296101acb7d529a0afc2b9875bf5}{%
+           family={Lau},
+           familyi={L\bibinitperiod},
+           given={Edmond},
+           giveni={E\bibinitperiod}}}%
+        {{hash=a517cb40a52f65bc2cede8151715977a}{%
+           family={Lin},
+           familyi={L\bibinitperiod},
+           given={Amerson},
+           giveni={A\bibinitperiod}}}%
+        {{hash=d8fede9515452b15e6efe161a1c49975}{%
+           family={Madden},
+           familyi={M\bibinitperiod},
+           given={Sam},
+           giveni={S\bibinitperiod}}}%
+        {{hash=3ac82f3cec35774ba19e71f90421c83b}{%
+           family={O'Neil},
+           familyi={O\bibinitperiod},
+           given={Elizabeth},
+           giveni={E\bibinitperiod}}}%
+        {{hash=3020e1508b2bf08f5dbd1fb8088b6b24}{%
+           family={O'Neil},
+           familyi={O\bibinitperiod},
+           given={Pat},
+           giveni={P\bibinitperiod}}}%
+        {{hash=ba631b8c04f3faded34518b101c002d0}{%
+           family={Rasin},
+           familyi={R\bibinitperiod},
+           given={Alex},
+           giveni={A\bibinitperiod}}}%
+        {{hash=8b42a5ed42bac63672f9f8ca0a665e79}{%
+           family={Tran},
+           familyi={T\bibinitperiod},
+           given={Nga},
+           giveni={N\bibinitperiod}}}%
+        {{hash=f9c63eb422f85aa16854694fe288be82}{%
+           family={Zdonik},
+           familyi={Z\bibinitperiod},
+           given={Stan},
+           giveni={S\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {VLDB Endowment}%
+      }
+      \strng{namehash}{970c5e673b5c2483e7ce2113bdb02366}
+      \strng{fullhash}{2b7de093c58fe16cf375edc555cb159d}
+      \strng{fullhashraw}{2b7de093c58fe16cf375edc555cb159d}
+      \strng{bibnamehash}{970c5e673b5c2483e7ce2113bdb02366}
+      \strng{authorbibnamehash}{970c5e673b5c2483e7ce2113bdb02366}
+      \strng{authornamehash}{970c5e673b5c2483e7ce2113bdb02366}
+      \strng{authorfullhash}{2b7de093c58fe16cf375edc555cb159d}
+      \strng{authorfullhashraw}{2b7de093c58fe16cf375edc555cb159d}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the 31st international conference on {Very} large data bases}
+      \field{month}{8}
+      \field{title}{\href{\thefield{url}}{C-store: a column-oriented {DBMS}}}
+      \field{year}{2005}
+      \verb{urlraw}
+      \verb https://dl.acm.org/doi/10.14778/1687553.1687625
+      \endverb
+      \verb{url}
+      \verb https://dl.acm.org/doi/10.14778/1687553.1687625
+      \endverb
+    \endentry
+    \entry{rouvroy_hypothetical_nodate}{thesis}{}{}
+      \name{author}{1}{}{%
+        {{hash=fc4b7b180495fed8665014626fb7c25e}{%
+           family={Rouvroy},
+           familyi={R\bibinitperiod},
+           given={Clément},
+           giveni={C\bibinitperiod}}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{fc4b7b180495fed8665014626fb7c25e}
+      \strng{fullhash}{fc4b7b180495fed8665014626fb7c25e}
+      \strng{fullhashraw}{fc4b7b180495fed8665014626fb7c25e}
+      \strng{bibnamehash}{fc4b7b180495fed8665014626fb7c25e}
+      \strng{authorbibnamehash}{fc4b7b180495fed8665014626fb7c25e}
+      \strng{authornamehash}{fc4b7b180495fed8665014626fb7c25e}
+      \strng{authorfullhash}{fc4b7b180495fed8665014626fb7c25e}
+      \strng{authorfullhashraw}{fc4b7b180495fed8665014626fb7c25e}
+      \field{sortinit}{4}
+      \field{sortinithash}{9381316451d1b9788675a07e972a12a7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{\href{\thefield{url}}{Hypothetical {Index} {Benefit} {Estimation} on {Column}-oriented {Databases} using {Quantiles}}}
+    \endentry
+    \entry{ding_extensible_2024}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=2b06372637471ed70889ecb2aead64ef}{%
+           family={Ding},
+           familyi={D\bibinitperiod},
+           given={Bailu},
+           giveni={B\bibinitperiod}}}%
+        {{hash=716a9b7e7935459a0c580442fda89b0d}{%
+           family={Narasayya},
+           familyi={N\bibinitperiod},
+           given={Vivek},
+           giveni={V\bibinitperiod}}}%
+        {{hash=c0977d136fdc05a6f02edad761cb4700}{%
+           family={Chaudhuri},
+           familyi={C\bibinitperiod},
+           given={Surajit},
+           giveni={S\bibinitperiod}}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{41ca84c486a7ecc61fe596ff49682b72}
+      \strng{fullhash}{41ca84c486a7ecc61fe596ff49682b72}
+      \strng{fullhashraw}{41ca84c486a7ecc61fe596ff49682b72}
+      \strng{bibnamehash}{41ca84c486a7ecc61fe596ff49682b72}
+      \strng{authorbibnamehash}{41ca84c486a7ecc61fe596ff49682b72}
+      \strng{authornamehash}{41ca84c486a7ecc61fe596ff49682b72}
+      \strng{authorfullhash}{41ca84c486a7ecc61fe596ff49682b72}
+      \strng{authorfullhashraw}{41ca84c486a7ecc61fe596ff49682b72}
+      \field{sortinit}{5}
+      \field{sortinithash}{20e9b4b0b173788c5dace24730f47d8c}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Foundations and Trends in Databases}
+      \field{month}{12}
+      \field{number}{3-4}
+      \field{title}{\href{\thefield{url}}{Extensible {Query} {Optimizers} in {Practice}}}
+      \field{volume}{14}
+      \field{year}{2024}
+      \verb{urlraw}
+      \verb https://www.emerald.com/ftdbs/article/14/3-4/186/1320832/Extensible-Query-Optimizers-in-Practice
+      \endverb
+      \verb{url}
+      \verb https://www.emerald.com/ftdbs/article/14/3-4/186/1320832/Extensible-Query-Optimizers-in-Practice
+      \endverb
+    \endentry
+    \entry{Pierre_Senellart_Course}{article}{}{}
+      \name{author}{1}{}{%
+        {{hash=f489aef55caefdb468329feb1fc734ec}{%
+           family={Senellart},
+           familyi={S\bibinitperiod},
+           given={Pierre},
+           giveni={P\bibinitperiod}}}%
+      }
+      \list{language}{1}{%
+        {fr}%
+      }
+      \strng{namehash}{f489aef55caefdb468329feb1fc734ec}
+      \strng{fullhash}{f489aef55caefdb468329feb1fc734ec}
+      \strng{fullhashraw}{f489aef55caefdb468329feb1fc734ec}
+      \strng{bibnamehash}{f489aef55caefdb468329feb1fc734ec}
+      \strng{authorbibnamehash}{f489aef55caefdb468329feb1fc734ec}
+      \strng{authornamehash}{f489aef55caefdb468329feb1fc734ec}
+      \strng{authorfullhash}{f489aef55caefdb468329feb1fc734ec}
+      \strng{authorfullhashraw}{f489aef55caefdb468329feb1fc734ec}
+      \field{sortinit}{6}
+      \field{sortinithash}{b33bc299efb3c36abec520a4c896a66d}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{\href{\thefield{url}}{Cours de Pierre Senellart}}
+      \field{year}{2017}
+      \verb{urlraw}
+      \verb https://pierre.senellart.com/enseignement/2016-2017/bd/
+      \endverb
+      \verb{url}
+      \verb https://pierre.senellart.com/enseignement/2016-2017/bd/
+      \endverb
+    \endentry
+    \entry{astrahan_system_1976}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=5b58f576b690f2bac4aad86116f9fefa}{%
+           family={Astrahan},
+           familyi={A\bibinitperiod},
+           given={M\bibnamedelima M},
+           giveni={M\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+        {{hash=a57807c641c37b85833469ef4e3bd31f}{%
+           family={Blasgen},
+           familyi={B\bibinitperiod}}}%
+        {{hash=a57807c641c37b85833469ef4e3bd31f}{%
+           family={Blasgen},
+           familyi={B\bibinitperiod}}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{d36cdfb0b5aebcceb82daf76ce2fa786}
+      \strng{fullhash}{d36cdfb0b5aebcceb82daf76ce2fa786}
+      \strng{fullhashraw}{d36cdfb0b5aebcceb82daf76ce2fa786}
+      \strng{bibnamehash}{d36cdfb0b5aebcceb82daf76ce2fa786}
+      \strng{authorbibnamehash}{d36cdfb0b5aebcceb82daf76ce2fa786}
+      \strng{authornamehash}{d36cdfb0b5aebcceb82daf76ce2fa786}
+      \strng{authorfullhash}{d36cdfb0b5aebcceb82daf76ce2fa786}
+      \strng{authorfullhashraw}{d36cdfb0b5aebcceb82daf76ce2fa786}
+      \field{sortinit}{7}
+      \field{sortinithash}{108d0be1b1bee9773a1173443802c0a3}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{month}{6}
+      \field{title}{\href{\thefield{url}}{System {R}}}
+      \field{year}{1976}
+      \verb{urlraw}
+      \verb https://dl.acm.org/doi/epdf/10.1145/320455.320457
+      \endverb
+      \verb{url}
+      \verb https://dl.acm.org/doi/epdf/10.1145/320455.320457
+      \endverb
+    \endentry
+    \entry{lan_survey_2021}{article}{}{}
+      \name{author}{3}{}{%
+        {{hash=667f0603187e346b028fe89168fe1f63}{%
+           family={Lan},
+           familyi={L\bibinitperiod},
+           given={Hai},
+           giveni={H\bibinitperiod}}}%
+        {{hash=d0ef8992108e033f04b913f0bc6c844d}{%
+           family={Bao},
+           familyi={B\bibinitperiod},
+           given={Zhifeng},
+           giveni={Z\bibinitperiod}}}%
+        {{hash=7ad666df74b7d206a3bf433034292ea2}{%
+           family={Peng},
+           familyi={P\bibinitperiod},
+           given={Yuwei},
+           giveni={Y\bibinitperiod}}}%
+      }
+      \strng{namehash}{93246937251dead6892024b56e45442f}
+      \strng{fullhash}{93246937251dead6892024b56e45442f}
+      \strng{fullhashraw}{93246937251dead6892024b56e45442f}
+      \strng{bibnamehash}{93246937251dead6892024b56e45442f}
+      \strng{authorbibnamehash}{93246937251dead6892024b56e45442f}
+      \strng{authornamehash}{93246937251dead6892024b56e45442f}
+      \strng{authorfullhash}{93246937251dead6892024b56e45442f}
+      \strng{authorfullhashraw}{93246937251dead6892024b56e45442f}
+      \field{sortinit}{9}
+      \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{annotation}{Comment: This paper was accepted by Data Science and Engineering (DSEJ) in Dec, 2020}
+      \field{journaltitle}{Data Science and Engineering}
+      \field{month}{3}
+      \field{number}{1}
+      \field{shorttitle}{A {Survey} on {Advancing} the {DBMS} {Query} {Optimizer}}
+      \field{title}{\href{\thefield{url}}{A {Survey} on {Advancing} the {DBMS} {Query} {Optimizer}: {Cardinality} {Estimation}, {Cost} {Model}, and {Plan} {Enumeration}}}
+      \field{volume}{6}
+      \field{year}{2021}
+      \verb{urlraw}
+      \verb http://arxiv.org/abs/2101.01507
+      \endverb
+      \verb{url}
+      \verb http://arxiv.org/abs/2101.01507
+      \endverb
+    \endentry
+    \entry{veldhuizen_leapfrog_2013}{article}{}{}
+      \name{author}{1}{}{%
+        {{hash=458a2cb529610dd86e202af60ae21f62}{%
+           family={Veldhuizen},
+           familyi={V\bibinitperiod},
+           given={Todd\bibnamedelima L.},
+           giveni={T\bibinitperiod\bibinitdelim L\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {arXiv}%
+      }
+      \strng{namehash}{458a2cb529610dd86e202af60ae21f62}
+      \strng{fullhash}{458a2cb529610dd86e202af60ae21f62}
+      \strng{fullhashraw}{458a2cb529610dd86e202af60ae21f62}
+      \strng{bibnamehash}{458a2cb529610dd86e202af60ae21f62}
+      \strng{authorbibnamehash}{458a2cb529610dd86e202af60ae21f62}
+      \strng{authornamehash}{458a2cb529610dd86e202af60ae21f62}
+      \strng{authorfullhash}{458a2cb529610dd86e202af60ae21f62}
+      \strng{authorfullhashraw}{458a2cb529610dd86e202af60ae21f62}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{shorttitle}
+      \field{month}{12}
+      \field{shorttitle}{Leapfrog {Triejoin}}
+      \field{title}{\href{\thefield{url}}{Leapfrog {Triejoin}: {A} {Worst}-{Case} {Optimal} {Join} {Algorithm}}}
+      \field{year}{2013}
+      \verb{urlraw}
+      \verb https://arxiv.org/abs/1210.0481
+      \endverb
+      \verb{url}
+      \verb https://arxiv.org/abs/1210.0481
+      \endverb
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+
