@@ -21,6 +21,11 @@
 *.nav
 *.snm
 *.tec
+*.xml
+*.blg
+*.bbl
+*.bcf
+
 
 # Fortran module files
 *.mod
@@ -63,7 +68,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-##### Linux
+##### Linu
 *~
 
 # temporary files which can be created if a process still has a handle open of a deleted file
@@ -1086,6 +1091,9 @@ dkms.conf
 *.uf2
 # Raspberry Pi Pico disassembler file
 *.dis
+
+
+
 /script/TABLE
 /script/table
 *.gz
