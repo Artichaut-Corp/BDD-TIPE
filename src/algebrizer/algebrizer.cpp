@@ -124,6 +124,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             }
         }
     }
+    std::cout<<"bite3"<<std::endl;
 
     for (std::variant<Parsing::SelectField, Parsing::AggregateFunction> colonne_info : Selection->getFields()->getField()) { // permet de convertir m_fields list en un autre type plus utile
         if (std::holds_alternative<Parsing::SelectField>(colonne_info)) {
@@ -207,11 +208,9 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
                 UsefullColumnForAggrAndOutput->insert(NomColonne);
             }
 
-            AppliqueAggr
-                .AjouteGroupBy(ColumnGroupByed);
+            AppliqueAggr.AjouteGroupBy(ColumnGroupByed);
         }
     }
-
     // permet de créer les OrderBy si il y en as
     Parsing::OrderByClause* order = Selection->getOrderBy();
 
@@ -261,8 +260,10 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
         AppliqueAggr.AjouterLimite(Limite->getOffset(), Limite->getCount());
     }
+    std::cout<<"bite2"<<std::endl;
 
     Parsing::WhereClause* where = Selection->getWhere();
+    std::cout<<"bite6"<<std::endl;
 
     std::unordered_set<ColonneNamesSet*>* ConditionColumn;
 
@@ -270,8 +271,10 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     // il faut ajouter les colonnes utilisé dans la conditions avant de créer la table principale
     if (where != nullptr) {
+            std::cout<<"zerfzefzef"<<std::endl;
 
         ConditionColumn = where->GetConditionColumnNames(TablePrincipaleNom.get());
+    std::cout<<"bite5"<<std::endl;
 
         cond = std::move(where->m_Condition);
         for (auto& NomColonne : *ConditionColumn) {
@@ -299,6 +302,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             }
         }
     }
+    std::cout<<"bite"<<std::endl;
 
     //  on doit creer la table principale, pour cela on doit creer les racines et les Colonnes
     auto Racines_principale = std::make_unique<std::vector<Racine*>>();

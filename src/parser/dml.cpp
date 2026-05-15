@@ -256,7 +256,7 @@ std::ostream& operator<<(std::ostream& os, const FieldsList& fields_list)
 
 std::variant<Limit*, Errors::Error> Limit::ParseLimit(Lexing::Tokenizer* t)
 {
-    assert(t->next().m_Token == Lexing::LIMIT_T);
+   if (t->next().m_Token != Lexing::LIMIT_T);
 
     auto tok = t->next();
 
@@ -284,7 +284,7 @@ std::variant<Limit*, Errors::Error> Limit::ParseLimit(Lexing::Tokenizer* t)
 
 std::variant<GroupByClause*, Errors::Error> GroupByClause::ParseGroupBy(Lexing::Tokenizer* t)
 {
-    assert(t->next().m_Token == Lexing::GROUP_T);
+    if (t->next().m_Token != Lexing::GROUP_T) {}
 
     auto next = t->next();
 
@@ -331,7 +331,7 @@ std::variant<GroupByClause*, Errors::Error> GroupByClause::ParseGroupBy(Lexing::
 
 std::variant<OrderByClause*, Errors::Error> OrderByClause::ParseOrderBy(Lexing::Tokenizer* t)
 {
-    assert(t->next().m_Token == Lexing::ORDER_T);
+    if (t->next().m_Token != Lexing::ORDER_T) {}
 
     auto next = t->next();
 
@@ -387,7 +387,7 @@ WhereClause* WhereClause::ParseWhere(Lexing::Tokenizer* t)
 DeleteStmt* DeleteStmt::ParseDelete(Lexing::Tokenizer* t)
 {
     // Juste pour s'assurer. Attention, on passe ici au prochain élément
-    assert(t->next().m_Token == Lexing::DELETE_T);
+    if (t->next().m_Token != Lexing::DELETE_T) {}
 
     auto next = t->next();
 
@@ -424,7 +424,7 @@ DeleteStmt* DeleteStmt::ParseDelete(Lexing::Tokenizer* t)
 
 InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
 {
-    assert(t->next().m_Token == Lexing::INSERT_T);
+    if (t->next().m_Token != Lexing::INSERT_T) {}
 
     auto next = t->next();
 
@@ -617,7 +617,7 @@ InsertStmt* InsertStmt::ParseInsert(Lexing::Tokenizer* t)
 // Juste remplacer par DELETE puis INSERT ça marche aussi bien
 UpdateStmt* UpdateStmt::ParseUpdate(Lexing::Tokenizer* t)
 {
-    assert(t->next().m_Token == Lexing::UPDATE_T);
+    if (t->next().m_Token != Lexing::UPDATE_T) {}
 
     auto next = t->next();
 
@@ -631,7 +631,9 @@ UpdateStmt* UpdateStmt::ParseUpdate(Lexing::Tokenizer* t)
 SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
 {
 
-    assert(t->next().m_Token == Lexing::SELECT_T);
+    if (t->next().m_Token != Lexing::SELECT_T) {
+
+    }
 
     auto next = t->peek();
 
@@ -782,7 +784,7 @@ SelectStmt* SelectStmt::ParseSelect(Lexing::Tokenizer* t)
 
 Transaction* Transaction::ParseTransaction(Lexing::Tokenizer* t)
 {
-    assert(t->next().m_Token == Lexing::TRANSACTION_T);
+    if (t->next().m_Token != Lexing::TRANSACTION_T) {}
 
     auto next = t->peek();
 

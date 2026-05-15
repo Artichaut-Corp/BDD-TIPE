@@ -18,6 +18,8 @@ public:
 
     bool empty() const { return m_Data.is_empty(); }
 
+    void print() const { m_Data.print_all(); }
+
     void push(const T element)
     {
         m_Data.append(element);
@@ -32,7 +34,7 @@ public:
         return value;
     }
     const T& first()
-    {        
+    {
         const T& value = m_Data.get_first().value();
 
         return value;

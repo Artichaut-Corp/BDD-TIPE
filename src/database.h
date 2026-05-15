@@ -363,9 +363,15 @@ public:
                     m_Quit = true;
 
                     break;
-                } else if (input == ".insert_data") {
-                    std::cout << "Insertion des données\n";
-                    import_all_csv();
+                } else if (input.starts_with(".insert_data")) {
+
+
+                    int hm = std::stoi(input.substr(13, input.length() - 13));
+
+                    std::cout << "Insertion de " << hm << " données\n";
+
+                    import_all_csv(hm);
+
                     std::cout << std::endl;
                 } else if (input == ".print_table_layout") {
                     PrintIndex(std::cout);
@@ -426,8 +432,8 @@ public:
         Cleanup();
     }
 
-    void import_all_csv();
-    void process_csv_streaming(const std::string& path, const std::string& table, const std::vector<std::string>& columns);
+    void import_all_csv(int how_many);
+    void process_csv_streaming(const std::string& path, const std::string& table, const std::vector<std::string>& columns, int how_many);
 };
 }
 

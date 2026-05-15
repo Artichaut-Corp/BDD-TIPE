@@ -298,6 +298,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
     std::variant<Parsing::Statement, Errors::Error> n = parser->Parse();
 
+
     if (std::holds_alternative<Errors::Error>(n)) {
         Errors::Error e = std::get<Errors::Error>(n);
 
@@ -399,7 +400,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
     return output;
 }
 
-void DatabaseEngine::process_csv_streaming(const std::string& path, const std::string& table, const std::vector<std::string>& columns)
+void DatabaseEngine::process_csv_streaming(const std::string& path, const std::string& table, const std::vector<std::string>& columns, int how_many)
 {
     constexpr int MAX_ROWS_PER_TRANSACTION = 100;
 
@@ -475,10 +476,10 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
             }
             query << " END;";
 
-            if (compteur > 10000)
+            if (compteur > how_many)
                 break;
 
-            std::cout << query.str();
+            //std::cout << query.str();
             DatabaseEngine::Eval(query.str());
             batch.clear();
         }
@@ -540,11 +541,11 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
     }
 }
 
-void DatabaseEngine::import_all_csv()
+void DatabaseEngine::import_all_csv(int how_many)
 {
-    DatabaseEngine::process_csv_streaming("../script/table/contributor.csv", "contributors", { "id", "username" });
-    DatabaseEngine::process_csv_streaming("../script/table/revision.csv", "revisions", { "id", "parent_id", "timestamp", "contributor_id" });
-    DatabaseEngine::process_csv_streaming("../script/table/page.csv", "pages", { "id", "ns", "title", "revision_id" });
+    DatabaseEngine::process_csv_streaming("../script/table/contributor.csv", "contributors", { "id", "username" }, how_many);
+    DatabaseEngine::process_csv_streaming("../script/table/revision.csv", "revisions", { "id", "parent_id", "timestamp", "contributor_id" }, how_many);
+    DatabaseEngine::process_csv_streaming("../script/table/page.csv", "pages", { "id", "ns", "title", "revision_id" }, how_many);
 
     // DatabaseEngine::process_csv_streaming("../script/table/namespaces.csv", "namespaces", { "key", "name" });
     //  DatabaseEngine::process_csv_streaming("../script/table/categories_pages.csv", "categories_pages", { "id_cat", "page_id" });

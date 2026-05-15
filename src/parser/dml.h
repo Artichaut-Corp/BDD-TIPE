@@ -296,16 +296,19 @@ public:
     static WhereClause* ParseWhere(Lexing::Tokenizer* t);
 
     std::unordered_set<QueryPlanning::ColonneNamesSet*>* GetConditionColumnNames(QueryPlanning::TableNamesSet* table_name)
-    {
+    {                                    std::cout<<"zegrregergaefze"<<std::endl;
+
         if (std::holds_alternative<Parsing::BinaryExpression>(*m_Condition)) {
 
             auto &temp = std::get<Parsing::BinaryExpression>(*m_Condition);
-            temp.FormatColumnName(table_name);
 
+            temp.FormatColumnName(table_name);
             return temp.Column();
         } else {
-            
+                                    std::cout<<"rthzefgze"<<std::endl;
+
             std::get<Parsing::Clause>(*m_Condition).FormatColumnName(table_name);
+                                    std::cout<<"fin"<<std::endl;
 
             return std::get<Parsing::Clause>(*m_Condition).Column();
         }
