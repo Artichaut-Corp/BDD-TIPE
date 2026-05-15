@@ -1,23 +1,22 @@
 Ce fichier résume les erreur connues, les idées d'améliorations à implémenter, et décrit les limitation de l'implémentation actuelle
 
 Erreur : 
-    -lors d'une requête, l'usage d'un Alias sur le dernier select ne passe pas dans le parser , exemple : "Select date as jour_de_lannee from calendrier" est faux pour le parser
-    - message d'erreir quand rien après le where
-bdd-tipe> select id, from revisions where id > 10 limit 10;
-ERROR [[ 9 ]] - ����������@����:
-Expected Column Names or Aggregate Functions after 'SELECT' statement
+    - message d'erreur quand rien après le where
 
-limitation de l'implémentation actuelle comparé à un SGBD classique :
+Limitation de l'implémentation actuelle comparé à un SGBD classique :
     - le seul type de join traité est le full, aucun autre n'est implémenter
-    - Dans le select, l'usage de "*" n'est pas traité
+    - L'usage de "*" n'est pas traité
     - les condition sur les string de la forme "%a" ne sont pas traité
     - les alias dans le selection ne sont pas ceux affiché dans le tableau de renvoie
+    - Requête imbriqué
+    - Abscence de Exept, Union, Interset
 
-idée d'améliorations:
+Idée d'améliorations:
     - Donner le choix de rendre paresseuse les évaluation dans EstimeSelectivité
     - Mémoiriser l'ordre des join et le calculer et pas prendre celui donner par le user
     - créer un system de JoinIndex
-
+    - Implémenter LFTJ
+    - créer un modèle de calcul du cout de la requête pour créer 
 
 
 

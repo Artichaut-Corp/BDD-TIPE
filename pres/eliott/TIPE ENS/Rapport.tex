@@ -1,0 +1,73 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc} % encode accents
+\usepackage[T1]{fontenc}    % fonts
+\usepackage[french]{babel}  % language
+\usepackage{csquotes}
+\usepackage[backend=biber,style=numeric,style=numeric,sorting=none]{biblatex}
+\usepackage{url}         
+\addbibresource{biblio.bib} 
+\usepackage{numprint}       % Histoire que les chiffres soient bien
+\usepackage[colorlinks=true,linkcolor=DarkBlue,citecolor=DarkGreen,urlcolor=DarkRed]{hyperref}
+\usepackage{amsmath}        % La base pour les maths
+\usepackage{mathrsfs}       % Quelques symboles supplémentaires
+\usepackage{amssymb}        % encore des symboles.
+\usepackage{amsfonts}       % Des fontes, eg pour \mathbb.
+
+\usepackage[svgnames]{xcolor} % De la couleur
+\usepackage{geometry}       % Gérer correctement la taille
+
+\usepackage{graphicx} % inclusion des graphiques
+\usepackage{wrapfig}  % Dessins dans le texte.
+
+
+\newcounter{byear}
+\setcounter{byear}{\the\year}
+\addtocounter{byear}{-1}
+
+\title{Optimisation et éxécutions des Plans de requêtes en SQL }
+\author{Eliott Paquet, MPI, \arabic{byear}-\the\year}
+
+
+
+\DeclareFieldFormat{url}{\relax} 
+\begin{document}
+
+\maketitle
+
+\section*{Introduction}
+Mon camarade et moi étant des amateurs de SQL et ayant déjà travaillé avec le SQL sur différents projets, l’étude des moteurs des Systèmes de Gestion des Base de Données (SGBD) nous a paru évident tant elle nous permettra l'étude de leur fonctionnement.
+\\
+\\
+\par C'est dans ce contexte que nous avons exploré différentes techniques pour optimiser la vitesse d'exécution d'une requête, notamment dans un contexte industriel, c'est à dire avec un gros volume de données et avec un grand nombre de requêtes utilisées. Mon TIPE se focalise sur la partie exécution des requêtes laissant la question de la gestion des données et de la vitesse d'accès de celles-ci à mon binôme.
+
+
+
+
+
+
+\section*{Bibliographie commentée}
+Les bases de données représentent les fondations d'internet. Depuis l'invention des premiers moteurs pour le traitement des requêtes SQL, plusieurs paradigmes ont émergé. Le paradigme que nous avons considéré est le Column-Based \cite{abadi_design_2013}. Il consiste à représenter les données groupées par colonne en opposition au modèle Row-Based qui regroupe les lignes les unes à la suite des autres. Ce modèle permet une très grande efficacité de lecture sur les grandes bases de donnée \cite{abadi_zstonebraker_c_store_2005}.
+
+
+Pour avoir une lecture rapide, le choix du support (disque dur, SSD,...) de stockage des données est essentiel, un autre facteur est le nombre de données à lire, il est donc pertinent de s'intéresser à comment les arranger pour optimiser cette partie. Dans de nombreuses requêtes, nos données doivent vérifier un prédicat (c'est la partie après le SELECT en SQL), il est donc intéressant d'ordonner nos données en fonction de ce critère pour facilement lire uniquement les données utiles, cette idée permet d'introduire les B-Arbres \cite{abadi_design_2013}. Cependant le coût de calculer et de maintenir un B-arbre en temps réel est coûteux, il est donc parfois préférable de cracker nos colonnes en différents clusters de données au lieu de construire des données trop complexes. En général, le choix de comment ordonner peut être décidé en temps réel à l'aide de modèles statistiques \cite{rouvroy_hypothetical_nodate}. 
+
+Pour traiter une requête SQL, différentes étapes sont requises, il faut d'abord un parser pour transformer la chaîne de caractères que l'utilisateur envoie en un arbre syntaxique. Cet arbre est ensuite traduit en plan d'exécution par l'algebrizer. Il porte le nom de l'algèbre relationelle, domaine massivement utilisé pour représenter les plans après les travaux de Codd. Celui-ci cherche en mémoire un plan similaire sauvegardé dans le cache ou le créé si il est inexistant \cite[348]{ding_extensible_2024}. Ce plan est ensuite optimisé à travers différentes optimisations, il est ensuite exécuté \cite{Pierre_Senellart_Course}.
+
+L'optimisation de plan se déroule, dans les modèles dit "volcano", basé sur système R \cite{astrahan_system_1976}, en deux étapes. D'abord il faut concevoir et optimiser le plan logique pour cela plusieurs optimisations ont été pensées et sont applicables dans de très nombreux cas \cite{abadi_design_2013}. Ces optimisations que l'on appellera naïves sont à différencier des autres optimisations qui dépendent d'estimations du résultat de certaine opération et de modèles statistiques \cite{lan_survey_2021}. Après avoir optimisé le plan logique, il faut optimiser le plan physique, c'est à dire choisir quel algorithme utiliser pour appliquer une opération \cite{abadi_design_2013}, par exemple l'opération de jointure possède différents algorithmes dont au moins 4 sont facilement utilisables avec notamment le Leap Frog Tree Join \cite{veldhuizen_leapfrog_2013}. Pour se faire, différentes méthodes ont été imaginées, il est possible de choisir à l'avance quelles opérations seront choisies ou alors de concevoir un modèle d'estimation des coûts et de calculer le modèle ayant le plus faible coût \cite{ding_extensible_2024,astrahan_system_1976} via un parcours de graphe. Cette dernière étape nécessite, pour être performante, énormément de statistiques et fait appel à des concepts avancés de statistique et de machine learning que nous n'utiliserons pas.
+
+
+En Conclusion, nous avons évoqué deux aspects majeurs dans l'optimisation de la vitesse d'exécution des requêtes SQL. Premièrement, la manière dans laquelle sont ordonnées et lues nos données et dans un second temps, comment notre notre requête SQL vas être traduite et éxécutée.
+\section*{Problématique retenue}
+Comment minimiser le temps d'exécution de requêtes SQL itérées ?
+\section*{Objectifs du TIPE}
+J'ai décidé de me concentrer sur la création du plan de l'optimisation de celui-ci, les objectifs de mon TIPE étant : 
+\begin{enumerate}
+    \item Création d'un algebrizer à partir de l'arbre syntaxique d'une requête SQL et implémentation de l'exécution de celui-ci
+    \item Implémentation de différentes optimisations de l'arbre logique et physique
+    \item création d'un modèle basique de génération d'arbre physique à partir des résultats précédents
+\end{enumerate}
+Avec le travail de mon camarade, nous avons avec succès créé un moteur SQL en C++, acceptant des requêtes SQL et renvoyant le résultat de celles-ci.
+
+\printbibliography
+
+\end{document}

@@ -4,4 +4,6 @@ PronfMode -> si il vaut 0 le join éxécuté dans tout les cas est le produit ca
 
 InsertProj -> si il vaut 1 : Insère des projection avant chaque selection et jointure, pour minimiser le plus possible les élément manipuler à chaque étape de l'éxécution
 
-OptimizeBinaryExpression -> si il vaut 1 -> ordonne les comparaisons dans les séléctions en fonction de la séléctivité de chacune des comparaison, utilisant le côté parresseux d'une condition
+OptimizeBinaryExpression -> si il vaut 1 : ordonne les comparaisons dans les séléctions en fonction de la séléctivité de chacune des comparaison, utilisant le côté parresseux d'une condition
+
+QueryJoinOrdering -> Si il vaut 1 on estime le rapport de cardinalité (RC : le nombre de ligne issue de la jointure divisé par le produit du nombre de ligne des deux table) puis on effectue les jointures de la plus petite RC à la plus grande
