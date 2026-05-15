@@ -14,8 +14,7 @@ remarque: à tout instant, toute les listes d'indices d'une MetaTable ont le mê
 
 Lors du tout début du traitement d'une requête, on vient générer une Racine par colonne (de la bdd) utilisé
 Par exemple si l'on a besoin des colonnes "Nom" et "Age", alors à l'execution, Le programme créera deux Racines une pour "Nom" et une pour "Age"
-Ensuite, si les deux colonne sont utilisé au même moment, par exemple car on a une selection qui vérifie que la premiere lettre du Nom est "a" et l'age est supérieur à 17
-Alors le programme vas créer une Table qui contiendras deux Racines, une pour l'age et une pour le nom.
+Ensuite, si les deux colonne sont utilisé au même moment, par exemple car on a une selection qui vérifie que la premiere lettre du Nom est "a" et l'age est supérieur à 17,alors le programme vas créer une Table qui contiendras deux Racines, une pour l'age et une pour le nom.
 Et ensuite la MetaTable qui contiendras au début que la Table
 
 Si jamais l'age est utilisé à deux endroit différent, alors il suffit uniquement de creer deux Table qui pointerons vers la même Racine 
