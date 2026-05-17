@@ -58,16 +58,17 @@ public:
     {
         auto parent_tableL = trouver(tableL);
         auto parent_tableR = trouver(tableR);
-        TableToNode[parent_tableL] = node;
-        TableToNode[parent_tableR] = node;
-        if (parent_tableL != parent_tableR) {
+        if (parent_tableL == parent_tableR) {
+            TableToNode[parent_tableL] = node;
+        } else {
             auto rangL = rang[parent_tableL];
             auto rangR = rang[parent_tableR];
             if (rangL > rangR) {
+                TableToNode[parent_tableL] = node;
                 parent[parent_tableR] = parent_tableL;
             } else {
+                TableToNode[parent_tableR] = node;
                 parent[parent_tableL] = parent_tableR;
-
                 if (rangL == rangR) {
                     rang[parent_tableR] = rangR + 1;
                 }

@@ -705,7 +705,7 @@ void BinaryExpression::PrintCondition(std::ostream& out)
     out << std::endl;
 }
 
-std::unique_ptr<BinaryExpression::Condition> BinaryExpression::ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire)
+std::unique_ptr<BinaryExpression::Conwdition> BinaryExpression::ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire)
 {
     if (BinaryExpression::Op() == LogicalOperator::AND || ColonnesAExtraire != nullptr) { // on ne peut pas couper un OR
 
