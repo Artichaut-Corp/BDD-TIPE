@@ -2,8 +2,8 @@
 #include "algebrizer_types.h"
 #include "data_process_system/meta-table.h"
 #include "data_process_system/racine.h"
-#include "utils/printing_utils.h"
 #include "pred.h"
+#include "utils/printing_utils.h"
 
 #include <algorithm>
 #include <utility>
@@ -16,13 +16,18 @@ MetaTable* Join::ExecNaif(MetaTable* meta_table1, MetaTable* meta_table2)
     // stocke tout les couple de ligne valide
     auto couple_valides = std::make_pair(std::make_unique<std::vector<int>>(), std::make_unique<std::vector<int>>());
 
-    for (int i = 0; i < meta_table1->Columnsize(); i++) {
+    auto val1 = meta_table1->GetValue(m_ColumnName1, 0);
+    auto val2 = meta_table2->GetValue(m_ColumnName2, 0);
 
-        auto val1 = meta_table1->GetValue(m_ColumnName1, i);
+    int MT1size = meta_table1->Columnsize();
+    int MT2size = meta_table2->Columnsize();
+    for (int i = 0; i < MT1size; i++) {
 
-        for (int j = 0; j < meta_table2->Columnsize(); j++) {
+        val1 = meta_table1->GetValue(m_ColumnName1, i);
 
-            auto val2 = meta_table2->GetValue(m_ColumnName2, j);
+        for (int j = 0; j < MT2size; j++) {
+
+            val2 = meta_table2->GetValue(m_ColumnName2, j);
 
             if (m_Comps.Eval(val1, val2)) {
                 couple_valides.first->push_back(i);
@@ -62,31 +67,44 @@ MetaTable* Join::ExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
     int pos1 = 0;
 
     int pos2 = 0;
+    auto val1 = meta_table1->GetValue(m_ColumnName1, pos1);
+    auto val2 = meta_table2->GetValue(m_ColumnName2, pos2);
 
-    while (pos1 < meta_table1->Columnsize() && pos2 < meta_table2->Columnsize()) {
+    int MT1size = meta_table1->Columnsize();
+    int MT2size = meta_table2->Columnsize();
+    while (pos1 < MT1size && pos2 < MT2size) {
 
         auto val1 = meta_table1->GetValue(m_ColumnName1, pos1);
 
-        auto val2 = meta_table2->GetValue(m_ColumnName2, pos2);
-
         if (val1 < val2) {
             pos1++;
+            val1 = meta_table1->GetValue(m_ColumnName1, pos1);
+
         } else if (val1 > val2) {
             pos2++;
+            val2 = meta_table2->GetValue(m_ColumnName2, pos2);
+
         } else {
             auto mainval = val1;
             int pos1deb = pos1;
             int pos2deb = pos2;
-
-            while (pos1 < meta_table1->Columnsize() && meta_table1->GetValue(m_ColumnName1, pos1) == mainval)
+            while (val1 == mainval) {
+                if (pos1 + 1 >= MT1size) {
+                    break;
+                }
                 pos1++;
-            while (pos2 < meta_table2->Columnsize() && meta_table2->GetValue(m_ColumnName2, pos2) == mainval)
+                val1 = meta_table1->GetValue(m_ColumnName1, pos1);
+            }
+            while (val2 == mainval) {
+                if (pos2 + 1 >= MT2size) {
+                    break;
+                }
                 pos2++;
+                val2 = meta_table2->GetValue(m_ColumnName2, pos2);
+            }
 
             for (int i = pos1deb; i < pos1; i++) {
-
                 for (int j = pos2deb; j < pos2; j++) {
-
                     couple_valides.first->push_back(i);
                     couple_valides.second->push_back(j);
                 }
@@ -119,13 +137,16 @@ MetaTable* Join::ExecGrouByStyle(MetaTable* meta_table1, MetaTable* meta_table2)
 
     std::unordered_map<ColumnData, std::vector<int>> map_col;
 
-    for (int i = 0; i < meta_table1->Columnsize(); i++) {
+    int MT1size = meta_table1->Columnsize();
+    int MT2size = meta_table2->Columnsize();
+
+    for (int i = 0; i < MT1size; i++) {
         map_col[meta_table1->GetValue(m_ColumnName1, i)].push_back(i);
     }
 
-    for (int i = 0; i < meta_table2->Columnsize(); i++) {
-
-        for (auto j : map_col[meta_table2->GetValue(m_ColumnName2, i)]) {
+    for (int i = 0; i < MT2size; i++) {
+        auto result = map_col[meta_table2->GetValue(m_ColumnName2, i)];
+        for (auto j : result) {
 
             couple_valides.first->push_back(j);
             couple_valides.second->push_back(i);
@@ -156,14 +177,16 @@ int Join::CardExecNaif(MetaTable* meta_table1, MetaTable* meta_table2)
     auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2);
 
     int nbr_match = 0;
+    auto val1 = (*Sample1)[0];
+    auto val2 = (*Sample2)[0];
 
     for (int i = 0; i < Sample1->size(); i++) {
 
-        auto val1 = (*Sample1)[i];
+        val1 = (*Sample1)[i];
 
         for (int j = 0; j < Sample2->size(); j++) {
 
-            auto val2 = (*Sample2)[j];
+            val2 = (*Sample2)[j];
 
             if (m_Comps.Eval(val1, val2)) {
                 nbr_match++;
@@ -188,10 +211,14 @@ int Join::CardExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
 
     int pos1 = 0;
     int pos2 = 0;
+    auto val1 = (*Sample1)[0];
+    auto val2 = (*Sample2)[0];
+    int sizesample1 = Sample1->size();
+    int sizesample2 = Sample2->size();
 
     while (pos1 < Sample1->size() && pos2 < Sample2->size()) {
-        auto val1 = (*Sample1)[pos1];
-        auto val2 = (*Sample2)[pos2];
+        val1 = (*Sample1)[pos1];
+        val2 = (*Sample2)[pos2];
 
         if (val1 < val2) {
             ++pos1;
@@ -202,10 +229,10 @@ int Join::CardExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
             int pos1deb = pos1;
             int pos2deb = pos2;
 
-            while (pos1 < Sample1->size() && (*Sample1)[pos1] == mainval)
-                ++pos1;
-            while (pos2 < Sample2->size() && (*Sample2)[pos2] == mainval)
-                ++pos2;
+            while (pos1 <sizesample1  && (*Sample1)[pos1] == mainval)
+                pos1++;
+            while (pos2 <sizesample2 && (*Sample2)[pos2] == mainval)
+                pos2++;
             nbr_match += (pos1 - pos1deb) * (pos2 - pos2deb);
         }
     }
@@ -221,14 +248,14 @@ int Join::CardExecGrouByStyle(MetaTable* meta_table1, MetaTable* meta_table2)
 
     int nbr_match = 0;
 
-    std::unordered_map<ColumnData, std::vector<int>> map_col;
+    std::unordered_map<ColumnData, int> map_col;
 
     for (int i = 0; i < Sample1->size(); i++) {
-        map_col[(*Sample1)[i]].push_back(i);
+        map_col[(*Sample1)[i]]++;
     }
 
     for (int i = 0; i < Sample2->size(); i++) {
-        nbr_match += map_col[(*Sample2)[i]].size();
+        nbr_match += map_col[(*Sample2)[i]];
     }
 
     return nbr_match;
@@ -251,11 +278,8 @@ float Join::calculeRC(MetaTable* MetaTableL, MetaTable* MetaTableR, int type_of_
         throw std::runtime_error("Type de Join Inconnu");
     }
     int max_meta = std::max(MetaTableL->Columnsize(), MetaTableR->Columnsize());
-    if (max_meta > 1000) {
-        return (CardResult / 1000);
-    } else {
-        return (CardResult / max_meta);
-    }
+
+    return (CardResult / max_meta);
 }
 
 };
