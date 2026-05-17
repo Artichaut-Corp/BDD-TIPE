@@ -68,7 +68,7 @@ public:
         return m_Columns.at(column_name);
     }
 
-    ColumnInfo operator[](const std::string& column_name)
+    ColumnInfo& operator[](const std::string& column_name)
     {
         return m_Columns.at(column_name);
     }

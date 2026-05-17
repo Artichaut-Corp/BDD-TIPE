@@ -3,6 +3,7 @@
 #include "data_process_system/racine.h"
 #include "storage/record.h"
 
+#include <cstdint>
 #include <fstream>
 #include <numeric>
 #include <ostream>
@@ -77,26 +78,26 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
 
     uint32_t first_schema_table_offset = Cursor::MoveOffset(MAX_TABLE * DB_STRING_SIZE);
 
-    ColumnInfo* t_name = new ColumnInfo(first_schema_table_offset, DbElemType::DbString, false);
+    ColumnInfo t_name = ColumnInfo(first_schema_table_offset, DbElemType::DbString, false);
 
-    ColumnInfo* is_sys = new ColumnInfo(
+    ColumnInfo is_sys = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * DB_BOOL_SIZE), DbElemType::DbBool, false);
 
-    ColumnInfo* current_element_nb = new ColumnInfo(
+    ColumnInfo current_element_nb = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * DB_UINT16_SIZE), DbElemType::DbUInt16, false);
 
-    ColumnInfo* column_number = new ColumnInfo(
+    ColumnInfo column_number = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * DB_UINT8_SIZE), DbElemType::DbUInt8, false);
 
-    ColumnInfo* column_offset = new ColumnInfo(
+    ColumnInfo column_offset = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * DB_UINT_SIZE), DbElemType::DbUInt, false);
 
     auto table_args = std::vector<std::pair<std::string, ColumnInfo>> {
-        { "name", *t_name },
-        { "is_sys", *is_sys },
-        { "current_max_record", *current_element_nb },
-        { "column_number", *column_number },
-        { "column_offset", *column_offset }
+        { "name", t_name },
+        { "is_sys", is_sys },
+        { "current_max_record", current_element_nb },
+        { "column_number", column_number },
+        { "column_offset", column_offset }
     };
 
     TableInfo* schema_table = new TableInfo(
@@ -113,7 +114,7 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
 
     // Keeping the first offset to initialise the TableInfo class later
     uint32_t first_schema_column_offset = Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_STRING_SIZE);
-    ColumnInfo* name = new ColumnInfo(first_schema_column_offset, DbElemType::DbString, false);
+    ColumnInfo name = ColumnInfo(first_schema_column_offset, DbElemType::DbString, false);
 
     ColumnInfo offset = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_UINT_SIZE),
@@ -144,14 +145,14 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
         DbElemType::DbBool, false);
 
     auto column_args = std::vector<std::pair<std::string, ColumnInfo>> {
-        { "name", *name },
-        { "offset", offset },
-        { "type", type },
-        { "sortable", is_sortable },
-        { "sorted", is_sorted },
-        { "index_offset", index_offset },
-        { "compressable", is_compressable },
-        { "compressed", is_compressed }
+        { "name", std::move(name) },
+        { "offset", std::move(offset) },
+        { "type", std::move(type) },
+        { "sortable", std::move(is_sortable) },
+        { "sorted", std::move(is_sorted) },
+        { "index_offset", std::move(index_offset) },
+        { "compressable", std::move(is_compressable) },
+        { "compressed", std::move(is_compressed) }
     };
 
     TableInfo* schema_column = new TableInfo(
@@ -222,13 +223,20 @@ auto DatabaseEngine::CreateCountryTable(int fd) -> void
 
     Record::Write(fd, &Index->at("schema_column"), c_pop, "pop");
 
-    ColumnInfo* c_idh = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_FLOAT_SIZE),
-        DbElemType::DbFloat, false);
+    /*
+     ColumnInfo* c_idh = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_FLOAT_SIZE),
+         DbElemType::DbFloat, false);
 
-    Record::Write(fd, &Index->at("schema_column"), c_idh, "idh");
+     Record::Write(fd, &Index->at("schema_column"), c_idh, "idh");
+
+     auto c_columns = std::vector<std::pair<std::string, ColumnInfo>> {
+         { "name", *c_name }, { "pop", *c_pop }, { "idh", *c_idh }
+     };
+
+     */
 
     auto c_columns = std::vector<std::pair<std::string, ColumnInfo>> {
-        { "name", *c_name }, { "pop", *c_pop }, { "idh", *c_idh }
+        { "name", *c_name }, { "pop", *c_pop }
     };
 
     // 3. Write it on disk in the dedicated system table
@@ -262,7 +270,9 @@ auto DatabaseEngine::CreateCityTable(int fd) -> void
     Record::Write(fd, &Index->at("schema_column"), c_name, "name");
 
     ColumnInfo* c_pop = new ColumnInfo(Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * DB_UINT_SIZE),
-        DbElemType::DbUInt, false);
+        DbElemType::DbUInt, true, true);
+
+    c_pop->AssociateTree(fd, Cursor::MoveOffset(DB_INDEXED_REPR_SIZE<DB_UINT_SIZE>), DB_UINT_SIZE, LEAF_SIZE<DB_UINT_SIZE>, INNER_NODE_SIZE<DB_UINT_SIZE>);
 
     Record::Write(fd, &Index->at("schema_column"), c_pop, "pop");
 
@@ -679,10 +689,13 @@ auto DatabaseEngine::PrintIndex(std::ostream& out) -> void
 
         for (auto c : e.second.m_Columns) {
             out << "Reading info from column: " << c.first << "\n";
-            out << "Found at offset: 0x" << c.second.GetOffset()
+            out << std::format("Found at offset: 0x{:x}", c.second.GetOffset())
                 << "\n";
             out << "Element size: " << static_cast<int>(c.second.GetElementSize())
                 << "\n";
+            if (c.second.IsSorted()) {
+                out << std::format("Is sorted: true at offset 0x{:x}\n", c.second.GetIndexOffset());
+            }
         }
 
         out << "\n";

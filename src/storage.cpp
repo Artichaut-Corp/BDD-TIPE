@@ -67,6 +67,8 @@ std::optional<Errors::Error> Store::DB_SetRecord(int fd, DBTableIndex* Index, co
 
     Record::Write(fd, t, record);
 
+    Record::WriteIndex(fd, t, record);
+
     return std::nullopt;
 }
 
@@ -81,6 +83,12 @@ std::optional<Errors::Error> Store::DB_SetData(int fd, DBTableIndex* Index, cons
     }
 
     auto write_result = Record::Write(fd, t, data);
+
+    if (write_result.has_value()) {
+        return write_result.value();
+    }
+
+    write_result = Record::WriteIndex(fd, t, data);
 
     if (write_result.has_value()) {
         return write_result.value();

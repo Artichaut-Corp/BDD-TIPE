@@ -183,7 +183,7 @@ public:
             result = e.formatErrorInfo();
         }
 
-        return result;    
+        return result;
     }
 
     auto Run() -> void

@@ -1,7 +1,9 @@
+#include <memory>
 #include <string>
 #include <tuple>
 #include <unordered_map>
 
+#include "b+tree.h"
 #include "cursor.h"
 #include "types.h"
 
@@ -24,7 +26,9 @@ class ColumnInfo {
 
     DbBool m_IsSorted = false;
 
-    DbUInt64 m_SortedColumnOffset;
+    DbUInt64 m_SortedColumnOffset = 0;
+
+    BPlusTree<TREE_ORDER>* m_IndexedData;
 
     DbBool m_Compressable = false;
 
@@ -48,13 +52,12 @@ public:
     }
 
     // Contructor for indexed column
-    ColumnInfo(DbUInt offset, DbElemType e_type, DbBool sortable, DbBool sorted, DbUInt64 sorted_offset)
+    ColumnInfo(DbUInt offset, DbElemType e_type, DbBool sortable, DbBool sorted)
         : m_Offset(offset)
         , m_ElementSize(Convert::TypeToTypeSize(e_type))
         , m_Type(e_type)
         , m_Sortable(sortable)
         , m_IsSorted(sorted)
-        , m_SortedColumnOffset(sorted_offset)
     {
     }
 
@@ -69,6 +72,16 @@ public:
         , m_IsCompressed(compressed)
     {
     }
+
+    void AssociateTree(int fd, DbUInt64 tree_offset, const DbUInt8 e_size, DbUInt8 l_size, DbUInt8 inner_size)
+    {
+        m_IndexedData = new BPlusTree<TREE_ORDER>(fd, tree_offset, e_size, l_size, inner_size);
+        m_SortedColumnOffset = tree_offset;
+
+        m_IndexedData->WriteRoot(tree_offset);
+    }
+
+    BPlusTree<TREE_ORDER>* Tree() const { return m_IndexedData; }
 
     DbUInt64 GetOffset() const { return m_Offset; }
 
