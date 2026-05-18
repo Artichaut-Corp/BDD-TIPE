@@ -1,0 +1,630 @@
+\documentclass[a4paper,12pt]{beamer}
+
+% -------------------------------------------------
+% Theme
+% -------------------------------------------------
+
+\usetheme{Berkeley}
+
+% -------------------------------------------------
+% Packages
+% -------------------------------------------------
+
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{color}
+\usepackage{tikz}
+\usepackage{pgfplots}
+
+\pgfplotsset{compat=1.18}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,matrix}
+
+% -------------------------------------------------
+% Colors
+% -------------------------------------------------
+
+\definecolor{lightgray}{gray}{0.95}
+
+% -------------------------------------------------
+% Table of contents styling
+% -------------------------------------------------
+
+\setbeamerfont{section in toc}{size=\small}
+\setbeamerfont{subsection in toc}{size=\scriptsize}
+
+% -------------------------------------------------
+% Listings configuration
+% -------------------------------------------------
+
+\lstset{
+    language=SQL,
+    showspaces=false,
+    numbers=left,
+    numberstyle=\tiny,
+    backgroundcolor=\color{lightgray},
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray},
+    stringstyle=\color{orange},
+    basicstyle=\ttfamily\scriptsize,
+    breaklines=true,
+    literate=
+        {é}{{\'e}}1
+        {è}{{\`e}}1
+        {à}{{\`a}}1
+        {ù}{{\`u}}1
+        {ç}{{\c{c}}}1
+        {ô}{{\^o}}1
+        {ê}{{\^e}}1
+}
+
+% -------------------------------------------------
+% Presentation information
+% -------------------------------------------------
+
+\title{Comment minimiser le temps d’exécution de requêtes SQL itérées ?}
+\author[Eliott P. \& Antoine BP]{Antoine Bertin--Paillette}
+\date{2026}
+
+% -------------------------------------------------
+% Footer
+% -------------------------------------------------
+
+\setbeamertemplate{footline}{
+    \begin{beamercolorbox}[
+        wd=\paperwidth,
+        ht=2.5ex,
+        dp=1ex
+    ]{author in head/foot}
+        \usebeamerfont{author in head/foot}
+        \hspace*{2ex}
+        \insertshortauthor
+        \hfill
+        \inserttitle
+        \hfill
+        \insertdate
+        \hfill
+        \insertframenumber/\inserttotalframenumber
+        \hspace*{2ex}
+    \end{beamercolorbox}
+}
+
+% Remove navigation symbols
+\setbeamertemplate{navigation symbols}{}
+
+% -------------------------------------------------
+% Compact top header
+% -------------------------------------------------
+
+\setbeamertemplate{headline}{
+    \leavevmode
+    \begin{beamercolorbox}[
+        wd=\paperwidth,
+        ht=1.5ex,
+        dp=0.6ex
+    ]{section in head/foot}
+    \end{beamercolorbox}
+}
+
+% -------------------------------------------------
+% Sidebar configuration
+% -------------------------------------------------
+
+% Narrower sidebar
+\setbeamersize{sidebar width left=2.4cm}
+
+% Display sections + subsections
+\setbeamertemplate{sidebar left}{
+    \vspace{0.5em}
+    \insertverticalnavigation{\beamersidebarwidth}
+}
+
+% Smaller fonts (prevents overflow)
+\setbeamerfont{section in sidebar}{size=\scriptsize}
+\setbeamerfont{subsection in sidebar}{size=\tiny}
+
+% Brighter colors
+\setbeamercolor{section in sidebar}{
+    fg=white,
+    bg=blue!75
+}
+
+\setbeamercolor{section in sidebar shaded}{
+    fg=white!75
+}
+
+\setbeamercolor{subsection in sidebar}{
+    fg=white!90,
+    bg=blue!25
+}
+
+\setbeamercolor{subsection in sidebar shaded}{
+    fg=white!65
+}
+
+% -------------------------------------------------
+% Automatic section TOC slide
+% -------------------------------------------------
+
+
+
+\begin{document}
+
+\begin{frame}
+    \titlepage\
+\end{frame}
+\begin{frame}
+    \frametitle{Sommaire}
+    \tableofcontents[hideallsubsections]
+\end{frame}
+
+\section{But du TIPE}
+
+\subsection{Description du jeux de données}
+
+\begin{frame}
+    \frametitle{Description du jeux de données}
+
+  \begin{block}{Nous avons choisi de travailler sur les données de wikipedia}
+    \begin{itemize}
+        \item  Des données de pages: titre, contenu, thème, modifications
+        \item  Des données d'utilisateur: nom, date d'inscription, nombre de modification
+        \item  Des révisions de pages
+    \end{itemize}
+    \end{block}
+
+
+\end{frame}
+
+
+
+\begin{frame}{Exemple du jeu de données Wikipédia}
+
+\scriptsize
+
+\begin{block}{Extrait du jeu de données}
+\centering
+\begin{tabular}{r c l r}
+\textbf{id} & \textbf{ns} & \textbf{title} & \textbf{revision\_id} \\
+\hline
+3  & 0 & Antoine Meillet & 230038204 \\
+10 & 0 & Algorithmique & 226806957 \\
+15 & 0 & Autriche & 229636050 \\
+18 & 0 & Arsène Lupin & 230120442 \\
+23 & 0 & Afghanistan & 230208941 \\
+27 & 0 & Ada (langage) & 226996025 \\
+35 & 0 & Alpes-Maritimes & 229772008 \\
+42 & 0 & Argentine & 230240365 \\
+44 & 0 & Akira Kurosawa & 228584801 \\
+\end{tabular}
+\end{block}
+
+\vspace{0.2cm}
+
+\begin{block}{Exemple de données de révision}
+\centering
+\begin{tabular}{r r r r}
+\textbf{id} & \textbf{parent\_id} &
+\textbf{timestamp} & \textbf{contributor\_id} \\
+\hline
+230038204 & 226458976 & 1761327915 & 316223 \\
+226672222 & 216521656 & 1750499141 & 5256901 \\
+228034381 & 228034155 & 1754898945 & 1430140 \\
+\end{tabular}
+\end{block}
+
+\end{frame}
+
+\subsection{Que faire des résultats ?}
+
+\begin{frame}
+    \frametitle{Que faire des résultats ?}
+    \begin{block}{Des exemples de requêtes seraient}
+       \begin{itemize}
+           \item  Donner un classement des utilisateurs les plus actifs par catégorie
+           \item  Utilisateurs experts d'une catégories
+           \item  Pages les plus modifiées par catégories
+       \end{itemize}
+       \end{block}
+  \begin{block}{Nous avons plusieurs manières d'utiliser les résultats}
+    \begin{itemize}
+        \item  Récolter et afficher des statistiques utilisateur
+        \item  Trier, comparer, selectionner
+        \item  Recommander/Rechercher des pages selon des critères
+    \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Exemples de requêtes SQL}
+
+\scriptsize
+
+\begin{block}{1. Classement des utilisateurs les plus actifs par catégorie}
+\begin{lstlisting}
+SELECT c.category_name,
+       u.username,
+       COUNT(*) AS edits
+FROM revisions r
+JOIN users AS u ON r.user_id = u.user_id
+JOIN pages AS p ON r.page_id = p.page_id
+JOIN categories c ON p.category_id = c.category_id
+GROUP BY c.category_name, u.username
+ORDER BY c.category_name, edits DESC;
+\end{lstlisting}
+\end{block}
+
+\vspace{-0.2cm}
+
+\begin{block}{2. Pages les plus modifiées par catégorie}
+\begin{lstlisting}
+SELECT c.category_name,
+       p.title,
+       COUNT(*) AS revisions
+FROM revisions r
+JOIN pages AS p ON r.page_id = p.page_id
+JOIN categories AS c ON p.category_id = c.category_id
+GROUP BY c.category_name, p.title
+ORDER BY revisions DESC;
+\end{lstlisting}
+\end{block}
+
+\end{frame}
+
+\section{Réalisation}
+
+\subsection{Ce qui est prévu}
+\begin{frame}
+    \frametitle{Ce qui est prévu}
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=250pt]{ressource/perf_comparaison.png}
+    \caption{Notre objectif est de comparer avec ce genre de graphique notre implémentation et ce qui a déjà été fait.}
+	\end{figure}
+\end{frame}
+
+\subsection{Ce qui a été fait}
+\begin{frame}
+    \frametitle{Ce qui a été fait}
+ \begin{block}{Ce que nous avons implémenté}
+    \begin{itemize}
+        \item  Une BDD fonctionnelle pour la plupart des requêtes
+        \item  Des optimisations du plan
+        \item  Tester un grand nombre de requêtes et enregistrer les temps
+        \item  Les optimisations mémoire
+        \item  Comparer avec des implémentation existentes
+        \item  Améliorer et optimiser certaines parties imparfaite de l'implémentation
+    \end{itemize}
+    \end{block}
+\end{frame}
+
+
+
+\section{Optimisations mémoire}
+
+\subsection{Paradigme ligne VS colonne}
+
+\begin{frame}
+    \frametitle{Paradigme ligne VS colonne}
+ \begin{figure}[h]
+        \centering
+        \includegraphics[width=300pt]{ressource/row_vs_column.png}
+        \caption{Rendu physique des BDD orientées colonnes et BDD orientées lignes}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Bases orientées colonnes vs orientées lignes}
+
+\small
+
+\begin{block}{Hypothèse expérimentale}
+Temps d'exécution normalisés (base ligne = 100) pour des
+requêtes analytiques typiques (\texttt{SUM}, \texttt{GROUP BY},
+jointures analytiques).
+\end{block}
+
+\vspace{-0.2cm}
+
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=0.46\textheight,
+    ybar,
+    bar width=9pt,
+    ymin=0,
+    ymax=110,
+    ylabel={Temps relatif (base ligne = 100)},
+    symbolic x coords={
+        Lecture\\3 colonnes,
+        Agrégation\\SUM,
+        GROUP BY,
+        Jointure\\analytique
+    },
+    xtick=data,
+    xticklabel style={
+        align=center,
+        font=\scriptsize
+    },
+    legend style={
+        at={(0.5,1.02)},
+        anchor=south,
+        legend columns=2,
+        font=\scriptsize
+    },
+    nodes near coords,
+    nodes near coords style={font=\tiny},
+    enlarge x limits=0.15,
+    grid=major
+]
+
+% Row-store baseline
+\addplot coordinates {
+    (Lecture\\3 colonnes,100)
+    (Agrégation\\SUM,100)
+    (GROUP BY,100)
+    (Jointure\\analytique,100)
+};
+
+% Column-store realistic ratios
+\addplot coordinates {
+    (Lecture\\3 colonnes,6)
+    (Agrégation\\SUM,12)
+    (GROUP BY,10)
+    (Jointure\\analytique,15)
+};
+
+\legend{
+    Base orientée lignes,
+    Base orientée colonnes
+}
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\vspace{-0.2cm}
+
+{\tiny
+Sources : Abadi et al., \textit{Column-Stores vs. Row-Stores:
+How Different Are They Really?} (SIGMOD 2008);
+\textit{The Design and Implementation of Modern Column-Oriented
+Database Systems} (2013).
+}
+
+\end{frame}
+
+\subsection{Indexation des données}
+
+\begin{frame}
+    \frametitle{Indexation des données}
+
+\begin{figure}[h]
+		\centering
+		\includegraphics[width=250pt]{ressource/indexing.jpg}
+    \caption{Un exemple de mise en oeuvre de l'indexation}
+	\end{figure}
+
+\end{frame}
+
+\begin{frame}{Arbres B+}
+
+\small
+
+\begin{columns}[T]
+
+% LEFT COLUMN (smaller)
+\column{0.42\textwidth}
+
+\begin{block}{Principe}
+\footnotesize
+\begin{itemize}
+    \item Structure équilibrée d'indexation
+    \item Noeuds internes : navigation
+    \item Feuilles : clés / pointeurs vers données
+    \item Même profondeur pour toutes les feuilles
+    \item Recherche en $\mathcal{O}(\log{}n)$
+\end{itemize}
+\end{block}
+
+% RIGHT COLUMN (larger tree)
+\column{0.55\textwidth}
+
+\centering
+
+\begin{tikzpicture}[
+level distance=1.2cm,
+sibling distance=2.0cm,
+every node/.style={
+draw,
+rounded corners,
+minimum width=1.6cm,
+minimum height=0.55cm,
+font=\scriptsize
+}
+]
+
+\node {20 | 50}
+child {
+node {10}
+child {node {3, 7}}
+child {node {12, 18}}
+}
+child {
+node {35}
+child {node {20, 28}}
+child {node {36, 42}}
+}
+child {
+node {70}
+child {node {50, 60}}
+child {node {72, 89}}
+};
+
+\end{tikzpicture}
+
+\vspace{0.2cm}
+
+{\scriptsize
+Exemple simplifié d'un arbre B+.
+}
+
+\end{columns}
+
+\vfill
+
+{\tiny
+Sources :
+Ramakrishnan \& Gehrke,
+\textit{Database Management Systems};
+Silberschatz et al.,
+\textit{Database System Concepts}.
+}
+
+\end{frame}
+
+\begin{frame}{Indexation par arbre B+ : bénéfices et compromis}
+
+\small
+
+\begin{block}{Effet d'un index B+}
+Les arbres B+ accélèrent fortement les recherches
+et requêtes filtrées, mais augmentent le coût
+des insertions et l'espace mémoire utilisé.
+\end{block}
+
+\vspace{-0.2cm}
+
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+    width=0.92\textwidth,
+    height=0.44\textheight,
+    ybar,
+    bar width=9pt,
+    ymin=0,
+    ymax=130,
+    ylabel={Coût relatif (sans index = 100)},
+    symbolic x coords={
+        Recherche,
+        Requête\\filtrée,
+        Insertion,
+        Mémoire
+    },
+    xtick=data,
+    xticklabel style={
+        align=center,
+        font=\scriptsize
+    },
+    legend style={
+        at={(0.5,1.02)},
+        anchor=south,
+        legend columns=2,
+        font=\scriptsize
+    },
+    nodes near coords,
+    nodes near coords style={font=\tiny},
+    enlarge x limits=0.15,
+    grid=major
+]
+
+% no index baseline
+\addplot coordinates {
+    (Recherche,100)
+    (Requête\\filtrée,100)
+    (Insertion,100)
+    (Mémoire,50)
+};
+
+% B+ tree indexed
+\addplot coordinates {
+    (Recherche,8)
+    (Requête\\filtrée,12)
+    (Insertion,120)
+    (Mémoire,115)
+};
+
+\legend{
+    Sans index,
+    Index B+
+}
+
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\vspace{-0.15cm}
+
+\begin{alertblock}{Observation}
+Un index B+ réduit fortement le coût des recherches
+(logarithmique), mais ralentit les écritures car
+l'arbre doit rester équilibré après insertion.
+\end{alertblock}
+
+\vspace{-0.1cm}
+
+{\tiny
+Ordres de grandeur inspirés de :
+Silberschatz et al.,
+\textit{Database System Concepts};
+Ramakrishnan \& Gehrke,
+\textit{Database Management Systems}.
+Les valeurs sont normalisées (sans index = 100).
+}
+
+\end{frame}
+
+\subsection{Fragmentation des données}
+
+\begin{frame}
+    \frametitle{Fragmentation des données}
+
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=250pt]{ressource/cracking.png}
+    \caption{Un exemple de mise en oeuvre du cracking}
+	\end{figure}
+\end{frame}
+
+\section{Conclusion}
+\subsection{Conclusion}
+\begin{frame}
+    \frametitle{Résumé}
+    \vspace{0.3cm}
+
+    \begin{beamercolorbox}[
+        wd=\textwidth,
+        rounded=true,
+        shadow=true,
+        sep=10pt,
+        center
+    ]{title}
+        {\Huge\bfseries Conclusion}
+    \end{beamercolorbox}
+
+    \vspace{0.6cm}
+
+    \begin{itemize}
+        \item Les bases des Systèmes de Gestion de Base de Données
+        \item Différentes optimisations naïve utilisant l'algèbre relationnelle
+        \item Certaines optimisations dépendantes des données que notre SGBD possède
+        \item Une analyse des résultats obtenus
+    \end{itemize}
+\end{frame}
+
+\subsection{Nos ressources}
+\begin{frame}
+    \frametitle{Nos ressources}
+    \textbf{Nos ressources:}
+    \begin{itemize}
+        \item \href{https://drive.google.com/file/d/1KNmuRBf8CV-s-zqdkUEP8iyYlPgFiglb/view?usp=drive_link}{\textit{The Design and Implementation of Modern Column-Oriented Database Systems} \(2013\)}
+        \item \href{https://web.stanford.edu/class/cs345d-01/rl/cstore.pdf}{\textit{C-Store: A Column-oriented DBMS} \(2005\)}
+        \item \href{https://link.springer.com/content/pdf/10.1007/s41019-020-00149-7.pdf}{\textit{A Survey on Advancing the DBMS Query Optimizer: Cardinality Estimation, Cost Model, and Plan Enumeration} \(2021\)}
+        \item \href{https://www.microsoft.com/en-us/research/wp-content/uploads/2024/12/Extensible-Query-Optimizers-in-Practice.pdf}{\textit{Extensible Query Optimizers in Practice} \(2024\)}
+        \item \href{http://webdam.inria.fr/Alice/}{\textit{Foundation of Databases} \(1995\)}
+    \end{itemize}
+\end{frame}
+
+\end{document}
