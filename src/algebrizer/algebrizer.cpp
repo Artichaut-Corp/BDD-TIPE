@@ -562,9 +562,10 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         fin = AppliqueAggr.AppliqueAgregateAndPrint(Table_Finale, params->m_Benchmarking);
     } else {
         fin = std::chrono::high_resolution_clock::now();
-    }
-    if (!params->m_Benchmarking) {
-        Utils::AfficheResultat(Table_Finale, std::move(colonnes_de_retour));
+
+        if (!params->m_Benchmarking) {
+            Utils::AfficheResultat(Table_Finale, std::move(colonnes_de_retour));
+        }
     }
 
     if (params->m_Benchmarking) {
