@@ -170,11 +170,11 @@ MetaTable* Join::ExecGrouByStyle(MetaTable* meta_table1, MetaTable* meta_table2)
     return meta_table1;
 }
 
-int Join::CardExecNaif(MetaTable* meta_table1, MetaTable* meta_table2)
+int Join::CardExecNaif(MetaTable* meta_table1, MetaTable* meta_table2, int size_sample_1, int size_sample_2)
 {
-    auto Sample1 = meta_table1->GetSampleFromColumn(m_ColumnName1);
+    auto Sample1 = meta_table1->GetSampleFromColumn(m_ColumnName1, size_sample_1);
 
-    auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2);
+    auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2, size_sample_2);
 
     int nbr_match = 0;
     auto val1 = (*Sample1)[0];
@@ -197,11 +197,11 @@ int Join::CardExecNaif(MetaTable* meta_table1, MetaTable* meta_table2)
     return nbr_match;
 }
 
-int Join::CardExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
+int Join::CardExecTrier(MetaTable* meta_table1, MetaTable* meta_table2, int size_sample_1, int size_sample_2)
 {
-    auto Sample1 = meta_table1->GetSampleFromColumn(m_ColumnName1);
+    auto Sample1 = meta_table1->GetSampleFromColumn(m_ColumnName1, size_sample_1);
 
-    auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2);
+    auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2, size_sample_2);
 
     sort(Sample1->begin(), Sample1->end());
 
@@ -229,9 +229,9 @@ int Join::CardExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
             int pos1deb = pos1;
             int pos2deb = pos2;
 
-            while (pos1 <sizesample1  && (*Sample1)[pos1] == mainval)
+            while (pos1 < sizesample1 && (*Sample1)[pos1] == mainval)
                 pos1++;
-            while (pos2 <sizesample2 && (*Sample2)[pos2] == mainval)
+            while (pos2 < sizesample2 && (*Sample2)[pos2] == mainval)
                 pos2++;
             nbr_match += (pos1 - pos1deb) * (pos2 - pos2deb);
         }
@@ -240,11 +240,11 @@ int Join::CardExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
     return nbr_match;
 }
 
-int Join::CardExecGrouByStyle(MetaTable* meta_table1, MetaTable* meta_table2)
+int Join::CardExecGrouByStyle(MetaTable* meta_table1, MetaTable* meta_table2, int size_sample_1, int size_sample_2)
 {
-    auto Sample1 = meta_table1->GetSampleFromColumn(m_ColumnName1);
+    auto Sample1 = meta_table1->GetSampleFromColumn(m_ColumnName1, size_sample_1);
 
-    auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2);
+    auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2, size_sample_2);
 
     int nbr_match = 0;
 
@@ -261,23 +261,23 @@ int Join::CardExecGrouByStyle(MetaTable* meta_table1, MetaTable* meta_table2)
     return nbr_match;
 }
 
-float Join::calculeRC(MetaTable* MetaTableL, MetaTable* MetaTableR, int type_of_join)
+float Join::calculeRC(MetaTable* MetaTableL, MetaTable* MetaTableR, int type_of_join, int size_sample)
 {
     float CardResult;
 
     if (type_of_join == 0) {
-        CardResult = CardExecNaif(MetaTableL, MetaTableR);
+        CardResult = CardExecNaif(MetaTableL, MetaTableR, size_sample, size_sample);
     } else if (type_of_join == 1) {
-        CardResult = CardExecTrier(MetaTableL, MetaTableR);
+        CardResult = CardExecTrier(MetaTableL, MetaTableR, size_sample, size_sample);
     } // else if (JoinParam == 2    ) {
     //    CardResult = CardExecTrierStockerMemoire(MetaTableL, MetaTableR);
     //}
     else if (type_of_join == 3) {
-        CardResult = CardExecGrouByStyle(MetaTableL, MetaTableR);
+        CardResult = CardExecGrouByStyle(MetaTableL, MetaTableR, size_sample, size_sample);
     } else {
         throw std::runtime_error("Type de Join Inconnu");
     }
-    int max_meta = std::max(MetaTableL->Columnsize(), MetaTableR->Columnsize());
+    int max_meta = MetaTableL->Columnsize() * MetaTableR->Columnsize();
 
     return (CardResult / max_meta);
 }

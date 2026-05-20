@@ -43,13 +43,16 @@ public:
 
     bool m_Benchmarking = 0;
 
+    bool m_SizeSample = 0;
+
     DatabaseSetting() = default;
 
     DatabaseSetting(const std::string& fname, bool selectiondescent = 0, uint8_t execution_tree_traversal_mode = 0,
         bool projection_insertion = 0,
         bool binary_expression_optimization = 0,
         bool query_join_ordering = 0,
-        bool benchmarking = 0)
+        bool benchmarking = 0,
+        int SizeSample = 1000)
         : m_FileName(fname)
         , m_SelectionDescent(selectiondescent)
         , m_ExecutionTreeTraversalMode(execution_tree_traversal_mode)
@@ -57,6 +60,7 @@ public:
         , m_BinaryExpressionOptimization(binary_expression_optimization)
         , m_QueryJoinOrdering(query_join_ordering)
         , m_Benchmarking(benchmarking)
+        , m_SizeSample(SizeSample)
     {
     }
 
@@ -76,6 +80,7 @@ public:
             m_QueryJoinOrdering = tbl["OrderingQueryJoin"].value_or(0);
 
             m_Benchmarking = tbl["Benchmarking"].value_or(0);
+            m_Benchmarking = tbl["SizeSample"].value_or(1000);
 
         } catch (const toml::parse_error& err) {
             std::cerr << "Error parsing config file: " << err.description() << std::endl;
@@ -365,12 +370,11 @@ public:
                     break;
                 } else if (input.starts_with(".insert_data")) {
 
-
                     int hm = std::stoi(input.substr(13, input.length() - 13));
 
                     std::cout << "Insertion de " << hm << " données\n";
 
-                    import_all_csv(hm);
+                    ImportAllCsv(hm);
 
                     std::cout << std::endl;
                 } else if (input == ".print_table_layout") {
@@ -432,8 +436,11 @@ public:
         Cleanup();
     }
 
-    void import_all_csv(int how_many);
-    void process_csv_streaming(const std::string& path, const std::string& table, const std::vector<std::string>& columns, int how_many);
+    void ImportAllCsv(int how_many);
+    void InsertCsvData(int offset, int how_many);
+
+    void ProcessCsvStream(const std::string& path, const std::string& table, const std::vector<std::string>& columns, int how_many);
+    void ProcessCsvStream(const std::string& path, const std::string& table, const std::vector<std::string>& columns, int offset, int how_many);
 };
 }
 

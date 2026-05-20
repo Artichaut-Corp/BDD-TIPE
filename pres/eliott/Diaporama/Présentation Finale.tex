@@ -33,7 +33,7 @@
         {ê}{{\^e}}1,
 }
 
-\title[Optimisation du plan et de l’éxécution de requêtes SQL]{Comment optimiser l'éxécution d'une requête SQL à l'aide de l'algèbre relationelle ?}
+\title[Optimisation du plan et de l’exécution de requêtes SQL]{Comment optimiser l'exécution d'une requête SQL à l'aide de l'algèbre relationnelle ?}
 \author{Eliott PAQUET N° 30960}
 \date{2025 -- 2026}
     
@@ -53,18 +53,16 @@
     \end{beamercolorbox}%
 }
 
-
-
 \begin{document}
 \begin{frame}
     \titlepage
 \end{frame}
-\AtBeginSection[]{
-    \begin{frame}
-        \frametitle{\insertsection}
-        \tableofcontents[currentsection, hideothersubsections]
-    \end{frame}
-}
+
+\begin{frame}
+    \frametitle{Sommaire}
+    \tableofcontents[hideothersubsections]
+
+\end{frame}
 
 
 \section{Les bases du traitement des requêtes SQL}
@@ -76,29 +74,11 @@
         \includegraphics[width=300pt]{../ressource/query_map.png}
         \caption{Traitement d'une requête SQL par un SGBD.}
         \vspace{2mm}
-        Source: \href{https://blog.quest.com/sql-server-execution-plan-what-is-it-and-how-does-it-help-with-performance-problems/}{Quest}
+        Source : \href{https://blog.quest.com/sql-server-execution-plan-what-is-it-and-how-does-it-help-with-performance-problems/}{Quest}
     \end{figure}
 \end{frame}
 
-\subsection{Notations}
-\begin{frame}
-    \frametitle{Rappel et Notation}
-    \begin{itemize}
-        \item On utiliseras les symboles: \(\Pi\) pour la projection,  \(\sigma\) pour la selection et \(\Join\) pour la jointure entre deux tables
-        \item A chaque étape de l'arbre, \(n\) feras référence au nombre de ligne encore présente dans la table
-        \item Les arbres d'éxécution se lisent du bas vers le haut, la dernière projection représentant la toute dernière opération efféctué
-        \item Le jeux de données utilisé:
-              \begin{itemize}
-                  \item \(3\) Tables
-                  \item \(100 000\) lignes par table
-                  \item \(10 000\) requête lancé par paramètre
-                  \item \(100\) requêtes différentes et très variées
-                  \item \(1\) point vaut une moyenne de \(100\) requête
-              \end{itemize}
-    \end{itemize}
-\end{frame}
-
-\subsection{l'algèbre relationnelle}
+\subsection{L'algèbre relationnelle}
 \begin{frame}[fragile]
     \frametitle{Edgar F. Codd (1970)}
 
@@ -109,10 +89,10 @@
 
     \begin{minipage}{0.48\textwidth}
         \begin{lstlisting}[language=SQL]
-SELECT S.id, S.price
+SELECT S.Id, S.Price
 FROM Sales
-JOIN Dp ON Dp.id = S.DpId
-WHERE Dp.name = 'Morbihan';
+JOIN Dp ON Dp.Id = S.DpId
+WHERE Dp.Name = 'Morbihan';
             \end{lstlisting}
     \end{minipage}
     \hfill
@@ -127,9 +107,9 @@ WHERE Dp.name = 'Morbihan';
             ]
 
             % Opérateurs
-            \node[block] (pi) {$\Pi_{Sales.id,\,Sales.price}$};
-            \node[block, below=of pi] (sigma) {$\sigma_{Dp.name = \text{'Morbihan'}}$};
-            \node[block, below=of sigma] (join) {$\Join_{Dp.id = Sales.DpId}$};
+            \node[block] (pi) {$\Pi_{Sales.Id,\,Sales.Price}$};
+            \node[block, below=of pi] (sigma) {$\sigma_{Dp.Name = \text{'Morbihan'}}$};
+            \node[block, below=of sigma] (join) {$\Join_{Dp.Id = Sales.DpId}$};
 
             % Relations
             \node[block, below left=of join] (sales) {$Sales$};
@@ -161,9 +141,9 @@ WHERE Dp.name = 'Morbihan';
         ]
 
         % Opérateurs 
-        \node[block] (pi) {$\Pi_{S.id,\,S.price}$};
-        \node[block, below=of pi] (sigma) {$\sigma_{Dp.name = \text{'Morbihan'}}$};
-        \node[block, below=of sigma] (join) {$\Join_{Dp.id = Sales.DpId}$};
+        \node[block] (pi) {$\Pi_{S.Id,\,S.Price}$};
+        \node[block, below=of pi] (sigma) {$\sigma_{Dp.Name = \text{'Morbihan'}}$};
+        \node[block, below=of sigma] (join) {$\Join_{Dp.Id = Sales.DpId}$};
         % Coûts (alignés en face)
 
         \node[right=1.1cm of pi, anchor=west] {Coût : $\mathcal{O}(1)$};
@@ -195,9 +175,9 @@ WHERE Dp.name = 'Morbihan';
         ]
 
         % Opérateurs
-        \node[block] (pi) {$\Pi_{S.id,\,S.price}$};
-        \node[block, below=of pi] (join) {$\Join_{Dp.id = Sales.DpId}$};
-        \node[block, below right=of join] (sigma) {$\sigma_{Dp.name = \text{'Morbihan'}}$};
+        \node[block] (pi) {$\Pi_{S.Id,\,S.Price}$};
+        \node[block, below=of pi] (join) {$\Join_{Dp.Id = Sales.DpId}$};
+        \node[block, below right=of join] (sigma) {$\sigma_{Dp.Name = \text{'Morbihan'}}$};
 
         % Relations
         \node[block, below left=of join] (sales) {$Sales$};
@@ -238,13 +218,13 @@ WHERE Dp.name = 'Morbihan';
         ]
 
         % Opérateurs en haut
-        \node[block] (pi) {$\Pi_{Sales.id, Sales.price}$};
+        \node[block] (pi) {$\Pi_{Sales.Id, Sales.Price}$};
 
         % Jointures
-        \node[block, below=of pi] (join1) {$\Join_{Dp.id = Sales.DpId}$};
-        \node[block, below left=of join1] (join2) {$\Join_{Sales.ProductId = Product.id}$};
+        \node[block, below=of pi] (join1) {$\Join_{Dp.Id = Sales.DpId}$};
+        \node[block, below left=of join1] (join2) {$\Join_{Sales.ProductId = Product.Id}$};
         \node[block, below right=of join2] (sigma2) {$\sigma_{Product.Price <5}$};
-        \node[block, below left=of join2] (sigma) {$\sigma_{Sales.price>100}$};
+        \node[block, below left=of join2] (sigma) {$\sigma_{Sales.Price>100}$};
 
 
         % Relations de base
@@ -278,15 +258,15 @@ WHERE Dp.name = 'Morbihan';
         ]
 
         % Opérateurs en haut
-        \node[block] (pi) {$\Pi_{Sales.id, Sales.price}$};
+        \node[block] (pi) {$\Pi_{Sales.Id, Sales.Price}$};
 
         % Jointures
-        \node[block, below=of pi] (join1) {$\Join_{Dp.id = Sales.DpId}$};
-        \node[block,below left=of join1] (pi2) {$\Pi_{Sales.id, Sales.price,Sales.DpId}$};
+        \node[block, below=of pi] (join1) {$\Join_{Dp.Id = Sales.DpId}$};
+        \node[block,below left=of join1] (pi2) {$\Pi_{Sales.Id, Sales.Price,Sales.DpId}$};
 
-        \node[block, below =of pi2] (join2) {$\Join_{Sales.ProductId = Product.id}$};
+        \node[block, below =of pi2] (join2) {$\Join_{Sales.ProductId = Product.Id}$};
         \node[block, below right=of join2] (sigma2) {$\sigma_{Product.Price <5}$};
-        \node[block, below left=of join2] (sigma) {$\sigma_{Sales.price>100}$};
+        \node[block, below left=of join2] (sigma) {$\sigma_{Sales.Price>100}$};
 
 
         % Relations de base
@@ -322,9 +302,9 @@ WHERE Dp.name = 'Morbihan';
 \begin{frame}
     \frametitle{Les différents types de jointures possibles}
     \begin{itemize}
-        \item Produit Cartésien: génère tous les couples possibles et teste la condition de jointure \(\rightarrow \mathcal{O}(n^2)\)\\
-        \item Jointure Triée: pré-trie les deux tables et lit les deux tables \(\rightarrow \mathcal{O}(2n\log(n)+2n)\)
-        \item Jointure par dictionnaire: crée un dictionnaire et recherche les correspondances \(\rightarrow \mathcal{O}(2n)\)
+        \item Produit Cartésien : \( \mathcal{O}(n \times m)\)\\
+        \item Jointure Triée :  \( \mathcal{O}(n \log(n) + n + m\log(m) +m)\)
+        \item Jointure par dictionnaire : \( \mathcal{O}(2n)\)
     \end{itemize}
 \end{frame}
 \begin{frame}
@@ -334,13 +314,13 @@ WHERE Dp.name = 'Morbihan';
     \end{figure}
 \end{frame}
 \section{Optimisation dépendante des données}
-\subsection{Optimisation des expression binaire}
+\subsection{Optimisation des expressions binaires}
 \begin{frame}[fragile]
     \frametitle{Analyse des expressions binaires}
 
     % Query en haut
     \begin{lstlisting}[language=SQL]
-Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
+WHERE (Dep.pays = "France" AND Sales.Id = 543) OR (Product.Origine = "Chine")
     \end{lstlisting}
 
     \vspace{0.5cm} % petit espace entre query et arbre
@@ -357,7 +337,7 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
             \node (or) {OR}
             child { node (and) {AND}
                     child { node (cond1) {Dep.pays = "France"} }
-                    child { node (cond2) {Sales.id = 543} }
+                    child { node (cond2) {Sales.Id = 543} }
                 }
             child { node (cond3) {Product.Origine = "Chine"} };
 
@@ -376,7 +356,7 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
 
     % Query en haut
     \begin{lstlisting}[language=SQL]
-Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
+WHERE (Dep.pays = "France" AND Sales.Id = 543) OR (Product.Origine = "Chine")
     \end{lstlisting}
 
     \vspace{0.5cm} % petit espace entre query et arbre
@@ -395,7 +375,7 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
 
             child { node (cond3) {Product.Origine = "Chine"} }
             child { node (and) {AND}
-                    child { node (cond2) {Sales.id = 543} }
+                    child { node (cond2) {Sales.Id = 543} }
                     child { node (cond1) {Dep.pays = "France"} }
                 };
 
@@ -414,7 +394,7 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
 
 \subsection{Choix de l'ordre des jointures}
 \begin{frame}
-    \frametitle{Résultats équivalent mais complexité différente}
+    \frametitle{Résultats équivalents mais complexité différente}
 
     \begin{minipage}{0.48\textwidth}
         \begin{tikzpicture}[
@@ -427,11 +407,11 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
             ]
 
             % Jointures
-            \node[block] (join1) {$\Join_{Dp.id = Sales.DpId}$};
+            \node[block] (join1) {$\Join_{Dp.Id = Sales.DpId}$};
             \node[card] at (join1.north) {$10^2$};
 
             \node[block, below left=0.8cm and -1cm of join1] (join2)
-            {$\Join_{Sales.ProductId = Product.id}$};
+            {$\Join_{Sales.ProductId = Product.Id}$};
             \node[card] at (join2.north) {$10^6$};
 
             % Relations
@@ -463,11 +443,11 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
             ]
 
             % Jointures
-            \node[block] (join1) {$\Join_{Sales.ProductId = Product.id}$};
+            \node[block] (join1) {$\Join_{Sales.ProductId = Product.Id}$};
             \node[card] at (join1.north) {$10^2$};
 
             \node[block, below left=0.8cm and -1cm of join1] (join2)
-            {$\Join_{Dp.id = Sales.DpId}$};
+            {$\Join_{Dp.Id = Sales.DpId}$};
             \node[card] at (join2.north) {$10^2$};
 
             % Relations
@@ -492,8 +472,8 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
 
     \vspace{1cm}
     \begin{itemize}
-        \item \(\Join_{Sales.ProductId = Product.id}\) d'abord → \(10^4\times10^6 + 10^6 \times 1 \) comparaisons
-        \item \(\Join_{Dp.id = Sales.DpId}\) d'abord \(\rightarrow\) \(1\times10^6 + 10^2 \times 10^4 \) comparaisons
+        \item \(\Join_{Sales.ProductId = Product.Id}\) d'abord → \(10^4\times10^6 + 10^6 \times 1 \) comparaisons
+        \item \(\Join_{Dp.Id = Sales.DpId}\) d'abord \(\rightarrow\) \(1\times10^6 + 10^2 \times 10^4 \) comparaisons
     \end{itemize}
 
 \end{frame}
@@ -504,19 +484,11 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
 
     \end{figure}
 \end{frame}
-\subsection{Comment choisir le meilleur plan rapidement?}
-\begin{frame}
-    \frametitle{Comment choisir le meilleur plan rapidement?}
-    \begin{itemize}
-        \item Choisir les optimisations avant de lancer la requête
-        \item Utiliser l'historique des plans générés
-        \item Donner un coût à chaque opération, énumérer tous les plans et prendre celui avec le plus faible coût
-    \end{itemize}
-\end{frame}
 
 \section{Analyse des résultats}
-\subsection{Grand jeux de donnée}
+\subsection{Grand jeu de donnée}
 \begin{frame}
+    \frametitle{Analyse de toutes les optimisations}
     \begin{figure}[h]
         \centering
         \includegraphics[width=300pt]{../ressource/toutes_les_courbes.png}
@@ -529,8 +501,8 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
     \begin{itemize}
         \item De nombreuses techniques n'ont pas été traitées, notamment les plus récentes (\(\sim 20\) ans)
         \item Les failles de notre code. \(45\) minutes \(\to\) \(22\) secondes
-        \item Les optimisations matérielles:Appel aux fonctions internes au processeur, le multi-threading
-        \item La compression des données. Exemple: \textit{C-Store} \(4\) manière de compresser les données
+        \item Les optimisations matérielles : Appel aux fonctions internes au processeur, le multi-threading
+        \item La compression des données : \textit{C-Store} \(4\) manière de compresser les données
         \item L'indexation des données facilitent les jointures
     \end{itemize}
 \end{frame}
@@ -539,16 +511,16 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
 \begin{frame}
     \frametitle{Résumé}
     \begin{itemize}
-        \item Différentes optimisations naïve utilisant l'algèbre relationnelle: Descente de Selection et insertion de projection
+        \item Différentes optimisations naïves utilisant l'algèbre relationnelle : Descente de sélection et insertion de projection
         \item Certaines optimisations dépendantes des données que notre SGBD possède
     \end{itemize}
 \end{frame}
 \subsection{Ouverture}
 \begin{frame}
     \frametitle{Ouverture}
-    \textbf{Les pistes récentes:}
+    \textbf{Les pistes récentes :}
     \begin{itemize}
-        \item Analyse des données \(\Rightarrow\) Machine Learning (Génération de plan, Choix de l'ordre des jointures,..)
+        \item Analyse des données \(\Rightarrow\) Machine Learning (Génération de plan, Choix de l'ordre des jointures, \dots)
         \item Une meilleure organisation des données en mémoire (Voire le travail d'Antoine)
         \item Les deux: \href{https://www.normalesup.org/~rouvroy/papers/NTU_25_QHICS.pdf}{\textit{Hypothetical Index Benefit Estimation on Column-oriented Databases using Quantiles} \(2025\)}
 
@@ -558,7 +530,7 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
 \subsection{Nos ressources}
 \begin{frame}
     \frametitle{Nos ressources}
-    \textbf{Nos ressources:}
+    \textbf{Nos ressources :}
     \begin{itemize}
         \item \href{https://drive.google.com/file/d/1KNmuRBf8CV-s-zqdkUEP8iyYlPgFiglb/view?usp=drive_link}{\textit{The Design and Implementation of Modern Column-Oriented Database Systems} \(2013\)}
         \item \href{https://web.stanford.edu/class/cs345d-01/rl/cstore.pdf}{\textit{C-Store: A Column-oriented DBMS} \(2005\)}
@@ -583,35 +555,9 @@ Where (Dep.pays = "France" AND Sales.id = 543) OR (Product.Origine = "Chine")
 \subsection{Notre gestion des tables pendant l'exécution}
 
 
-\begin{frame}{Notre gestion des tables pendant l'exécution}
+\begin{frame}{Notre gestion des tables durant l'exécution}
 
-    \begin{center}
-        \begin{tikzpicture}[
-                level distance=1.5cm,
-                sibling distance=3cm,
-                every node/.style={draw, rectangle, align=center, minimum width=2.5cm, minimum height=0.8cm}
-            ]
-
-            % Racine de l'arbre
-            \node {MetaTable}
-            % Niveau 1 : les tables
-            child { node {table1}
-                    % Niveau 2 : racines de table1
-                    child { node {racine1} }
-                    child { node {racine2} }
-                }
-            child { node {table2} }
-            child { node {table3} };
-
-        \end{tikzpicture}
-    \end{center}
-
-    \begin{itemize}
-        \item \textbf{Racine}: valeurs chargées.
-        \item \textbf{Table}: liste de lignes encore valides.
-        \item \textbf{MetaTable}: jointure de plusieurs \textit{Tables}.
-        \item \textbf{Particularité}: modifier les lignes d'une \textit{Table} (jointure ou sélection) modifie toutes les \textit{Tables}.
-    \end{itemize}
+    c
 
 \end{frame}
 \end{document}
