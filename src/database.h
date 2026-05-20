@@ -216,8 +216,9 @@ public:
 
                 ColumnInfo city_name = ColumnInfo(DbElemType::DbString, false);
 
+                // Beware, this one is sorted!
                 ColumnInfo city_pop = ColumnInfo(
-                    DbElemType::DbUInt, false);
+                    DbElemType::DbUInt, true, true);
 
                 ColumnInfo city_country = ColumnInfo(
                     DbElemType::DbString, false);

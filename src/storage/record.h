@@ -66,7 +66,7 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
@@ -95,7 +95,7 @@ public:
         int ret = 0;
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
@@ -122,7 +122,7 @@ public:
         }
 
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             uint8_t e_size = iter->second.GetElementSize();
 
@@ -145,17 +145,20 @@ public:
     static std::optional<Errors::Error> WriteIndex(int fd, TableInfo* info, const std::unordered_map<std::string, ColumnData>& data)
     {
         for (auto iter = info->m_Columns.begin(); iter != info->m_Columns.end();
-            ++iter) {
+             ++iter) {
 
             if (iter->second.IsSorted()) {
                 DbInt64 offset = iter->second.GetIndexOffset();
 
                 const DbInt8 e_size = iter->second.GetElementSize();
 
-                BPlusTree<TREE_ORDER>::Node root = BPlusTree<TREE_ORDER>::FindRoot(fd, offset);
+                //BPlusTree<TREE_ORDER>::Node root = BPlusTree<TREE_ORDER>::FindRoot(fd, offset, e_size);
 
-                BPlusTree<TREE_ORDER>::Insert(fd, root, data.at(iter->first));
+                auto d = iter->second.Tree()->FindRoot(offset);
+
+                iter->second.Tree()->Insert(d, data.at(iter->first));
             }
+
         }
 
         return std::nullopt;
@@ -213,7 +216,7 @@ public:
             } else if (column_data[i].getColumnType() == Parsing::ColumnType::FLOAT_C) {
 
                 res->insert(
-                    { column_order->at(i).getColumnName(), static_cast<DbFloat>(std::stof(column_data[i].getData())) });
+                    { column_order->at(i).getColumnName(), static_cast<DbFloat64>(std::stof(column_data[i].getData())) });
             } else {
 
                 res->insert(
@@ -224,5 +227,7 @@ public:
         return res;
     }
 };
+
 }
+
 #endif
