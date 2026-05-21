@@ -161,12 +161,22 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
             auto arg = std::get<Parsing::AggregateFunction>(colonne_info);
 
             if (!arg.isAll()) {
-                // on vérifie que y'as bien une valeur, c'est un type optinal
+                // on vérifie que y'as bien une valeur, c'est un type optional
                 ColonneNamesSet* NomColonne = ConvertToStandardColumnName(*TablePrincipaleNom, arg.getColumnName(), *variation_of_tablename_to_main_table_name);
 
-                std::unordered_set<ColonneNamesSet*>* s = TableNameToColumnList.at(NomColonne->GetTableSet()->GetMainName());
+                std::unordered_set<ColonneNamesSet*>* s;
 
-                s->insert(NomColonne);
+                if (TableNameToColumnList.contains(NomColonne->GetTableSet()->GetMainName())) {
+                    s = TableNameToColumnList.at(NomColonne->GetTableSet()->GetMainName());
+
+                    s->insert(NomColonne);
+                } else {
+                    s = new std::unordered_set<ColonneNamesSet*>;
+
+                    s->insert(NomColonne);
+
+                    TableNameToColumnList.insert({ NomColonne->GetTableSet()->GetMainName(), s });
+                }
 
                 colonnes_de_retour->push_back(ReturnType(*NomColonne, arg.getType()));
 
@@ -431,7 +441,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     if (!params->m_Benchmarking) {
         RacineExec->printBT(std::cout);
     }
-    std::cout<<"fez"<<std::endl;
     if (where != NULL && params->m_BinaryExpressionOptimization) {
 
         if (Node_Select == nullptr) {
@@ -456,7 +465,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
                     for (auto& e : usefull_col) {
 
-                        std::unique_ptr<std::vector<ColumnData>> temp = Magasin->GetTableByName(*e->GetTableSet())->GetSampleFromColumn(*e,params->m_SizeSample);
+                        std::unique_ptr<std::vector<ColumnData>> temp = Magasin->GetTableByName(*e->GetTableSet())->GetSampleFromColumn(*e, params->m_SizeSample);
 
                         if (nbr_ligne_mini == -1 || (*temp).size() < nbr_ligne_mini) {
                             nbr_ligne_mini = (*temp).size();
@@ -503,7 +512,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
         std::vector<std::pair<Join*, float>> JoinAndRCs = std::vector<std::pair<Join*, float>>();
         for (auto Join : join_list) {
-            JoinAndRCs.push_back(std::make_pair(Join, Join->calculeRC(Magasin->GetTableByName(Join->GetLTable()), Magasin->GetTableByName(Join->GetRTable()), params->m_ExecutionTreeTraversalMode,params->m_SizeSample)));
+            JoinAndRCs.push_back(std::make_pair(Join, Join->calculeRC(Magasin->GetTableByName(Join->GetLTable()), Magasin->GetTableByName(Join->GetRTable()), params->m_ExecutionTreeTraversalMode, params->m_SizeSample)));
         }
         std::sort(JoinAndRCs.begin(), JoinAndRCs.end(),
             [&](const std::pair<Join*, float>& a, const std::pair<Join*, float>& b) { return a.second < b.second; });
@@ -574,7 +583,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
         if (!file.is_open()) {
             std::cout << "Error: File not found or could not be opened." << std::endl;
         } else {
-            file << params->m_SelectionDescent << ";" << (int)params->m_ExecutionTreeTraversalMode << ";" << params->m_ProjectionInsertion << ";" << params->m_BinaryExpressionOptimization << ";" << params->m_QueryJoinOrdering<<";" << params->m_SizeSample<<";"<<params->m_SizeData <<";" << std::chrono::duration_cast<std::chrono::microseconds>(fin - deb).count() << ";" << tables_secondaires.size() << "\n";
+            file << params->m_SelectionDescent << ";" << (int)params->m_ExecutionTreeTraversalMode << ";" << params->m_ProjectionInsertion << ";" << params->m_BinaryExpressionOptimization << ";" << params->m_QueryJoinOrdering << ";" << params->m_SizeSample << ";" << params->m_SizeData << ";" << std::chrono::duration_cast<std::chrono::microseconds>(fin - deb).count() << ";" << tables_secondaires.size() << "\n";
         }
         file.close();
     }

@@ -48,13 +48,13 @@ public:
     int m_SizeData = 0;
     DatabaseSetting() = default;
 
-    DatabaseSetting(const std::string& fname, bool selectiondescent = 0, uint8_t execution_tree_traversal_mode = 0,
+    DatabaseSetting(const std::string& fname, bool selectiondescent = 0, uint8_t execution_tree_traversal_mode = 1,
         bool projection_insertion = 0,
         bool binary_expression_optimization = 0,
         bool query_join_ordering = 0,
         bool benchmarking = 0,
         int SizeSample = 1000,
-        int SizeData=-1)
+        int SizeData = -1)
         : m_FileName(fname)
         , m_SelectionDescent(selectiondescent)
         , m_ExecutionTreeTraversalMode(execution_tree_traversal_mode)
@@ -75,7 +75,7 @@ public:
 
             m_SelectionDescent = tbl["SelectionDescent"].value_or(0);
 
-            m_ExecutionTreeTraversalMode = tbl["PronfMode"].value_or(0);
+            m_ExecutionTreeTraversalMode = tbl["PronfMode"].value_or(1);
 
             m_ProjectionInsertion = tbl["InsertProj"].value_or(0);
 
@@ -221,8 +221,11 @@ public:
                 ColumnInfo city_name = ColumnInfo(DbElemType::DbString, false);
 
                 // Beware, this one is sorted!
+                // ColumnInfo city_pop = ColumnInfo(
+                //    DbElemType::DbUInt, true, true);
+
                 ColumnInfo city_pop = ColumnInfo(
-                    DbElemType::DbUInt, true, true);
+                    DbElemType::DbUInt, false);
 
                 ColumnInfo city_country = ColumnInfo(
                     DbElemType::DbString, false);
@@ -367,7 +370,7 @@ public:
 
             for (;;) {
                 input = replxx_input(rx, prompt.c_str());
-                std::cout<<input<<std::endl;
+                std::cout << input << std::endl;
                 if (input.empty()) {
                     std::cout << "Exiting...\n";
                     m_Quit = true;

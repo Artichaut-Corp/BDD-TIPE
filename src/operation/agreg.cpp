@@ -297,6 +297,9 @@ std::chrono::high_resolution_clock::time_point Final::AppliqueAgregateAndPrint(M
     }
 
     if (m_Limite.has_value()) {
+        if(m_Limite->second+m_Limite->first>OrdreIndice->size()){
+            m_Limite->first = OrdreIndice->size()-m_Limite->second;
+        }
         std::span<int> sub = std::span<int>(*OrdreIndice).subspan(m_Limite->first, m_Limite->second);
 
         auto fin = std::chrono::high_resolution_clock::now();

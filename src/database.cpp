@@ -47,7 +47,7 @@ auto DatabaseEngine::ParseArguments(int argc, char** argv) -> DatabaseSetting*
         }
     }
 
-    return new DatabaseSetting(fname, "../../../bdd-tipe/Parametre.toml");
+    return new DatabaseSetting(fname, "~/bdd-tipe/Parametre.toml");
 }
 
 auto DatabaseEngine::FindDBFile() -> const std::string
@@ -708,6 +708,7 @@ void DatabaseEngine::InsertCsvData(int offset, int how_many)
     DatabaseEngine::ProcessCsvStream("../script/table/contributor.csv", "contributors", { "id", "username" }, offset, how_many);
     DatabaseEngine::ProcessCsvStream("../script/table/revision.csv", "revisions", { "id", "parent_id", "timestamp", "contributor_id" }, offset, how_many);
     DatabaseEngine::ProcessCsvStream("../script/table/page.csv", "pages", { "id", "ns", "title", "revision_id" }, offset, how_many);
+    Cleanup();
 }
 
 auto DatabaseEngine::PrintIndex(std::ostream& out) -> void
