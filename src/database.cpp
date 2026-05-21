@@ -364,7 +364,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
         auto transaction = std::get<Parsing::Transaction*>(stmt);
 
         std::string name = transaction->getTable()->getTableName();
-
+        std::cout<<name<<std::endl;
         auto col_order = transaction->getOrder().get();
 
         auto col_data = transaction->getData().get();
@@ -430,7 +430,7 @@ void DatabaseEngine::ProcessCsvStream(const std::string& path, const std::string
         compteur++;
         batch.push_back(line.substr(0, line.size() - 1));
 
-        if ((int)batch.size() >= MAX_ROWS_PER_TRANSACTION) {
+        if (batch.size() >= MAX_ROWS_PER_TRANSACTION) {
 
             // std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
@@ -626,7 +626,6 @@ void DatabaseEngine::ProcessCsvStream(const std::string& path, const std::string
                 }
             }
             query << " END;";
-
             if (compteur > how_many)
                 break;
 
@@ -705,6 +704,7 @@ void DatabaseEngine::ImportAllCsv(int how_many)
 
 void DatabaseEngine::InsertCsvData(int offset, int how_many)
 {
+    std::cout<<offset<<how_many<<std::endl;
     DatabaseEngine::ProcessCsvStream("../script/table/contributor.csv", "contributors", { "id", "username" }, offset, how_many);
     DatabaseEngine::ProcessCsvStream("../script/table/revision.csv", "revisions", { "id", "parent_id", "timestamp", "contributor_id" }, offset, how_many);
     DatabaseEngine::ProcessCsvStream("../script/table/page.csv", "pages", { "id", "ns", "title", "revision_id" }, offset, how_many);

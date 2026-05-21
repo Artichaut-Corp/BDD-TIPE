@@ -43,8 +43,9 @@ public:
 
     bool m_Benchmarking = 0;
 
-    bool m_SizeSample = 0;
+    int m_SizeSample = 0;
 
+    int m_SizeData = 0;
     DatabaseSetting() = default;
 
     DatabaseSetting(const std::string& fname, bool selectiondescent = 0, uint8_t execution_tree_traversal_mode = 0,
@@ -52,7 +53,8 @@ public:
         bool binary_expression_optimization = 0,
         bool query_join_ordering = 0,
         bool benchmarking = 0,
-        int SizeSample = 1000)
+        int SizeSample = 1000,
+        int SizeData=-1)
         : m_FileName(fname)
         , m_SelectionDescent(selectiondescent)
         , m_ExecutionTreeTraversalMode(execution_tree_traversal_mode)
@@ -61,6 +63,7 @@ public:
         , m_QueryJoinOrdering(query_join_ordering)
         , m_Benchmarking(benchmarking)
         , m_SizeSample(SizeSample)
+        , m_SizeData(SizeData)
     {
     }
 
@@ -81,6 +84,7 @@ public:
 
             m_Benchmarking = tbl["Benchmarking"].value_or(0);
             m_Benchmarking = tbl["SizeSample"].value_or(1000);
+            m_Benchmarking = tbl["DataSize"].value_or(1000);
 
         } catch (const toml::parse_error& err) {
             std::cerr << "Error parsing config file: " << err.description() << std::endl;
@@ -363,14 +367,13 @@ public:
 
             for (;;) {
                 input = replxx_input(rx, prompt.c_str());
-
+                std::cout<<input<<std::endl;
                 if (input.empty()) {
                     std::cout << "Exiting...\n";
                     m_Quit = true;
 
                     break;
                 } else if (input.starts_with(".insert_data")) {
-
                     int hm = std::stoi(input.substr(13, input.length() - 13));
 
                     std::cout << "Insertion de " << hm << " données\n";

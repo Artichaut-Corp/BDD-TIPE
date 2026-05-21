@@ -34,7 +34,7 @@
 }
 
 \title[Optimisation du plan et de l’exécution de requêtes SQL]{Comment optimiser l'exécution d'une requête SQL à l'aide de l'algèbre relationnelle ?}
-\author{Eliott PAQUET N° 30960}
+\author{EliottP}
 \date{2025 -- 2026}
     
 
@@ -521,7 +521,7 @@ WHERE (Dep.pays = "France" AND Sales.Id = 543) OR (Product.Origine = "Chine")
     \textbf{Les pistes récentes :}
     \begin{itemize}
         \item Analyse des données \(\Rightarrow\) Machine Learning (Génération de plan, Choix de l'ordre des jointures, \dots)
-        \item Une meilleure organisation des données en mémoire (Voire le travail d'Antoine)
+        \item Une meilleure organisation des données en mémoire 
         \item Les deux: \href{https://www.normalesup.org/~rouvroy/papers/NTU_25_QHICS.pdf}{\textit{Hypothetical Index Benefit Estimation on Column-oriented Databases using Quantiles} \(2025\)}
 
     \end{itemize}
@@ -557,7 +557,33 @@ WHERE (Dep.pays = "France" AND Sales.Id = 543) OR (Product.Origine = "Chine")
 
 \begin{frame}{Notre gestion des tables durant l'exécution}
 
-    c
+    \begin{center}
+        \begin{tikzpicture}[
+                level distance=1.5cm,
+                sibling distance=3cm,
+                every node/.style={draw, rectangle, align=center, minimum width=2.5cm, minimum height=0.8cm}
+            ]
+
+            % Racine de l'arbre
+            \node {MetaTable}
+            % Niveau 1 : les tables
+            child { node {table1}
+                    % Niveau 2 : racines de table1
+                    child { node {racine1} }
+                    child { node {racine2} }
+                }
+            child { node {table2} }
+            child { node {table3} };
+
+        \end{tikzpicture}
+    \end{center}
+
+    \begin{itemize}
+        \item \textbf{Racine} : valeurs chargées.
+        \item \textbf{Table} : liste de lignes encore valides.
+        \item \textbf{MetaTable} : jointure de plusieurs \textit{Tables}.
+        \item \textbf{Particularité} : modifier les lignes d'une \textit{Table} (jointure ou sélection) modifie toutes les \textit{Tables}.
+    \end{itemize}
 
 \end{frame}
 \end{document}

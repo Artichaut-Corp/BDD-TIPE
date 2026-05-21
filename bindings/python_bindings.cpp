@@ -14,6 +14,7 @@ PYBIND11_MODULE(py_bddtipe, m, py::mod_gil_not_used())
             bool,
             bool,
             bool,
+            int,
             int>());
 
     py::class_<Database::DatabaseEngine>(m, "DatabaseEngine")

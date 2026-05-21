@@ -268,7 +268,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
 
     // il faut ajouter les colonnes utilisé dans la conditions avant de créer la table principale
     if (where != nullptr) {
-            std::cout<<"zerfzefzef"<<std::endl;
 
         ConditionColumn = where->GetConditionColumnNames(TablePrincipaleNom.get());
 
@@ -432,7 +431,7 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     if (!params->m_Benchmarking) {
         RacineExec->printBT(std::cout);
     }
-
+    std::cout<<"fez"<<std::endl;
     if (where != NULL && params->m_BinaryExpressionOptimization) {
 
         if (Node_Select == nullptr) {
@@ -570,12 +569,12 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     if (params->m_Benchmarking) {
         std::ofstream file;
 
-        file.open("./script/data.csv", std::ios::app);
+        file.open("../script/data.csv", std::ios::app);
 
         if (!file.is_open()) {
             std::cout << "Error: File not found or could not be opened." << std::endl;
         } else {
-            file << params->m_SelectionDescent << ";" << (int)params->m_ExecutionTreeTraversalMode << ";" << params->m_ProjectionInsertion << ";" << params->m_BinaryExpressionOptimization << ";" << params->m_QueryJoinOrdering << ";" << std::chrono::duration_cast<std::chrono::microseconds>(fin - deb).count() << ";" << tables_secondaires.size() << "\n";
+            file << params->m_SelectionDescent << ";" << (int)params->m_ExecutionTreeTraversalMode << ";" << params->m_ProjectionInsertion << ";" << params->m_BinaryExpressionOptimization << ";" << params->m_QueryJoinOrdering<<";" << params->m_SizeSample<<";"<<params->m_SizeData <<";" << std::chrono::duration_cast<std::chrono::microseconds>(fin - deb).count() << ";" << tables_secondaires.size() << "\n";
         }
         file.close();
     }

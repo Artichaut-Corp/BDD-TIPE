@@ -78,7 +78,7 @@ public:
         }
 
         struct stat s;
-
+        std::cout<<filepath<<std::endl;
         if (fstat(fd, &s) == -1) {
             throw std::runtime_error("failed fstat");
         }
