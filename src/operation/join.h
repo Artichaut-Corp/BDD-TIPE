@@ -53,13 +53,13 @@ public:
 
     Comparateur GetComp() { return m_Comps; }
 
-    float calculeRC(MetaTable* MetaTableL, MetaTable* MetaTableR, int type_of_join);
+    float calculeRC(MetaTable* MetaTableL, MetaTable* MetaTableR, int type_of_join, int size_sample);
 
-    int CardExecNaif(MetaTable* table1, MetaTable* table2);
+    int CardExecNaif(MetaTable* table1, MetaTable* table2,int size_sample_1, int size_sample_2);
 
-    int CardExecTrier(MetaTable* table1, MetaTable* table2);
+    int CardExecTrier(MetaTable* table1, MetaTable* table2,int size_sample_1, int size_sample_2);
 
-    int CardExecGrouByStyle(MetaTable* table1, MetaTable* table2);
+    int CardExecGrouByStyle(MetaTable* table1, MetaTable* table2,int size_sample_1, int size_sample_2);
 };
 
 } // Database::QueryPlanning

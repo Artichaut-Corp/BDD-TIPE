@@ -118,17 +118,21 @@ public:
 
     void Sort(const ColonneNamesSet& ColonneToSortBy);
 
-    std::unique_ptr<std::vector<ColumnData>> GetSampleFromColumn(const ColonneNamesSet& column_name)
+    std::unique_ptr<std::vector<ColumnData>> GetSampleFromColumn(const ColonneNamesSet& column_name, int size_sample)
     {
+        if (size_sample < 1) {
+            std::cout << "le Sample pour calculer les RC est nul";
+            return nullptr;
+        }
         const Table& table = GetTableByColName(column_name);
 
         auto values_set = std::make_unique<std::vector<ColumnData>>();
 
-        values_set->reserve(1000);
+        values_set->reserve(size_sample);
 
-        for (int i = 0; i < 1000 and i < table.Columnsize(); i++) {
+        for (int i = 0; i < size_sample and i < table.Columnsize(); i++) {
 
-            int pos = int(std::max(i * (table.Columnsize() / 1000), i));
+            int pos = int(std::max(i * (table.Columnsize() / size_sample), i));
 
             auto temp = table.GetValueFromTable(column_name, pos);
 
@@ -206,7 +210,7 @@ public:
 
         return vec;
     }
-}; 
+};
 
 } // Database::QueryPlanning
 //

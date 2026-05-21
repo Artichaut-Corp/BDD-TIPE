@@ -15,58 +15,457 @@
 
 \usepackage[svgnames]{xcolor} % De la couleur
 \usepackage{geometry}       % Gérer correctement la taille
-
+\usepackage{listings} % Ecriture de Code
 \usepackage{graphicx} % inclusion des graphiques
 \usepackage{wrapfig}  % Dessins dans le texte.
+\usepackage{tikz} % Des schémas
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric,matrix} % Des belles formes
+
+\usepackage{caption} %Des légende de schéma
+
+
+\lstset{ % Beau SQL <3
+    language=SQL,
+    showspaces=false, 
+    numbers=left,
+    numberstyle=\tiny,
+    backgroundcolor=\color{white},
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray},
+    stringstyle=\color{orange},
+    basicstyle=\ttfamily\normalsize,
+    breaklines=true,
+    literate=
+        {é}{{\'e}}1
+        {è}{{\`e}}1
+        {à}{{\`a}}1
+        {ù}{{\`u}}1
+        {ç}{{\c{c}}}1
+        {ô}{{\^o}}1
+        {ê}{{\^e}}1,
+}
+
+\newcommand{\paren}[1]{\left(#1\right)} % (x)
 
 
 \newcounter{byear}
 \setcounter{byear}{\the\year}
 \addtocounter{byear}{-1}
 
-\title{Optimisation et éxécutions des Plans de requêtes en SQL }
-\author{Eliott Paquet, MPI, \arabic{byear}-\the\year}
-
+\title{Optimisation de l'éxécutions des Plans de requêtes en SQL }
+\author{Eliott Paquet, MPI}
 
 
 \DeclareFieldFormat{url}{\relax} 
 \begin{document}
 
 \maketitle
+\tableofcontents
 
-\section*{Introduction}
-Mon camarade et moi étant des amateurs de SQL et ayant déjà travaillé avec le SQL sur différents projets, l’étude des moteurs des Systèmes de Gestion des Base de Données (SGBD) nous a paru évident tant elle nous permettra l'étude de leur fonctionnement.
-\\
-\\
-\par C'est dans ce contexte que nous avons exploré différentes techniques pour optimiser la vitesse d'exécution d'une requête, notamment dans un contexte industriel, c'est à dire avec un gros volume de données et avec un grand nombre de requêtes utilisées. Mon TIPE se focalise sur la partie exécution des requêtes laissant la question de la gestion des données et de la vitesse d'accès de celles-ci à mon binôme.
+\section{Introduction}
+\subsection{Abstract}
+Depuis les dernières décennies la gestion des données est devenue un élément essentiel. Pour se faire les ingénieur.e.s et chercheur.e.s dans ce domaine ont développé de nombreux outils, dont le SQL qui permet de formuler les requêtes à envoyer à un SGBD, les Systèmes de Gestion de Base de Donnée pour interpréter le SQL et stocker ces données et le modèle relationnel qui permet de définir différente relation entre nos données et qui est étudié ici.
+C'est dans ce contexte qu'à travers ce TIPE, nous analysons certaine manière utilisée par les SGBD pour optimiser la vitesse d'exécution des requêtes SQL. Nous allons étudier dans un premier temps, à travers l'algèbre relationnelle des optimisations de plan et certaine amélioration algorithmique des techniques de jointures et ensuite nous analyserons les résultats de ces optimisations sur notre SGBD, prénommé \href{https://github.com/Artichaut-Corp/BDD-TIPE}{BDD-TIPE}, créé pour ce projet, en C++, disponible publiquement sur Git-Hub, permettant de comparer l'efficacité de ces optimisations.
+
+Ce TIPE a été conçu en binôme. Mon binôme, Antoine Bertin--Pailette, s'est concentré sur la gestion mémoire de nos données avec le même objectif et sur l'implémentation d'un parser et de la gestion mémoire dans notre SGBD. La particularité de son analyse repose sur le paradigme orienté colonne du stockage des données qui fut initialement le cœur de notre étude. Ce paradigme n'as eu au final que des impacts mineurs sur mon sujet d'études décrit dans \ref{Code:data}.
+\subsection{Fonctionnement du traitement d'une requête SQL par un SGBD}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=300pt]{../ressource/query_map.png}
+    \caption{Schéma explicatif du traitement d'une requête SQL}
+\end{figure}
+La requête SQL qu'un client envoie au SGBD est d'abord transformé par le parser en un arbre d'information. L'Algebrizer transforme cette liste de données en un arbre primaire de nœud composé de Sélections, Projections ou jointures. Cet arbre est ensuite optimisé en fonction des décisions du SGBD pour être enfin exécuté, c'est à ce moment-là que les données sont récupérer, transformer en envoyer au client.
+\subsection{L'Algèbre relationnelle}
+En 1971, Edgar F. Codd a démontré que toute requête du calcul relationnel, c'est-à-dire la logique du premier ordre sans symbole de fonction peut s'écrire de manière équivalente comme requête d'algèbre relationnelle. Le SQL permet de décrire une requête de l'algèbre relationnelle en plus de certains ajouts avec par exemple : \lstinline[language=SQL]!MIN, MAX, COUNT, AVG! .\\~\\
+L'enjeu de l'Algebrizer est donc de convertir cette requête SQL en un arbre d'opérateur de l'algèbre relationnelle pour ensuite utiliser les outils déjà existants d'optimisations ces arbres.
+Les trois principales opérations que possède l'algèbre relationnelle sont :
+\begin{itemize}
+    \item Les Selection \((\sigma)\): Les selections représente une condition appliqué sur une colonne.exemple : \(\sigma_{Dp.name = \text{'Morbihan'}}\)
+    \item Les projection \((\Pi)\): Les projections permet de faire disparaitre des colonnes à un certain moment de l'éxecution, sont enlevé celle qui ne sont pas mentionée.  Exemple : \(\Pi_{Sales.id,\,Sales.price}\)
+    \item Les projection \((\Join)\) permettent de faire la joiture entre deux table avec comme condition une égalité entre les valeur d'une colonne par table jointe. Exemple : \(\Join_{Dp.id = Sales.DpId}\)
+\end{itemize}
+
+Les Arbres se lisent du bas vers le haut dans le sens des flèches comme avec \href{fig:arbre:one}{premier exemple}.
+
+\begin{minipage}{0.48\textwidth}
+    \begin{lstlisting}[language=SQL]
+SELECT S.id, S.price
+FROM Sales
+JOIN Dp ON Dp.id = S.DpId
+WHERE Dp.name = 'Morbihan';
+            \end{lstlisting}
+    \label{fig:code:one}
+    \captionof{figure}{Exemple de requête classique en SQL}
+\end{minipage}
+\vspace{0.5em}
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \begin{tikzpicture}[
+            scale=0.85,
+            transform shape,
+            node distance=1cm,
+            block/.style={
+                    draw,
+                    rounded corners,
+                    minimum width=1.8cm,
+                    minimum height=0.7cm,
+                    align=center,
+                    font=\small
+                },
+            arrow/.style={-Stealth, thick}
+        ]
+
+        % Opérateurs
+        \node[block] (pi) {$\Pi_{Sales.id,\,Sales.price}$};
+        \node[block, below=of pi] (sigma) {$\sigma_{Dp.name = \text{'Morbihan'}}$};
+        \node[block, below=of sigma] (join) {$\Join_{Dp.id = Sales.DpId}$};
+
+        % Relations
+        \node[block, below left=of join] (sales) {$Sales$};
+        \node[block, below right=of join] (dp) {$Dp$};
+
+        % Flèches
+        \draw[arrow] (sigma) -- (pi);
+        \draw[arrow] (join) -- (sigma);
+        \draw[arrow] (sales) -- (join);
+        \draw[arrow] (dp) -- (join);
+
+    \end{tikzpicture}
+    \captionof{figure}{Exemple de conversion par un algebrizer de la requête en \ref{fig:code:one} en un arbre d'opération de l'algèbre relationnelle}
+    \label{fig:arbre:one}
+\end{minipage}
+On remarquera que l'arbre est binaire, et que seule les opérations de Jointure possède deux enfants.
+Le premier arbre conçu par un algebrizer qui se veut être la traduction la plus direct de la requête vas être de la forme Projection, Sélection puis Jointures, faisant ainsi toute les jointure d'abord avant d'appliquer la Condition exprimer après le where pour enfin appliquer la projection finale ne renvoyant que les données demandé. Ce premier arbre est techniquement valide ainsi toute transformation équivalente à cette arbre auras comme éxécution le résultat attendu.
+
+\section{Optimisation statique}
+Maintenant que les bases de la représentation théorique des requêtes SQL ont été posés, on peut étudier les propriétés que possèdent ces arbres.
+\subsection{Descente de Sélection}
+La première analyse que l'on peut remarquer est que la selection est distributive sur la jointure, c'est à dire que sur un table A et B on as :
+\[\sigma_{\text{A.a < 100 and B.b >10}} \paren{\Join_{\text{A.c = b.d}}\paren{A,B}} \Longleftrightarrow \Join_{\text{A.c = B.d}} \paren{\sigma_{\text{A.a <100}}\paren{A}, \sigma_{\text{B.b >10}}\paren{B}}\]
+
+L'intérêt de cette remarque réside dans le fait qu'une Jointure n'as pas une complexité linéaire en fonction du nombre de ligne des tables. Donc supprimer des lignes le plus tôt possible diminueras la complexité de la jointure. Aussi les jointure on tendances à crées plus de ligne qu'il n'y en avais avant donc la selection a tendance a être plus rapide quand elle est faites avant. Enfin, le multi-threading permet de faire ces Selection en même temps alors que la selection sur les tuples recrée après la jointure ne le permet pas forcément.
+
+
+La description rapide d'un algorithme permettant de descendre les sélections ferais un parcours post-fixe sur les noeud de l'arbre, en verifiant si à un noeud donnée, elle ne pourrais pas découper l'arbre binaire d'expression au niveau d'un "AND"
+\subsection{Descente de Projection}
+Une des difficultés de l'opération de jointure et de sélection est de maintenir les tuples de données valide à chaque opération. En fonction du nombre de colonnes chargé cette opération peut prendre plus ou moins de temps, il est donc intéressant de placer des projections, qui ont un cout très faible devant le cout des jointures et des sélections, le plus tôt possible pour diminuer au plus possible de maintenir ou de travailler sur des données inutiles.
+
+Ainsi, puisque l'ajout de projection après la dernière utilisation d'une colonne ne change pas le fonctionnement d'un plan de requête, on va considérer l'optimisation qui consiste à ajouter la projection la plus stricte au sens des colonnes non-supprimé deux opération de jointure
+
+Le fonctionnement grossier d'un tel algorithme est de partir de la racine de l'arbre, et de garder en mémoire toutes les colonnes utilisé par le noeud et ses parents. A chaque noeud A, si un colonne non-utilisé par B et ses parents est utilisé par le noeud A, on rajoute un projection enlevant cette colonne entre A et B, puis on continu sur les enfants de A avec la nouvelle liste de colonne utilisé envoyé aux enfant en même temps.
+
+
+Les colonnes et les opération sur celle-ci étant généralement très rapide comparé aux nombre de données totale d'une base de donnée. Les verifications nécessaire de cette algorithme sont donc très rapide, il est donc lui aussi très rapide.
+
+~\\~\\
+\begin{minipage}{0.48\textwidth}
+    \raggedleft
+    \begin{tikzpicture}[
+            scale=0.45,
+            transform shape,
+            node distance=1.5cm and 1.2cm,
+            block/.style={
+                    draw,
+                    rounded corners,
+                    minimum width=1.8cm,
+                    minimum height=0.7cm,
+                    align=center,
+                    font=\small
+                },
+            arrow/.style={-Stealth, thick}
+        ]
+
+        % Opérateurs en haut
+        \node[block] (pi) {$\Pi_{Sales.id, Sales.price}$};
+
+        % Jointures
+        \node[block, below=of pi] (join1) {$\Join_{Dp.id = Sales.DpId}$};
+        \node[block, below left=of join1] (join2) {$\Join_{Sales.ProductId = Product.id}$};
+        \node[block, below right=of join2] (sigma2) {$\sigma_{Product.Price <5}$};
+        \node[block, below left=of join2] (sigma) {$\sigma_{Sales.price>100}$};
+
+
+        % Relations de base
+        \node[block, below =of sigma] (sales) {$Sales$};
+        \node[block, below =of sigma2] (Product) {$Product$};
+        \node[block, below right=of join1] (dp) {$Dp$};
+
+        % Flèches
+        \draw[arrow] (join1) -- (pi);
+        \draw[arrow] (join2) -- (join1);
+
+        \draw[arrow] (sales) -- (sigma);
+        \draw[arrow] (Product) -- (sigma2);
+        \draw[arrow] (sigma2) -- (join2);
+        \draw[arrow] (sigma) -- (join2);
+
+
+
+        \draw[arrow] (dp) -- (join1);
+
+    \end{tikzpicture}
+    \label{fig:arbre:DesProj1}
+    \captionof{figure}{Exemple d'arbre où l'insertion d'une projection après la première jointure pourrait être utile}
+\end{minipage}
+\hspace{0.5cm}
+\begin{minipage}{0.48\textwidth}
+    \raggedright
+    \begin{tikzpicture}[
+            scale=0.45,
+            transform shape,
+            node distance=1.5cm and 1.2cm,
+            block/.style={
+                    draw,
+                    rounded corners,
+                    minimum width=1.8cm,
+                    minimum height=0.7cm,
+                    align=center,
+                    font=\small
+                },arrow/.style={-Stealth, thick}
+        ]
+
+        % Opérateurs en haut
+        \node[block] (pi) {$\Pi_{Sales.id, Sales.price}$};
+
+        % Jointures
+        \node[block, below=of pi] (join1) {$\Join_{Dp.id = Sales.DpId}$};
+        \node[block,below left=of join1] (pi2) {$\Pi_{Sales.id, Sales.price,Sales.DpId}$};
+
+        \node[block, below =of pi2] (join2) {$\Join_{Sales.ProductId = Product.id}$};
+        \node[block, below right=of join2] (sigma2) {$\sigma_{Product.Price <5}$};
+        \node[block, below left=of join2] (sigma) {$\sigma_{Sales.price>100}$};
+
+
+        % Relations de base
+        \node[block, below =of sigma] (sales) {$Sales$};
+        \node[block, below =of sigma2] (Product) {$Product$};
+        \node[block, below right=of join1] (dp) {$Dp$};
+
+        % Flèches
+        \draw[arrow] (join1) -- (pi);
+
+        \draw[arrow] (sales) -- (sigma);
+        \draw[arrow] (Product) -- (sigma2);
+        \draw[arrow] (join2) -- (pi2);
+        \draw[arrow] (pi2) -- (join1);
+
+        \draw[arrow] (sigma) -- (join2);
+        \draw[arrow] (sigma2) -- (join2);
 
 
 
 
+        \draw[arrow] (dp) -- (join1);
+
+    \end{tikzpicture}
+    \label{figure:arbre:DesProj2}
+    \captionof{figure}{Optimisation de l'arbre en \ref{fig:arbre:DesProj1} en insérant une projection après la première jointure}
+\end{minipage}
 
 
-\section*{Bibliographie commentée}
-Les bases de données représentent les fondations d'internet. Depuis l'invention des premiers moteurs pour le traitement des requêtes SQL, plusieurs paradigmes ont émergé. Le paradigme que nous avons considéré est le Column-Based \cite{abadi_design_2013}. Il consiste à représenter les données groupées par colonne en opposition au modèle Row-Based qui regroupe les lignes les unes à la suite des autres. Ce modèle permet une très grande efficacité de lecture sur les grandes bases de donnée \cite{abadi_zstonebraker_c_store_2005}.
+Dans cet exemple l'insertion d'une projection permettras de gagner du temps sur la futur jointure et le rest de la query et les deux arbres restent équivalent.
+\section{Optimisation dépendante des données}
+Il existe des optimisations très intéressante dans certain cas mais néfaste dans d'autre. Les Optimiseur de plan utilisé par les plus grandes entreprises utilisent des modèle pour utilisé des données sur les données stockées pour faire des plans adaptée. Nous montrons les principales optimisations qui peuvent être utilisé par les SGBD pour optimisé la vitesse d'éxécution de leurs query
+
+\subsection{Optimisation des Sélections}
+
+Pour évaluer une condition représenté sous forme d'une expression binaire, on utilise la propriété de paresse, c'est à dire que si en dessous d'un AND on trouve un Faux, on ne vas pas vérifier l'autre côté car le AND seras d'office faux. De même avec un OR si l'on trouve vrai on vas directement renvoyer vrai.
+
+Ainsi, il peut être intérresant d'optimiser l'arbre binaire pour minimiser le nombre d'évaluation. Pour cela il faut tester la conition sur un echantillon de nos données pour estimer à quelle point une condition vas être verifié, puis la ré-arranger pour respecter la condition expliqué au dessus.
+
+Il doit cependant être noté que malgré qu'une comparaison A soit plus facilement verifié qu'une condition B. La vitesse d'évaluation devrait aussi être prise en compte, en effet comparer une string et un booléen sont clairement deux opération qui ne nécessitent pas le même temps d'évaluation et donc les inverser peut être contre-productive, les modèles les plus récent tiennent donc en facteur cette information aussi lors du choix de l'ordre d'évaluation.
+
+Supposons la requête :
+\begin{lstlisting}[language=SQL]
+SELECT S.id, S.price
+FROM Sales
+JOIN Dp ON Dp.id = S.DpId
+Join Product ON S.ProdId = Product.Id
+WHERE (Dep.pays = "France" AND Sales.Id = 543 ) OR Product.Origine = "Chine";
+\end{lstlisting}
+\label{code:CondExpemple}
+
+Nous obtenons alors en traduction direct de la condition en Expression Binaire. \\~\\
 
 
-Pour avoir une lecture rapide, le choix du support (disque dur, SSD,...) de stockage des données est essentiel, un autre facteur est le nombre de données à lire, il est donc pertinent de s'intéresser à comment les arranger pour optimiser cette partie. Dans de nombreuses requêtes, nos données doivent vérifier un prédicat (c'est la partie après le SELECT en SQL), il est donc intéressant d'ordonner nos données en fonction de ce critère pour facilement lire uniquement les données utiles, cette idée permet d'introduire les B-Arbres \cite{abadi_design_2013}. Cependant le coût de calculer et de maintenir un B-arbre en temps réel est coûteux, il est donc parfois préférable de cracker nos colonnes en différents clusters de données au lieu de construire des données trop complexes. En général, le choix de comment ordonner peut être décidé en temps réel à l'aide de modèles statistiques \cite{rouvroy_hypothetical_nodate}. 
+\begin{center}
 
-Pour traiter une requête SQL, différentes étapes sont requises, il faut d'abord un parser pour transformer la chaîne de caractères que l'utilisateur envoie en un arbre syntaxique. Cet arbre est ensuite traduit en plan d'exécution par l'algebrizer. Il porte le nom de l'algèbre relationelle, domaine massivement utilisé pour représenter les plans après les travaux de Codd. Celui-ci cherche en mémoire un plan similaire sauvegardé dans le cache ou le créé si il est inexistant \cite[348]{ding_extensible_2024}. Ce plan est ensuite optimisé à travers différentes optimisations, il est ensuite exécuté \cite{Pierre_Senellart_Course}.
+    \begin{tikzpicture}[
+            scale=1,
+            level distance=2cm,
+            sibling distance=4cm,
+            every node/.style={draw, rectangle, align=center, minimum width=3cm, minimum height=0.8cm, font=\scriptsize},
+            arrow/.style={-, thick}]
+        % Arbre
+        \node (or) {OR}
+        child { node (and) {AND}
+                child { node (cond1) {Dep.pays = "France"} }
+                child { node (cond2) {Sales.id = 543} }
+            }
+        child { node (cond3) {Product.Origine = "Chine"} };
 
-L'optimisation de plan se déroule, dans les modèles dit "volcano", basé sur système R \cite{astrahan_system_1976}, en deux étapes. D'abord il faut concevoir et optimiser le plan logique pour cela plusieurs optimisations ont été pensées et sont applicables dans de très nombreux cas \cite{abadi_design_2013}. Ces optimisations que l'on appellera naïves sont à différencier des autres optimisations qui dépendent d'estimations du résultat de certaine opération et de modèles statistiques \cite{lan_survey_2021}. Après avoir optimisé le plan logique, il faut optimiser le plan physique, c'est à dire choisir quel algorithme utiliser pour appliquer une opération \cite{abadi_design_2013}, par exemple l'opération de jointure possède différents algorithmes dont au moins 4 sont facilement utilisables avec notamment le Leap Frog Tree Join \cite{veldhuizen_leapfrog_2013}. Pour se faire, différentes méthodes ont été imaginées, il est possible de choisir à l'avance quelles opérations seront choisies ou alors de concevoir un modèle d'estimation des coûts et de calculer le modèle ayant le plus faible coût \cite{ding_extensible_2024,astrahan_system_1976} via un parcours de graphe. Cette dernière étape nécessite, pour être performante, énormément de statistiques et fait appel à des concepts avancés de statistique et de machine learning que nous n'utiliserons pas.
+        % Flèches parcours préfixe (parent → enfants)
+        \draw[arrow] (or) -- (and);
+        \draw[arrow] (and) -- (cond1);
+        \draw[arrow] (and) -- (cond2);
+        \draw[arrow] (or) -- (cond3);
+
+        \label{fig:arbre:BinExprPasOpti}
+    \end{tikzpicture}
+    \captionof{figure}{Representation de l'Expression Binaire}
+\end{center}
+
+Supposons maintenant qu'un très gros nombre de produit sont produit en chine et que par ailleurs il y a un très gros nombre de departement de vente du produit qui sont français mais que le LOT numéro 543 est très peut choisis.
+
+Alors après avoir reconstruit le tuple, on vas d'abord évaluer la condition "Dep.Pays = "France"" ce qui vas être très souvent vrai, alors seulement ensuite on vas vérifier si le numéro de vente est le 543, ce qui vas être très peu souvent vrai alors enfin on vas tester si l'origine du produit est chinoise ce qui vas évidemment très souvent être vrai, alors pour la majorité des produit chinois, on aurais fait deux test inutile. On vas alors réarranger la condition pour obtenir :
+\begin{center}
+
+    \begin{tikzpicture}[
+            scale=1,
+            level distance=2cm,
+            sibling distance=4cm,
+            every node/.style={draw, rectangle, align=center, minimum width=3cm, minimum height=0.8cm, font=\scriptsize},
+            arrow/.style={-, thick}]
+
+        % Arbre
+        \node (or) {OR}
+
+        child { node (cond3) {Product.Origine = "Chine"} }
+        child { node (and) {AND}
+                child { node (cond2) {Sales.id = 543} }
+                child { node (cond1) {Dep.pays = "France"} }
+            };
+
+    \end{tikzpicture}
+    \captionof{figure}{Version optimisé de la condition \ref{fig:arbre:BinExprPasOpti} }
+\end{center}
+
+Ici la majorité des tuples vont s'arréter sur la verfication de l'origine du produit et pour les rares produits non chinois, on vas d'abord verifier l'id de la vente qui est bien plus rarement verifier que l'origine du département de vente
+
+Le code d'une fonction faisant ceci ferais un parcours post-fixe sur l'entiereté de l'arbre, à noeud, si il la condition est verifie, on ajoute 1 a son compteur personnel.
+
+puis par un parcours pre-fixe, on applique les règle décrite plus haut.
+
+Les Descente de selection n'impactant pas la forme générale de l'expression binaire, ces deux opérations sont indépendantes et peuvent radicalement changer la vitesse d'éxécution.
+\subsection{Choix de l'algorithme de jointures}
+Maitenant que le choix du plan a été fait, il faut l'éxécuter. Les optimisation restantes dépendent de la vitesse d'éxécution de nos opération. Une projection est très rapide car elle travaille unqiquement sur les colonnes et non sur les données. Les sélections ne possèdent pas une grande variété d'optimisation, le seul cas particulier est celui où nos données sont triés et que la condition se résume à une seule comparaison sur la colonne triée, une recherche dichotomique peut être effectué.
+
+La partie la plus importe car souvent la plus lente est la jointure, cette opération génère beaucoup de ralentissement, nous présentons ici 4 manière de faire l'opération de jointure, dont trois ont été implémenté avec succès.
+L'opération de jointure se résume simplement en la création de tout le couple du produit cartésien entre deux table qui respectent une condition (En SQL cette condition se résume très souvent en une égalité entre deux colonnes). 
+
+L'idée naïve pour faire cette opération serait de faire deux boucle imbriqué crééant et testant tout les couples possible et les verifiants, cette implémentation, appellé Nested Loop est très souvent très lente, sauf dans de rare cas où la création des structures utilisé est plus lent que l'utilisation de boucles imbriqué. Cette implémentation est en O(n*m)
+
+Une meilleur idée serait d'éffectuer un pré-tri sur les colonnes comparées, pour ensuite faire une lecture en simultané des deux colonnes et ne garder que les couple verifiant la condition d'égalité.
+
+Une idée similaire, non implémenté, serait d'étendre cette logique sur plus de 2 table jointe à la fois. En supposans que l'on fait plusieurs jointure sur la même colonne de manière direct ou indirect, on peut alors appliquer cette logique 
+\subsection{Optimisation de l'ordre d'exécution des jointures}x
+
+Toujours dans une optique de minimiser le nombre de ligne à chaque étape on peut noter que la jointure est associative c'est à dire avec les tables A, B et C:
+\[\Join_{\text{C.c = A.a}} \paren{\Join_{\text{C.d = B.b}}\paren{C,B},A} \Longleftrightarrow \Join_{\text{C.d = B.b}} \paren{\Join_{\text{C.c = A.a}}\paren{C,A},B} \]
+
+Reprenons la requête de la partie \ref{code:CondExpemple} et supposons que la table Sales possède \(10^6\) entrées, que la table Product possède \(10^4\) entrées et enfin que la table Département possède \(1\) entrée.
+Supposons aussi que la jointure entre Sales et Product produisent \(10^6\) entrées, la jointure entre Sales et Département produisent \(10^3\) entrées et que enfin après les deux jointures on obtient \(10^2\) entrée.
+Comparons alors les deux manière d'éxécuter cette double jointure :
+
+\begin{minipage}{0.48\textwidth}
+    \begin{tikzpicture}[
+            scale=0.7,
+            transform shape,
+            node distance=0.6cm and 0cm,
+            block/.style={minimum width=0.6cm, minimum height=0.6cm, align=center},
+            arrow/.style={-Stealth, thick},
+            card/.style={font=\scriptsize, above}
+        ]
+
+        % Jointures
+        \node[block] (join1) {$\Join_{Dp.id = Sales.DpId}$};
+        \node[card] at (join1.north) {$10^2$};
+
+        \node[block, below left=0.8cm and -1cm of join1] (join2)
+        {$\Join_{Sales.ProductId = Product.id}$};
+        \node[card] at (join2.north) {$10^6$};
+
+        % Relations
+        \node[block, below left=0.8cm and -1cm of join2] (sales) {$Sales$};
+        \node[card] at (sales.north) {$10^6$};
+
+        \node[block, below right=0.8cm and -1cm of join2] (product) {$Product$};
+        \node[card] at (product.north) {$10^4$};
+
+        \node[block, below right=0.8cm and -1cm of join1] (dp) {$Dp$};
+        \node[card] at (dp.north) {$1$};
+
+        % Flèches
+        \draw[arrow] (join2) -- (join1);
+        \draw[arrow] (sales) -- (join2);
+        \draw[arrow] (product) -- (join2);
+        \draw[arrow] (dp) -- (join1);
+
+    \end{tikzpicture}
+    \captionof{figure}{Première manière de faire la double jointure}
+\end{minipage}
+\begin{minipage}{0.48\textwidth}
+    \begin{tikzpicture}[
+            scale=0.7,
+            transform shape,
+            node distance=0.6cm and 0cm,
+            block/.style={minimum width=0.6cm, minimum height=0.6cm, align=center},
+            arrow/.style={-Stealth, thick},
+            card/.style={font=\scriptsize, above}
+        ]
+
+        % Jointures
+        \node[block] (join1) {$\Join_{Sales.ProductId = Product.id}$};
+        \node[card] at (join1.north) {$10^2$};
+
+        \node[block, below left=0.8cm and -1cm of join1] (join2)
+        {$\Join_{Dp.id = Sales.DpId}$};
+        \node[card] at (join2.north) {$10^3$};
+
+        % Relations
+        \node[block, below left=0.8cm and -1cm of join2] (sales) {$Sales$};
+        \node[card] at (sales.north) {$10^6$};
+
+        \node[block, below right=0.8cm and -1cm of join1] (product) {$Product$};
+        \node[card] at (product.north) {$10^4$};
+
+        \node[block, below right=0.8cm and -1cm of join2] (dp) {$Dp$};
+        \node[card] at (dp.north) {$1$};
+
+        % Flèches
+        \draw[arrow] (join2) -- (join1);
+        \draw[arrow] (sales) -- (join2);
+        \draw[arrow] (product) -- (join1);
+        \draw[arrow] (dp) -- (join2);
+
+    \end{tikzpicture}
+    \captionof{figure}{Deuxieme manière de faire la double jointure}
+\end{minipage}
+\vspace{1cm}
+Supposons que la méthode jointure des deux tables soit un naïvement des boucle imbriquées qui testent tout les tuples sur la condition, la première manière de faire fait \(10^4\times10^6 + 10^6 \times 1 \) comparaison, tandis que la deuxième manière de faire fait \( 10^6 \times 1 + 10^3 \times 10^4 \) comparaisons. La deuxième manière de faire minimise donc le nombre total de comparaisons.
+
+Choisir l'ordre des jointures permet donc d'accélérer la vitesse d'éxécution. Cette méthode permet de dire a posteriori lequel de ces deux ordres de jointure est le plus optimisé. La difficulté réside donc dans l'estimation de l'ordre à choisir pour optimiser la vitesse d'exécution. 
 
 
-En Conclusion, nous avons évoqué deux aspects majeurs dans l'optimisation de la vitesse d'exécution des requêtes SQL. Premièrement, la manière dans laquelle sont ordonnées et lues nos données et dans un second temps, comment notre notre requête SQL vas être traduite et éxécutée.
-\section*{Problématique retenue}
-Comment minimiser le temps d'exécution de requêtes SQL itérées ?
-\section*{Objectifs du TIPE}
-J'ai décidé de me concentrer sur la création du plan de l'optimisation de celui-ci, les objectifs de mon TIPE étant : 
-\begin{enumerate}
-    \item Création d'un algebrizer à partir de l'arbre syntaxique d'une requête SQL et implémentation de l'exécution de celui-ci
-    \item Implémentation de différentes optimisations de l'arbre logique et physique
-    \item création d'un modèle basique de génération d'arbre physique à partir des résultats précédents
-\end{enumerate}
-Avec le travail de mon camarade, nous avons avec succès créé un moteur SQL en C++, acceptant des requêtes SQL et renvoyant le résultat de celles-ci.
+Nous avons choisi pour cela d'estimé le rapport entre le nombre de tuple que produirais la jointure et le nombre maximal de lignes entre les deux tables que nous nommons Rapport de Cardinalité (RC). Nous avons utilisé cette heuristique pour classer les différentes jointures à faire en fonction de leur RC. Nous reconstruisons alors l'arbre en utilisant d'abord les jointures minimisant leur RC.
+Cette implémentation reste très limité et seras plus finement analysé dans la partie \ref{Analyse:OrdreJointure}.
+
+\section{Nos Résultats}
+\subsection{Présentation du jeu de donnée}
+\subsection{Analyse des résultats}
+\label{Analyse:OrdreJointure}
+\section{Conclusion}
+\subsection{Conclusion}
+\subsection{Amélioration du modèle actuel}
+\subsection{Autre Champ d'étude pour l'optimisation de notre SGBD}
+\section{Annexe}
+\subsection{Présentation Sommaire du code}
+\subsection{Gestion globale}
+\subsection{Gestion mémoire des tables}
+\label{Code:data}
+\subsection{Gestion du plan}
+\subsection{Descriptions rapides du code utilisé}
+
 
 \printbibliography
 
