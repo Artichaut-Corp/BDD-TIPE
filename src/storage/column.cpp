@@ -15,24 +15,24 @@ ColumnInfo::GetColumnsData(int fd, int total_column_number)
 
     // initialise each container
     std::vector<DbString> name = {};
-    std::vector<DbUInt> column_offset = {};
+    std::vector<DbOffset> column_offset = {};
     std::vector<DbUInt8> type = {};
     std::vector<DbBool> is_sortable = {};
     std::vector<DbBool> is_sorted = {};
-    std::vector<DbUInt64> sorted_offset = {};
+    std::vector<DbOffset> sorted_offset = {};
     std::vector<DbBool> is_compressable = {};
     std::vector<DbBool> is_compressed = {};
 
     // Get the data
-    DbUInt64 offset = SCHEMA_COLUMN_OFFSET;
+    DbOffset offset = SCHEMA_COLUMN_OFFSET;
 
     FileInterface::ReadVec(fd, name, &offset, DB_STRING_SIZE, total_column_number);
 
     offset += (MAX_TABLE * MAX_COLUMN_PER_TABLE - total_column_number) * DB_STRING_SIZE;
 
-    FileInterface::ReadVec(fd, column_offset, &offset, DB_UINT_SIZE, total_column_number);
+    FileInterface::ReadVec(fd, column_offset, &offset, DB_OFFSET_REPR_SIZE, total_column_number);
 
-    offset += (MAX_TABLE * MAX_COLUMN_PER_TABLE - total_column_number) * DB_UINT_SIZE;
+    offset += (MAX_TABLE * MAX_COLUMN_PER_TABLE - total_column_number) * DB_OFFSET_REPR_SIZE;
 
     FileInterface::ReadVec(fd, type, &offset, DB_UINT8_SIZE, total_column_number);
 
@@ -46,9 +46,9 @@ ColumnInfo::GetColumnsData(int fd, int total_column_number)
 
     offset += (MAX_TABLE * MAX_COLUMN_PER_TABLE - total_column_number) * DB_BOOL_SIZE;
 
-    FileInterface::ReadVec(fd, sorted_offset, &offset, DB_UINT64_SIZE, total_column_number);
+    FileInterface::ReadVec(fd, sorted_offset, &offset, DB_OFFSET_REPR_SIZE, total_column_number);
 
-    offset += (MAX_TABLE * MAX_COLUMN_PER_TABLE - total_column_number) * DB_UINT64_SIZE;
+    offset += (MAX_TABLE * MAX_COLUMN_PER_TABLE - total_column_number) * DB_OFFSET_REPR_SIZE;
 
     FileInterface::ReadVec(fd, is_compressable, &offset, DB_BOOL_SIZE, total_column_number);
 

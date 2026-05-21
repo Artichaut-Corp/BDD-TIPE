@@ -1,3 +1,4 @@
+\PassOptionsToPackage{table}{xcolor}
 \documentclass[a4paper,12pt]{beamer}
 
 % -------------------------------------------------
@@ -15,9 +16,11 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{hyperref}
-\usepackage{color}
 \usepackage{tikz}
 \usepackage{pgfplots}
+\usepackage[table]{xcolor}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 
 \pgfplotsset{compat=1.18}
 
@@ -220,22 +223,26 @@
 
 \subsection{Que faire des résultats ?}
 
-\begin{frame}
-    \frametitle{Que faire des résultats ?}
-    \begin{block}{Des exemples de requêtes seraient}
-       \begin{itemize}
-           \item  Donner un classement des utilisateurs les plus actifs par catégorie
-           \item  Utilisateurs experts d'une catégories
-           \item  Pages les plus modifiées par catégories
-       \end{itemize}
-       \end{block}
-  \begin{block}{Nous avons plusieurs manières d'utiliser les résultats}
-    \begin{itemize}
-        \item  Récolter et afficher des statistiques utilisateur
-        \item  Trier, comparer, selectionner
-        \item  Recommander/Rechercher des pages selon des critères
-    \end{itemize}
-    \end{block}
+\begin{frame}{Que faire des résultats ?}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \begin{block}{Requêtes typiques}
+            \begin{itemize}
+                \item Classement des utilisateurs les plus actifs par catégorie
+                \item Utilisateurs experts d'une catégorie
+                \item Pages les plus modifiées par catégorie
+            \end{itemize}
+        \end{block}
+
+        \column{0.48\textwidth}
+        \begin{block}{Utilisations des résultats}
+            \begin{itemize}
+                \item Récolter et afficher des statistiques utilisateur
+                \item Trier, comparer, sélectionner
+                \item Recommander / rechercher des pages selon des critères
+            \end{itemize}
+        \end{block}
+    \end{columns}
 \end{frame}
 
 \begin{frame}[fragile]{Exemples de requêtes SQL}
@@ -306,287 +313,390 @@ ORDER BY revisions DESC;
 
 \subsection{Paradigme ligne VS colonne}
 
-\begin{frame}
-    \frametitle{Paradigme ligne VS colonne}
- \begin{figure}[h]
-        \centering
-        \includegraphics[width=300pt]{ressource/row_vs_column.png}
-        \caption{Rendu physique des BDD orientées colonnes et BDD orientées lignes}
-    \end{figure}
+\begin{frame}{Paradigme ligne VS colonne}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \begin{block}{Orientée lignes}
+            \footnotesize
+            \begin{itemize}
+                \item Stockage par enregistrement complet
+                \item Efficace pour \texttt{SELECT *}
+                \item Lit des colonnes inutiles pour les agrégations
+            \end{itemize}
+        \end{block}
+        \vspace{0.2cm}
+        \begin{exampleblock}{Exemple (PostgreSQL, MySQL)}
+            \centering\scriptsize
+            \begin{tikzpicture}
+                \draw[fill=blue!15] (0,0) rectangle (2.4,0.4)
+                    node[midway]{\tiny id | name | score};
+                \draw[fill=blue!10] (0,0.45) rectangle (2.4,0.85)
+                    node[midway]{\tiny id | name | score};
+                \draw[fill=blue!5]  (0,0.9)  rectangle (2.4,1.3)
+                    node[midway]{\tiny id | name | score};
+            \end{tikzpicture}
+        \end{exampleblock}
+
+        \column{0.48\textwidth}
+        \begin{block}{Orientée colonnes}
+            \footnotesize
+            \begin{itemize}
+                \item Stockage par attribut
+                \item Meilleure compression
+                \item Très efficace pour les agrégations analytiques
+            \end{itemize}
+        \end{block}
+        \vspace{0.2cm}
+        \begin{exampleblock}{Exemple (MonetDB, C-Store)}
+            \centering\scriptsize
+            \begin{tikzpicture}
+                \draw[fill=green!15] (0,0)    rectangle (0.7,1.3)
+                    node[midway,rotate=90]{\tiny id};
+                \draw[fill=green!10] (0.75,0) rectangle (1.55,1.3)
+                    node[midway,rotate=90]{\tiny name};
+                \draw[fill=green!5]  (1.6,0)  rectangle (2.4,1.3)
+                    node[midway,rotate=90]{\tiny score};
+            \end{tikzpicture}
+        \end{exampleblock}
+    \end{columns}
+    \vfill
+    {\tiny Source : Abadi et al., \textit{Column-Stores vs. Row-Stores} (SIGMOD 2008)}
 \end{frame}
 
 \begin{frame}{Bases orientées colonnes vs orientées lignes}
-
 \small
-
-\begin{block}{Hypothèse expérimentale}
-Temps d'exécution normalisés (base ligne = 100) pour des
-requêtes analytiques typiques (\texttt{SUM}, \texttt{GROUP BY},
-jointures analytiques).
+\begin{block}{Temps d'exécution normalisés (base ligne = 100)}
+\centering\tiny Requêtes analytiques typiques : \texttt{SUM}, \texttt{GROUP BY}, jointures.
 \end{block}
-
-\vspace{-0.2cm}
-
+\vspace{-0.15cm}
 \begin{center}
 \begin{tikzpicture}
 \begin{axis}[
-    width=0.92\textwidth,
-    height=0.46\textheight,
+    width=0.90\textwidth,
+    height=0.64\textheight,
     ybar,
-    bar width=9pt,
-    ymin=0,
-    ymax=110,
+    bar width=7pt,
+    ymin=0, ymax=267,
     ylabel={Temps relatif (base ligne = 100)},
     symbolic x coords={
         Lecture\\3 colonnes,
         Agrégation\\SUM,
         GROUP BY,
-        Jointure\\analytique
+        Jointure
     },
     xtick=data,
-    xticklabel style={
-        align=center,
-        font=\scriptsize
-    },
-    legend style={
-        at={(0.5,1.02)},
-        anchor=south,
-        legend columns=2,
-        font=\scriptsize
-    },
+    xticklabel style={align=center, font=\scriptsize},
+    legend style={at={(0.5,1.02)}, anchor=south,
+                  legend columns=3, font=\scriptsize},
     nodes near coords,
     nodes near coords style={font=\tiny},
-    enlarge x limits=0.15,
+    enlarge x limits=0.2,
     grid=major
 ]
-
-% Row-store baseline
 \addplot coordinates {
-    (Lecture\\3 colonnes,100)
-    (Agrégation\\SUM,100)
-    (GROUP BY,100)
-    (Jointure\\analytique,100)
-};
-
-% Column-store realistic ratios
+    (Lecture\\3 colonnes,100)(Agrégation\\SUM,100)
+    (GROUP BY,100)(Jointure,100)};
 \addplot coordinates {
-    (Lecture\\3 colonnes,6)
-    (Agrégation\\SUM,12)
-    (GROUP BY,10)
-    (Jointure\\analytique,15)
-};
-
-\legend{
-    Base orientée lignes,
-    Base orientée colonnes
-}
-
+    (Lecture\\3 colonnes,6)(Agrégation\\SUM,12)
+    (GROUP BY,10)(Jointure,15)};
+\addplot coordinates {
+    (Lecture\\3 colonnes,155)(Agrégation\\SUM,127)
+    (GROUP BY,238)(Jointure,226)};
+\legend{Orientée lignes, Orientée colonnes, Nos performances}
 \end{axis}
 \end{tikzpicture}
 \end{center}
-
-\vspace{-0.2cm}
-
+\vspace{-0.15cm}
 {\tiny
-Sources : Abadi et al., \textit{Column-Stores vs. Row-Stores:
-How Different Are They Really?} (SIGMOD 2008);
-\textit{The Design and Implementation of Modern Column-Oriented
-Database Systems} (2013).
+Sources : Abadi et al., \textit{Column-Stores vs. Row-Stores} (SIGMOD 2008) ;
+\textit{The Design and Implementation of Modern Column-Oriented Database Systems} (2013).
 }
-
 \end{frame}
 
 \subsection{Indexation des données}
 
-\begin{frame}
-    \frametitle{Indexation des données}
-
-\begin{figure}[h]
-		\centering
-		\includegraphics[width=250pt]{ressource/indexing.jpg}
-    \caption{Un exemple de mise en oeuvre de l'indexation}
-	\end{figure}
-
-\end{frame}
-
-\begin{frame}{Arbres B+}
-
+\begin{frame}{Indexation des données — exemple Wikipédia}
 \small
 
 \begin{columns}[T]
 
-% LEFT COLUMN (smaller)
-\column{0.42\textwidth}
+% ── Colonne gauche : index ────────────────────────
+\column{0.38\textwidth}
+\centering
+{\scriptsize\textbf{Index sur \texttt{page\_id}}}\\[4pt]
 
+\scriptsize
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{r l}
+  \textbf{page\_id} & \textbf{pointeur} \\
+  \hline
+  3  & $\rightarrow$ ligne 1 \\
+  10 & $\rightarrow$ ligne 2 \\
+  \rowcolor{blue!10}
+  15 & $\rightarrow$ ligne 3 \\
+  \rowcolor{blue!10}
+  18 & $\rightarrow$ ligne 4 \\
+  \rowcolor{blue!10}
+  23 & $\rightarrow$ ligne 5 \\
+  27 & $\rightarrow$ ligne 6 \\
+  35 & $\rightarrow$ ligne 7 \\
+  $\vdots$ & $\vdots$ \\
+\end{tabular}
+
+% ── Colonne droite : table Wikipédia ─────────────
+\column{0.58\textwidth}
+\centering
+{\scriptsize\textbf{Table \texttt{pages} (Wikipédia)}}\\[4pt]
+
+\scriptsize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{r l r}
+  \textbf{page\_id} & \textbf{title} & \textbf{revision\_id} \\
+  \hline
+  3  & Antoine Meillet  & 230038204 \\
+  10 & Algorithmique    & 226806957 \\
+  \rowcolor{blue!10}
+  15 & Autriche         & 229636050 \\
+  \rowcolor{blue!10}
+  18 & Arsène Lupin     & 230120442 \\
+  \rowcolor{blue!10}
+  23 & Afghanistan      & 230208941 \\
+  27 & Ada (langage)    & 226996025 \\
+  35 & Alpes-Maritimes  & 229772008 \\
+  $\vdots$ & $\vdots$ & $\vdots$ \\
+\end{tabular}
+
+\vspace{0.1cm}
+{\tiny\textit{Lignes surlignées = résultat de la requête.}}
+
+\end{columns}
+
+\vspace{0.2cm}
+
+\begin{exampleblock}{}
+  \centering\scriptsize
+  \texttt{SELECT title FROM pages WHERE page\_id BETWEEN 15 AND 23}\\[3pt]
+  Sans index : scan de toute la table. \quad
+  Avec index : accès direct aux 3 lignes surlignées.
+\end{exampleblock}
+
+\vspace{0.15cm}
+
+\begin{columns}[T]
+  \column{0.32\textwidth}
+  \begin{exampleblock}{\footnotesize Gain en lecture}
+    \centering\scriptsize $\mathcal{O}(n) \;\to\; \mathcal{O}(\log n)$
+  \end{exampleblock}
+  \column{0.32\textwidth}
+  \begin{alertblock}{\footnotesize Coût en écriture}
+    \centering\scriptsize Rééquilibrage à chaque insertion
+  \end{alertblock}
+  \column{0.32\textwidth}
+  \begin{alertblock}{\footnotesize Coût mémoire}
+    \centering\scriptsize Structure auxiliaire stockée
+  \end{alertblock}
+\end{columns}
+
+\vfill
+{\tiny
+Données : dump Wikipédia français —
+Silberschatz et al., \textit{Database System Concepts}.
+}
+\end{frame}
+
+\begin{frame}{Indexation par arbre B+}
+\small
+
+% ── Arbre B+ pleine largeur ──────────────────────────────────
+\begin{center}
+\begin{tikzpicture}[
+    x=1.04cm, y=1cm,
+    inode/.style={draw, rounded corners=3pt,
+                  minimum width=1.7cm, minimum height=0.5cm,
+                  font=\scriptsize, fill=blue!12},
+    leaf/.style={draw, rounded corners=3pt,
+                 minimum width=1.55cm, minimum height=0.46cm,
+                 font=\scriptsize, fill=teal!18},
+    arr/.style={->, >=stealth, thin},
+    chain/.style={->, >=stealth, very thin, dashed, gray}
+]
+% centres feuilles (unités x) : 0.75 2.25 3.75 5.25 6.75 8.25
+% centres L1 : 1.5  4.5  7.5
+% racine : 4.5
+
+% Racine
+\node[inode, minimum width=2.0cm] (root) at (4.5, 0) {20 \,|\, 50};
+
+% Niveau 1
+\node[inode] (n1) at (1.5,  -1.35) {10};
+\node[inode] (n2) at (4.5,  -1.35) {35};
+\node[inode] (n3) at (7.5,  -1.35) {70};
+
+% Racine → N1
+\draw[arr] (root.south) -- (n1.north);
+\draw[arr] (root.south) -- (n2.north);
+\draw[arr] (root.south) -- (n3.north);
+
+% Feuilles
+\node[leaf] (l1) at (0.75, -2.7) {3,\,7};
+\node[leaf] (l2) at (2.25, -2.7) {12,\,18};
+\node[leaf] (l3) at (3.75, -2.7) {20,\,28};
+\node[leaf] (l4) at (5.25, -2.7) {36,\,42};
+\node[leaf] (l5) at (6.75, -2.7) {50,\,60};
+\node[leaf] (l6) at (8.25, -2.7) {72,\,89};
+
+% N1, N2, N3 → feuilles
+\draw[arr] (n1.south) -- (l1.north);
+\draw[arr] (n1.south) -- (l2.north);
+\draw[arr] (n2.south) -- (l3.north);
+\draw[arr] (n2.south) -- (l4.north);
+\draw[arr] (n3.south) -- (l5.north);
+\draw[arr] (n3.south) -- (l6.north);
+
+% Chaînage horizontal des feuilles
+\draw[chain] (l1.east) -- (l2.west);
+\draw[chain] (l2.east) -- (l3.west);
+\draw[chain] (l3.east) -- (l4.west);
+\draw[chain] (l4.east) -- (l5.west);
+\draw[chain] (l5.east) -- (l6.west);
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.1cm}
+
+% ── Blocs de texte — 3 colonnes ─────────────────────────────
+\begin{columns}[T]
+
+\column{0.31\textwidth}
 \begin{block}{Principe}
 \footnotesize
 \begin{itemize}
     \item Structure équilibrée d'indexation
-    \item Noeuds internes : navigation
-    \item Feuilles : clés / pointeurs vers données
-    \item Même profondeur pour toutes les feuilles
-    \item Recherche en $\mathcal{O}(\log{}n)$
+    \item Nœuds internes : navigation
+    \item Feuilles : clés + pointeurs
+    \item Recherche en $\mathcal{O}(\log n)$
 \end{itemize}
 \end{block}
 
-% RIGHT COLUMN (larger tree)
-\column{0.55\textwidth}
+\column{0.33\textwidth}
+\begin{alertblock}{\footnotesize Sans index}
+    \centering\scriptsize
+    Parcours complet de la table\\
+    $\Rightarrow\;\mathcal{O}(n)$ lectures
+\end{alertblock}
+\vspace{0.15cm}
+\begin{exampleblock}{\footnotesize Avec index B+}
+    \centering\scriptsize
+    Navigation dans l'arbre\\
+    $\Rightarrow\;\mathcal{O}(\log n)$ lectures
+\end{exampleblock}
 
-\centering
-
-\begin{tikzpicture}[
-level distance=1.2cm,
-sibling distance=2.0cm,
-every node/.style={
-draw,
-rounded corners,
-minimum width=1.6cm,
-minimum height=0.55cm,
-font=\scriptsize
-}
-]
-
-\node {20 | 50}
-child {
-node {10}
-child {node {3, 7}}
-child {node {12, 18}}
-}
-child {
-node {35}
-child {node {20, 28}}
-child {node {36, 42}}
-}
-child {
-node {70}
-child {node {50, 60}}
-child {node {72, 89}}
-};
-
-\end{tikzpicture}
-
-\vspace{0.2cm}
-
-{\scriptsize
-Exemple simplifié d'un arbre B+.
-}
+\column{0.31\textwidth}
+\begin{alertblock}{Observation}
+\footnotesize
+Réduit fortement le coût des
+recherches, mais ralentit les
+insertions : l'arbre doit rester
+équilibré après chaque écriture.
+\end{alertblock}
 
 \end{columns}
 
 \vfill
-
 {\tiny
-Sources :
-Ramakrishnan \& Gehrke,
-\textit{Database Management Systems};
-Silberschatz et al.,
-\textit{Database System Concepts}.
+Sources : Ramakrishnan \& Gehrke, \textit{Database Management Systems} ;
+Silberschatz et al., \textit{Database System Concepts}.
 }
-
 \end{frame}
 
-\begin{frame}{Indexation par arbre B+ : bénéfices et compromis}
+\begin{frame}{Index B+ : bénéfices et compromis}
 
 \small
 
-\begin{block}{Effet d'un index B+}
-Les arbres B+ accélèrent fortement les recherches
-et requêtes filtrées, mais augmentent le coût
-des insertions et l'espace mémoire utilisé.
+\begin{block}{Temps d'exécution normalisés (base ligne = 100)}
+\centering
+\tiny Requêtes analytiques typiques :
+\texttt{SUM}, \texttt{GROUP BY}, jointures.
 \end{block}
 
-\vspace{-0.2cm}
+\vspace{-0.15cm}
 
 \begin{center}
 \begin{tikzpicture}
 \begin{axis}[
-    width=0.92\textwidth,
-    height=0.44\textheight,
+    width=0.98\textwidth,
+    height=0.60\textheight,
     ybar,
-    bar width=9pt,
+    bar width=14pt,
     ymin=0,
-    ymax=130,
-    ylabel={Coût relatif (sans index = 100)},
+    ymax=267,
+    ylabel={Temps relatif},
     symbolic x coords={
-        Recherche,
-        Requête\\filtrée,
-        Insertion,
-        Mémoire
+        Lecture\\3 colonnes,
+        Filtrage,
+        Jointure
     },
     xtick=data,
     xticklabel style={
         align=center,
-        font=\scriptsize
+        font=\small
     },
     legend style={
-        at={(0.5,1.02)},
+        at={(0.5,1.03)},
         anchor=south,
-        legend columns=2,
+        legend columns=3,
         font=\scriptsize
     },
     nodes near coords,
-    nodes near coords style={font=\tiny},
-    enlarge x limits=0.15,
+    nodes near coords style={font=\scriptsize},
+    enlarge x limits=0.38,
     grid=major
 ]
 
-% no index baseline
+% Sans indexation
 \addplot coordinates {
-    (Recherche,100)
-    (Requête\\filtrée,100)
-    (Insertion,100)
-    (Mémoire,50)
+    (Lecture\\3 colonnes,100)
+    (Filtrage,100)
+    (Jointure,100)
 };
 
-% B+ tree indexed
+% Avec indexation
 \addplot coordinates {
-    (Recherche,8)
-    (Requête\\filtrée,12)
-    (Insertion,120)
-    (Mémoire,115)
+    (Lecture\\3 colonnes,100)
+    (Filtrage,17)
+    (Jointure,23)
+};
+
+% Nos performances
+\addplot coordinates {
+    (Lecture\\3 colonnes,155)
+    (Filtrage,126)
+    (Jointure,204)
 };
 
 \legend{
-    Sans index,
-    Index B+
+    Sans indexation,
+    Avec indexation,
+    Nos performances
 }
 
 \end{axis}
 \end{tikzpicture}
 \end{center}
 
-\vspace{-0.15cm}
-
-\begin{alertblock}{Observation}
-Un index B+ réduit fortement le coût des recherches
-(logarithmique), mais ralentit les écritures car
-l'arbre doit rester équilibré après insertion.
-\end{alertblock}
-
 \vspace{-0.1cm}
 
 {\tiny
-Ordres de grandeur inspirés de :
-Silberschatz et al.,
-\textit{Database System Concepts};
-Ramakrishnan \& Gehrke,
-\textit{Database Management Systems}.
-Les valeurs sont normalisées (sans index = 100).
+Sources :
+Abadi et al., \textit{Column-Stores vs. Row-Stores}
+(SIGMOD 2008) ;
+\textit{The Design and Implementation of Modern
+Column-Oriented Database Systems} (2013).
 }
 
 \end{frame}
 
-\subsection{Fragmentation des données}
 
-\begin{frame}
-    \frametitle{Fragmentation des données}
-
-	\begin{figure}[h]
-		\centering
-		\includegraphics[width=250pt]{ressource/cracking.png}
-    \caption{Un exemple de mise en oeuvre du cracking}
-	\end{figure}
-\end{frame}
 
 \section{Conclusion}
 \subsection{Conclusion}

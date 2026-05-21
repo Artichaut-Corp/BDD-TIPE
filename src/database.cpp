@@ -84,7 +84,7 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
     // UInt8 column_number
     // UInt column_offset -> first column offset (assuming they are all aligned)
 
-    uint32_t first_schema_table_offset = Cursor::MoveOffset(MAX_TABLE * DB_STRING_SIZE);
+    DbOffset first_schema_table_offset = Cursor::MoveOffset(MAX_TABLE * DB_STRING_SIZE);
 
     ColumnInfo t_name = ColumnInfo(first_schema_table_offset, DbElemType::DbString, false);
 
@@ -97,8 +97,13 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
     ColumnInfo column_number = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * DB_UINT8_SIZE), DbElemType::DbUInt8, false);
 
+#if DB_OFFSET_REPR_SIZE == DB_OFFSET_REPR_SIZE
     ColumnInfo column_offset = ColumnInfo(
-        Cursor::MoveOffset(MAX_TABLE * DB_UINT_SIZE), DbElemType::DbUInt, false);
+        Cursor::MoveOffset(MAX_TABLE * DB_OFFSET_REPR_SIZE), DbElemType::DbUInt, false);
+#else
+    ColumnInfo column_offset = ColumnInfo(
+        Cursor::MoveOffset(MAX_TABLE * DB_OFFSET_REPR_SIZE), DbElemType::DbUInt64, false);
+#endif
 
     auto table_args = std::vector<std::pair<std::string, ColumnInfo>> {
         { "name", t_name },
@@ -121,12 +126,18 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
     // Bool is_compressed
 
     // Keeping the first offset to initialise the TableInfo class later
-    uint32_t first_schema_column_offset = Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_STRING_SIZE);
+    DbOffset first_schema_column_offset = Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_STRING_SIZE);
     ColumnInfo name = ColumnInfo(first_schema_column_offset, DbElemType::DbString, false);
 
+#if DB_OFFSET_REPR_SIZE == DB_UINT_SIZE
     ColumnInfo offset = ColumnInfo(
-        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_UINT_SIZE),
+        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_OFFSET_REPR_SIZE),
         DbElemType::DbUInt, false);
+#else
+    ColumnInfo offset = ColumnInfo(
+        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_OFFSET_REPR_SIZE),
+        DbElemType::DbUInt64, false);
+#endif
 
     ColumnInfo type = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_UINT8_SIZE),
@@ -140,9 +151,15 @@ auto DatabaseEngine::InitializeSystemTables(int fd) -> void
         Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_BOOL_SIZE),
         DbElemType::DbBool, false);
 
+#if DB_OFFSET_REPR_SIZE == DB_UINT_SIZE
     ColumnInfo index_offset = ColumnInfo(
-        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_UINT64_SIZE),
+        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_OFFSET_REPR_SIZE),
+        DbElemType::DbUInt, false);
+#else
+    ColumnInfo index_offset = ColumnInfo(
+        Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_OFFSET_REPR_SIZE),
         DbElemType::DbUInt64, false);
+#endif
 
     ColumnInfo is_compressable = ColumnInfo(
         Cursor::MoveOffset(MAX_TABLE * MAX_COLUMN_PER_TABLE * DB_BOOL_SIZE),
@@ -220,7 +237,7 @@ auto DatabaseEngine::CreateTable(int fd, const std::string& name, Storing::Table
 
             const DbUInt8 e_size = c.second.GetElementSize();
 
-            c.second.AssociateTree(fd, Cursor::MoveOffset(IndexReprSize(e_size)), e_size, LeafSize(e_size), InnerSize(e_size));
+            c.second.AssociateTree(fd, Cursor::MoveOffset(IndexReprSize(e_size)), c.second.GetType(), LeafSize(e_size), InnerSize(e_size), true);
         }
 
         Record::Write(fd, &Index->at("schema_column"), &c.second, c.first);
@@ -250,11 +267,11 @@ auto DatabaseEngine::FillIndex() -> void
     std::vector<DbBool> is_sys = {};
     std::vector<DbInt> current_element_nb = {};
     std::vector<DbInt8> col_num = {};
-    std::vector<DbInt> col_offsets = {};
+    std::vector<DbOffset> col_offsets = {};
 
     std::cout << "Allocating index memory...\n";
 
-    DbUInt64 offset = SCHEMA_TABLE_OFFSET;
+    DbOffset offset = SCHEMA_TABLE_OFFSET;
 
     FileInterface::ReadVec(fd, name, &offset, DB_STRING_SIZE, table_number);
 
@@ -272,7 +289,7 @@ auto DatabaseEngine::FillIndex() -> void
 
     offset += (MAX_TABLE - table_number) * DB_UINT8_SIZE;
 
-    FileInterface::ReadVec(fd, col_offsets, &offset, DB_UINT_SIZE, table_number);
+    FileInterface::ReadVec(fd, col_offsets, &offset, DB_OFFSET_REPR_SIZE, table_number);
 
     auto column_data = ColumnInfo::GetColumnsData(
         fd, std::accumulate(col_num.begin(), col_num.end(), 0));
@@ -306,7 +323,6 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
     std::unique_ptr<Parsing::Parser> parser = std::make_unique<Parsing::Parser>(input);
 
     std::variant<Parsing::Statement, Errors::Error> n = parser->Parse();
-
 
     if (std::holds_alternative<Errors::Error>(n)) {
         Errors::Error e = std::get<Errors::Error>(n);
@@ -488,7 +504,7 @@ void DatabaseEngine::process_csv_streaming(const std::string& path, const std::s
             if (compteur > how_many)
                 break;
 
-            //std::cout << query.str();
+            // std::cout << query.str();
             DatabaseEngine::Eval(query.str());
             batch.clear();
         }

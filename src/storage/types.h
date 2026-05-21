@@ -2,7 +2,6 @@
 #include <array>
 #include <cstdint>
 #include <memory>
-#include <numbers>
 #include <optional>
 #include <string>
 #include <variant>
@@ -17,9 +16,9 @@
 namespace Database {
 
 #define MAX_DBINT32 0xFFFFFFFF
-#define MAX_TABLE 20
+#define MAX_TABLE 256
 #define MAX_COLUMN_PER_TABLE 16
-#define MAX_ELEMENT_PER_COLUMN 256 //4194303
+#define MAX_ELEMENT_PER_COLUMN 1024
 #define MAX_ARRAY_SIZE 16
 #define MAX_STRING_LENGTH 255
 
@@ -38,14 +37,18 @@ constexpr uint8_t DB_CHAR_SIZE = 1; // 8 bits
 constexpr uint8_t DB_STRING_SIZE = MAX_STRING_LENGTH * DB_CHAR_SIZE; // 256 chars
 constexpr uint8_t DB_INT_ARRAY_SIZE = DB_INT_SIZE * MAX_ARRAY_SIZE; // 16 int
 
-constexpr uint8_t TREE_ORDER = 10;
+constexpr uint8_t TREE_ORDER = 4;
 
-#if MAX_ELEMENT_PER_COLUMN > MAX_DBINT
-#define DB_COL_ELMT_INT_SIZE DB_UINT64_SIZE
+#if MAX_ELEMENT_PER_COLUMN > MAX_DBINT32
+#define DB_NB_ELEMT_INT DB_UINT64_SIZE
+#define DB_OFFSET_REPR_SIZE DB_UINT64_SIZE
 using DbKey = uint64_t;
+using DbOffset = uint64_t;
 #else
-#define DB_COL_ELMT_INT_SIZE DB_UINT32_SIZE
+#define DB_NB_ELEMT_INT DB_UINT_SIZE
 using DbKey = uint32_t;
+#define DB_OFFSET_REPR_SIZE DB_UINT_SIZE
+using DbOffset = uint32_t;
 #endif
 
 // Taille d'un élément de la table système contenant les
@@ -106,19 +109,11 @@ using DbChar = uint8_t;
 using DbString = std::array<DbChar, MAX_STRING_LENGTH>;
 using DbUIntArray = std::array<DbUInt, MAX_ARRAY_SIZE>;
 
-#if MAX_ELEMENT_PER_COLUMN > MAX_DBINT
-#define DB_COL_ELMT_INT_SIZE DB_UINT64_SIZE
-using DbKey = uint64_t;
-#else
-#define DB_COL_ELMT_INT_SIZE DB_UINT32_SIZE
-using DbKey = uint32_t;
-#endif
+template <DbUInt8 S>
+constexpr uint32_t INNER_NODE_SIZE = DB_BOOL_SIZE + 2 * DB_UINT8_SIZE + TREE_ORDER * DB_OFFSET_REPR_SIZE + (TREE_ORDER - 1) * (S + DB_NB_ELEMT_INT);
 
 template <DbUInt8 S>
-constexpr uint32_t INNER_NODE_SIZE = DB_BOOL_SIZE + 2 * DB_UINT8_SIZE + TREE_ORDER * DB_UINT64_SIZE + (TREE_ORDER - 1) * S;
-
-template <DbUInt8 S>
-constexpr uint32_t LEAF_SIZE = DB_BOOL_SIZE + 2 * DB_UINT64_SIZE + (TREE_ORDER - 1) * S;
+constexpr uint32_t LEAF_SIZE = DB_BOOL_SIZE + 2 * DB_OFFSET_REPR_SIZE + (TREE_ORDER - 1) * (S + DB_NB_ELEMT_INT);
 
 template <DbUInt8 S>
 constexpr uint32_t MAX_NODE_SIZE = MAX_ELEMENT_PER_COLUMN * std::max(LEAF_SIZE<S>, INNER_NODE_SIZE<S>);

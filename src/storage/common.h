@@ -14,11 +14,16 @@ namespace Database::Storing {
 
 class FileInterface {
 public:
-    static void WriteField(int fd, ColumnData element, DbUInt64* offset, DbUInt8 size)
+
+
+    template <typename T>
+    static void WriteField(int fd, T* element, DbOffset* offset, const DbElemType type)
     {
         lseek(fd, *offset, SEEK_SET);
 
-        int bytes_written = write(fd, &element, size);
+        int size = Convert::TypeToTypeSize(type);
+
+        int bytes_written = write(fd, element, size);
 
         if (bytes_written != size) {
 
@@ -28,29 +33,34 @@ public:
         *offset += bytes_written;
     }
 
-    static void WriteVec(int fd, DbUInt8 e_number, const std::vector<ColumnData>& vec, DbUInt64* offset, const size_t element_size)
+    template <typename T>
+    static void WriteVec(int fd, DbUInt8 e_number, const std::vector<T>& vec, DbOffset* offset, const DbElemType type)
     {
         lseek(fd, *offset, SEEK_SET);
 
+        int size = Convert::TypeToTypeSize(type);
+
         for (int i = 0; i < e_number; i++) {
-            int bytes_written = write(fd, &vec + i, element_size);
+            T e = vec[i];
+
+            int bytes_written = write(fd, &e, size);
 
             *offset += bytes_written;
         }
     }
 
     template <typename T>
-    static void ReadField(int fd, T* buffer, DbUInt64* offset, DbUInt8 size)
+    static void ReadField(int fd, T* buffer, DbOffset* offset, DbUInt8 size)
     {
         lseek(fd, *offset, SEEK_SET);
 
-        int bytes_read = read(fd, &buffer, size);
+        int bytes_read = read(fd, buffer, size);
 
         *offset += bytes_read;
     }
 
     template <typename T>
-    static void ReadVec(int fd, std::vector<T>& vec, DbUInt64* offset, const size_t element_size, int element_count)
+    static void ReadVec(int fd, std::vector<T>& vec, DbOffset* offset, const size_t element_size, DbKey element_count)
     {
         vec.resize(element_count);
 
@@ -72,7 +82,7 @@ public:
     }
 
     template <typename T>
-    static void ReadVecByRange(int fd, std::vector<T>& vec, DbUInt64* offset,
+    static void ReadVecByRange(int fd, std::vector<T>& vec, DbOffset* offset,
 
         const DbInt8 element_size, int element_count)
     {

@@ -13,7 +13,7 @@ template <>
 struct std::hash<Database::ColumnData> {
     size_t operator()(const Database::ColumnData& c) const noexcept
     {
-        return Database::QueryPlanning::hashColumn(c); // ok, on utilise la fonction de hash dans Utils::Hash
+        return Database::hashColumn(c); // ok, on utilise la fonction de hash dans Utils::Hash
     }
 };
 
@@ -41,8 +41,8 @@ struct MultiKeyDynHash {
     {
         uint64_t h = 0xcbf29ce484222325ULL;
         for (const auto& key : mk.keys) {
-            uint64_t part = Database::QueryPlanning::hashColumn(key);
-            h ^= Database::QueryPlanning::mix64(part + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2));
+            uint64_t part = Database::hashColumn(key);
+            h ^= Database::mix64(part + 0x9e3779b97f4a7c15ULL + (h << 6) + (h >> 2));
         }
         return static_cast<size_t>(h);
     }

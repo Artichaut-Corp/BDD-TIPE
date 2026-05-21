@@ -35,7 +35,7 @@ public:
 
         std::unique_ptr<std::vector<T>> result = std::make_unique<std::vector<T>>();
 
-        uint32_t offset = info.GetOffset();
+        DbOffset offset = info.GetOffset();
 
         uint8_t element_size = info.GetElementSize();
 
@@ -115,7 +115,7 @@ public:
     {
         int ret = 0;
 
-        DbInt e_numb = info->GetElementNumber();
+        DbKey e_numb = info->GetElementNumber();
 
         if (info->m_Columns.size() != data.size()) {
             return Errors::Error(Errors::ErrorType::RuntimeError, "Write could not proceed due to unmatched argument number", 0, 0, Errors::ERROR_UNMATCHED_ARG_NUMBER);
@@ -148,7 +148,7 @@ public:
              ++iter) {
 
             if (iter->second.IsSorted()) {
-                DbInt64 offset = iter->second.GetIndexOffset();
+                DbOffset offset = iter->second.GetIndexOffset();
 
                 const DbInt8 e_size = iter->second.GetElementSize();
 
@@ -156,7 +156,7 @@ public:
 
                 auto d = iter->second.Tree()->FindRoot(offset);
 
-                iter->second.Tree()->Insert(d, data.at(iter->first));
+                iter->second.Tree()->Insert(d, { info->GetElementNumber(), data.at(iter->first)});
             }
 
         }

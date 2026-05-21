@@ -215,6 +215,7 @@ public:
                 ColumnInfo city_pop = ColumnInfo(
                     DbElemType::DbUInt, true, true);
 
+
                 ColumnInfo city_country = ColumnInfo(
                     DbElemType::DbString, false);
 
@@ -365,7 +366,6 @@ public:
 
                     break;
                 } else if (input.starts_with(".insert_data")) {
-
 
                     int hm = std::stoi(input.substr(13, input.length() - 13));
 

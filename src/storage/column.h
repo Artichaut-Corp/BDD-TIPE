@@ -15,7 +15,7 @@ namespace Database::Storing {
 
 class ColumnInfo {
 
-    DbUInt m_Offset;
+    DbOffset m_Offset;
 
     // Not actually written in memory as we can deduce it from the type
     DbUInt8 m_ElementSize;
@@ -26,16 +26,16 @@ class ColumnInfo {
 
     DbBool m_IsSorted = false;
 
-    DbUInt64 m_SortedColumnOffset = 0;
+    DbOffset m_SortedColumnOffset = 0;
 
-    BPlusTree<TREE_ORDER>* m_IndexedData;
+    BPlusTree<TREE_ORDER>* m_IndexedData = nullptr;
 
     DbBool m_Compressable = false;
 
     DbBool m_IsCompressed = false;
 
 public:
-    using ColumnInfoTuple = std::tuple<DbString, DbUInt, DbUInt8, DbBool, DbBool, DbUInt64, DbBool, DbBool>;
+    using ColumnInfoTuple = std::tuple<DbString, DbOffset, DbUInt8, DbBool, DbBool, DbOffset, DbBool, DbBool>;
 
     ColumnInfo() = default;
 
@@ -52,7 +52,7 @@ public:
         m_Offset = Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * m_ElementSize);
     }
 
-    ColumnInfo(DbUInt offset, DbElemType e_type, DbBool opt)
+    ColumnInfo(DbOffset offset, DbElemType e_type, DbBool opt)
         : m_ElementSize(Convert::TypeToTypeSize(e_type))
         , m_Offset(offset)
         , m_Type(e_type)
@@ -73,7 +73,7 @@ public:
         m_Offset = Cursor::MoveOffset(MAX_ELEMENT_PER_COLUMN * m_ElementSize);
     }
 
-    ColumnInfo(DbUInt offset, DbElemType e_type, DbBool sortable, DbBool sorted, DbUInt64 sorted_offset,
+    ColumnInfo(DbOffset offset, DbElemType e_type, DbBool sortable, DbBool sorted, DbOffset sorted_offset,
         DbBool compressable, DbBool compressed)
         : m_Offset(offset)
         , m_Type(e_type)
@@ -85,19 +85,21 @@ public:
     {
     }
 
-    void AssociateTree(int fd, DbUInt64 tree_offset, const DbUInt8 e_size, DbUInt l_size, DbUInt inner_size)
+    void AssociateTree(int fd, DbOffset tree_offset, const DbElemType e_type, DbUInt l_size, DbUInt inner_size, bool is_tree_creation)
     {
-        m_IndexedData = new BPlusTree<TREE_ORDER>(fd, tree_offset, e_size, l_size, inner_size);
+        m_IndexedData = new BPlusTree<TREE_ORDER>(fd, tree_offset, e_type, l_size, inner_size);
         m_SortedColumnOffset = tree_offset;
 
-        m_IndexedData->WriteRoot(tree_offset);
+        if (is_tree_creation) {
+            m_IndexedData->WriteRoot(tree_offset);
+        }
     }
 
     BPlusTree<TREE_ORDER>* Tree() const { return m_IndexedData; }
 
-    DbUInt64 GetOffset() const { return m_Offset; }
+    DbOffset GetOffset() const { return m_Offset; }
 
-    DbUInt64 GetIndexOffset() const { return m_SortedColumnOffset; }
+    DbOffset GetIndexOffset() const { return m_SortedColumnOffset; }
 
     DbUInt8 GetElementSize() const { return m_ElementSize; }
 

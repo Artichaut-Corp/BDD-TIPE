@@ -11,7 +11,7 @@
 
 #define AlGEBRIZER_TYPE_H
 
-namespace Database::QueryPlanning {
+namespace Database {
 
 inline void afficherColumnData(const ColumnData& col)
 {

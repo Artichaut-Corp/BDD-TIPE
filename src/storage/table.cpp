@@ -14,15 +14,23 @@ TableInfo::GetTableColumns(
     res->reserve(column_number);
 
     for (int i = column_number_beginning;
-        i < column_number_beginning + column_number; i++) {
+         i < column_number_beginning + column_number; i++) {
 
         const auto [name, offset, type, sortable, sorted, sorted_offset, compressable,
             compressed]
             = data->at(i);
 
+        DbUInt8 e_size = Convert::TypeToTypeSize(static_cast<DbElemType>(type));
+
+        auto c = ColumnInfo(offset, static_cast<DbElemType>(type), sortable, sorted, sorted_offset, compressable, compressed);
+
+        if (sorted) {
+            c.AssociateTree(fd, sorted_offset, static_cast<DbElemType>(type), LeafSize(e_size), InnerSize(e_size), false);
+        }
+
         std::pair<std::string, ColumnInfo> e = {
             Convert::DbStringToString(name),
-            ColumnInfo(offset, static_cast<DbElemType>(type), sortable, sorted, sorted_offset, compressable, compressed)
+            c
         };
 
         res->emplace_back(e);

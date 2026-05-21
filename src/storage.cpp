@@ -1,7 +1,6 @@
 #include "storage.h"
-#include <memory>
+
 #include <utility>
-#include <vector>
 
 namespace Database::Storing {
 
@@ -69,9 +68,9 @@ std::optional<Errors::Error> Store::DB_SetRecord(int fd, DBTableIndex* Index, co
         return Errors::Error(Errors::ErrorType::RuntimeError, std::format("Table '{}' does not exist", table_name), 0, 0, Errors::ERROR_TABLE_DOES_NOT_EXIST);
     }
 
-    Record::Write(fd, t, record);
-
     Record::WriteIndex(fd, t, record);
+
+    Record::Write(fd, t, record);
 
     return std::nullopt;
 }

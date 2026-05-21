@@ -16,18 +16,18 @@ namespace Database::Storing {
 class TableInfo {
     DbBool m_IsSys;
 
-    DbInt m_CurrentElementNb;
+    DbKey m_CurrentElementNb;
 
     DbUInt8 m_ColumnNumber;
 
-    DbUInt m_FirstColumnOffset;
+    DbOffset m_FirstColumnOffset;
 
 public:
     std::unordered_map<std::string, ColumnInfo> m_Columns;
 
     TableInfo() = default;
 
-    TableInfo(DbBool sys, DbUInt8 column_number, DbUInt first_offset,
+    TableInfo(DbBool sys, DbUInt8 column_number, DbOffset first_offset,
         std::vector<std::pair<std::string, ColumnInfo>> columns)
         : m_IsSys(sys)
         , m_CurrentElementNb(0)
@@ -39,8 +39,8 @@ public:
         m_Columns.insert(columns.begin(), columns.end());
     }
 
-    TableInfo(DbBool sys, DbUInt current_element_number, DbUInt8 column_number,
-        DbUInt first_offset,
+    TableInfo(DbBool sys, DbKey current_element_number, DbUInt8 column_number,
+        DbOffset first_offset,
         std::vector<std::pair<std::string, ColumnInfo>> columns)
         : m_IsSys(sys)
         , m_CurrentElementNb(current_element_number)
@@ -51,7 +51,7 @@ public:
         m_Columns.insert(columns.begin(), columns.end());
     }
 
-    DbUInt GetElementNumber() { return m_CurrentElementNb; }
+    DbKey GetElementNumber() { return m_CurrentElementNb; }
 
     DbBool IsSys() { return m_IsSys; }
 
@@ -84,7 +84,7 @@ public:
             ColumnInfo::ColumnInfoTuple>>& data);
 
     std::unordered_map<std::string, ColumnData> Map(const std::string& name,
-        DbUInt offset)
+        DbOffset offset)
     {
         return { { "name", Convert::StringToDbString(name) },
             { "column_offset", offset },

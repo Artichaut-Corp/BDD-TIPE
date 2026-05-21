@@ -597,8 +597,6 @@ BinaryExpression::Condition* BinaryExpression::ParseCondition(Lexing::Tokenizer*
     int nb_count_equal_zero = 0;
 
     do {
-        arg_pile.print();
-
         next = t->peek();
 
         switch (next.m_Token) {
@@ -705,7 +703,7 @@ void BinaryExpression::PrintCondition(std::ostream& out)
     out << std::endl;
 }
 
-std::unique_ptr<BinaryExpression::Conwdition> BinaryExpression::ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire)
+std::unique_ptr<BinaryExpression::Condition> BinaryExpression::ExtraireCond(std::unordered_set<QueryPlanning::ColonneNamesSet*>* ColonnesAExtraire)
 {
     if (BinaryExpression::Op() == LogicalOperator::AND || ColonnesAExtraire != nullptr) { // on ne peut pas couper un OR
 
@@ -886,17 +884,17 @@ bool Clause::Eval(std::unordered_map<std::string, ColumnData*>* CombinaisonATest
     }
     switch (Op()) {
     case Parsing::LogicalOperator::EQ:
-        return Database::QueryPlanning::operator==(LeftVal, RightVal);
+        return Database::operator==(LeftVal, RightVal);
     case Parsing::LogicalOperator::GT:
-        return Database::QueryPlanning::operator>(LeftVal, RightVal);
+        return Database::operator>(LeftVal, RightVal);
     case Parsing::LogicalOperator::LT:
-        return Database::QueryPlanning::operator<(LeftVal, RightVal);
+        return Database::operator<(LeftVal, RightVal);
     case Parsing::LogicalOperator::GTE:
-        return Database::QueryPlanning::operator>=(LeftVal, RightVal);
+        return Database::operator>=(LeftVal, RightVal);
     case Parsing::LogicalOperator::LTE:
-        return Database::QueryPlanning::operator<=(LeftVal, RightVal);
+        return Database::operator<=(LeftVal, RightVal);
     case Parsing::LogicalOperator::NE:
-        return Database::QueryPlanning::operator!=(LeftVal, RightVal);
+        return Database::operator!=(LeftVal, RightVal);
     default:
         throw Errors::Error(Errors::ErrorType::RuntimeError,
             "Unknown Logical Operator",
@@ -1103,27 +1101,27 @@ bool Clause::EstimeSelectivite(std::unordered_map<std::string, ColumnData>* Comb
     }
     switch (Op()) {
     case Parsing::LogicalOperator::EQ:
-        resultat_eval = Database::QueryPlanning::operator==(LeftVal, RightVal);
+        resultat_eval = Database::operator==(LeftVal, RightVal);
         break;
 
     case Parsing::LogicalOperator::GT:
-        resultat_eval = Database::QueryPlanning::operator>(LeftVal, RightVal);
+        resultat_eval = Database::operator>(LeftVal, RightVal);
         break;
 
     case Parsing::LogicalOperator::LT:
-        resultat_eval = Database::QueryPlanning::operator<(LeftVal, RightVal);
+        resultat_eval = Database::operator<(LeftVal, RightVal);
         break;
 
     case Parsing::LogicalOperator::GTE:
-        resultat_eval = Database::QueryPlanning::operator>=(LeftVal, RightVal);
+        resultat_eval = Database::operator>=(LeftVal, RightVal);
         break;
 
     case Parsing::LogicalOperator::LTE:
-        resultat_eval = Database::QueryPlanning::operator<=(LeftVal, RightVal);
+        resultat_eval = Database::operator<=(LeftVal, RightVal);
         break;
 
     case Parsing::LogicalOperator::NE:
-        resultat_eval = Database::QueryPlanning::operator!=(LeftVal, RightVal);
+        resultat_eval = Database::operator!=(LeftVal, RightVal);
         break;
 
     default:
