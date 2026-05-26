@@ -93,7 +93,6 @@ MetaTable* Join::ExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
                 if (pos1 >= MT1size-1) {
                     break;
                 }
-                std::cout<<pos1<<std::endl;
                 pos1++;
                 val1 = meta_table1->GetValue(m_ColumnName1, pos1);
             }
@@ -101,7 +100,6 @@ MetaTable* Join::ExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
                 if (pos2 >= MT2size-1) {
                     break;
                 }
-                std::cout<<pos2<<std::endl;
                 pos2++;
                 val2 = meta_table2->GetValue(m_ColumnName2, pos2);
             }
@@ -114,7 +112,6 @@ MetaTable* Join::ExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
             }
         }
     }
-    std::cout<<"fin boucle"<<std::endl;
     }
     meta_table1->AppliqueOrdre(*couple_valides.first.get());
 

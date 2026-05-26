@@ -13,6 +13,7 @@ int main(int argc, char* argv[])
     while (!database.m_Quit) {
         try {
 
+            
             database.Run();
 
         } catch (const Errors::Error& e) {

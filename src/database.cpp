@@ -47,7 +47,7 @@ auto DatabaseEngine::ParseArguments(int argc, char** argv) -> DatabaseSetting*
         }
     }
 
-    return new DatabaseSetting(fname, "~/bdd-tipe/Parametre.toml");
+    return new DatabaseSetting(fname, std::string("../script/parametre.toml"));
 }
 
 auto DatabaseEngine::FindDBFile() -> const std::string
@@ -323,7 +323,7 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
 
         QueryPlanning::ConversionEnArbre_ET_excution(select, File, Index.get(), &Settings);
 
-        output = "SELECT SUCESS";
+        output = "SELECT SUCCESS";
     } else if (std::holds_alternative<Parsing::UpdateStmt*>(stmt)) {
         auto update = std::get<Parsing::UpdateStmt*>(stmt);
 
@@ -364,7 +364,6 @@ auto DatabaseEngine::Eval(const std::string& input) -> const std::string
         auto transaction = std::get<Parsing::Transaction*>(stmt);
 
         std::string name = transaction->getTable()->getTableName();
-        std::cout<<name<<std::endl;
         auto col_order = transaction->getOrder().get();
 
         auto col_data = transaction->getData().get();
@@ -563,8 +562,9 @@ void DatabaseEngine::ProcessCsvStream(const std::string& path, const std::string
     std::string header;
     std::getline(in, header); // skip header
 
-    in.ignore(offset);
-
+for (int i = 0; i < offset; i++) {
+    in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
     std::vector<std::string> batch;
     batch.reserve(MAX_ROWS_PER_TRANSACTION);
 
@@ -626,12 +626,11 @@ void DatabaseEngine::ProcessCsvStream(const std::string& path, const std::string
                 }
             }
             query << " END;";
-            if (compteur > how_many)
-                break;
-
-            // std::cout << query.str();
+            std::cout << query.str()<<std::endl;
             DatabaseEngine::Eval(query.str());
             batch.clear();
+            if (compteur > how_many)
+                break;
         }
     }
     // Handle the final partial batch
@@ -704,7 +703,6 @@ void DatabaseEngine::ImportAllCsv(int how_many)
 
 void DatabaseEngine::InsertCsvData(int offset, int how_many)
 {
-    std::cout<<offset<<how_many<<std::endl;
     DatabaseEngine::ProcessCsvStream("../script/table/contributor.csv", "contributors", { "id", "username" }, offset, how_many);
     DatabaseEngine::ProcessCsvStream("../script/table/revision.csv", "revisions", { "id", "parent_id", "timestamp", "contributor_id" }, offset, how_many);
     DatabaseEngine::ProcessCsvStream("../script/table/page.csv", "pages", { "id", "ns", "title", "revision_id" }, offset, how_many);

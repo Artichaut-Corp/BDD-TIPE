@@ -1,0 +1,8 @@
+SelectionDescent = 0
+PronfMode = 1
+InsertProj = 0
+OptimizeBinaryExpression = 1
+OrderingQueryJoin = 0
+Benchmarking = 0
+SizeSample = 0
+DataSize = 1000

@@ -2,7 +2,6 @@
 #include <array>
 #include <cstdint>
 #include <memory>
-#include <numbers>
 #include <optional>
 #include <string>
 #include <variant>
@@ -19,7 +18,7 @@ namespace Database {
 #define MAX_DBINT32 0xFFFFFFFF
 #define MAX_TABLE 20
 #define MAX_COLUMN_PER_TABLE 16
-#define MAX_ELEMENT_PER_COLUMN 256 //4194303
+#define MAX_ELEMENT_PER_COLUMN 4194303
 #define MAX_ARRAY_SIZE 16
 #define MAX_STRING_LENGTH 255
 

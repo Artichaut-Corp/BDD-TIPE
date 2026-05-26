@@ -17,7 +17,7 @@ std::variant<Statement, Errors::Error> Parser::Parse()
     std::variant<Statement, Errors::Error> node;
 
     if (m_Tokenizer->isEmpty()) {
-        node = Errors::Error();
+        node = Errors::Error(Errors::ErrorType::RuntimeError, "Empty Query", 0, 0, Errors::ERROR_FAILED_IO);
         return node;
     }
 

@@ -45,9 +45,33 @@ public:
 
     int m_SizeSample = 0;
 
-    int m_SizeData = 0;
+    int m_SizeData = -1;
     DatabaseSetting() = default;
 
+    DatabaseSetting(const std::string& fname, const std::string& config_fname)
+        : m_FileName(fname)
+    {
+        try {
+            auto tbl = toml::parse_file(config_fname);
+
+            m_SelectionDescent = tbl["SelectionDescent"].value_or(0);
+
+            m_ExecutionTreeTraversalMode = tbl["PronfMode"].value_or(1);
+
+            m_ProjectionInsertion = tbl["InsertProj"].value_or(0);
+
+            m_BinaryExpressionOptimization = tbl["OptimizeBinaryExpression"].value_or(0);
+            m_QueryJoinOrdering = tbl["OrderingQueryJoin"].value_or(0);
+
+            m_Benchmarking = tbl["Benchmarking"].value_or(0);
+            m_SizeSample = tbl["SizeSample"].value_or(1000);
+            m_SizeData = tbl["DataSize"].value_or(1000);
+
+        } catch (const toml::parse_error& err) {
+            std::cerr << "Error parsing config file: " << err.description() << std::endl;
+            std::cerr << "Using default values.\n";
+        }
+    }
     DatabaseSetting(const std::string& fname, bool selectiondescent = 0, uint8_t execution_tree_traversal_mode = 1,
         bool projection_insertion = 0,
         bool binary_expression_optimization = 0,
@@ -67,30 +91,7 @@ public:
     {
     }
 
-    DatabaseSetting(const std::string& fname, const std::string& config_fname)
-        : m_FileName(fname)
-    {
-        try {
-            auto tbl = toml::parse_file(config_fname);
-
-            m_SelectionDescent = tbl["SelectionDescent"].value_or(0);
-
-            m_ExecutionTreeTraversalMode = tbl["PronfMode"].value_or(1);
-
-            m_ProjectionInsertion = tbl["InsertProj"].value_or(0);
-
-            m_BinaryExpressionOptimization = tbl["OptimizeBinaryExpression"].value_or(0);
-            m_QueryJoinOrdering = tbl["OrderingQueryJoin"].value_or(0);
-
-            m_Benchmarking = tbl["Benchmarking"].value_or(0);
-            m_Benchmarking = tbl["SizeSample"].value_or(1000);
-            m_Benchmarking = tbl["DataSize"].value_or(1000);
-
-        } catch (const toml::parse_error& err) {
-            std::cerr << "Error parsing config file: " << err.description() << std::endl;
-            std::cerr << "Using default values.\n";
-        }
-    }
+    
 };
 
 class DatabaseEngine {
@@ -387,7 +388,6 @@ public:
                 } else if (input == ".print_table_layout") {
                     PrintIndex(std::cout);
                 } else {
-
                     Utils::Repl::Print(Eval(input));
                 }
 
