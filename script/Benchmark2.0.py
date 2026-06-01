@@ -13,7 +13,8 @@ csv_header = [
     "InsertProj",
     "OptimizeBinaryExpression",
     "OrderingQueryJoin",
-    "SampleSize","DataSize",
+    "SampleSize",
+    "DataSize",
     "temps",
     "nbr_join",
 ]

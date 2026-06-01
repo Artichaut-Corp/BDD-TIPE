@@ -90,8 +90,6 @@ public:
         , m_SizeData(SizeData)
     {
     }
-
-    
 };
 
 class DatabaseEngine {
@@ -377,6 +375,23 @@ public:
                     m_Quit = true;
 
                     break;
+                } else if (input.starts_with(".insert_data_offset")) {
+                    std::string crop_str = input.substr(20, input.length() - 20);
+
+                    int pos = crop_str.find(' ');
+
+                    int hm = stoi(crop_str.substr(0, pos));
+
+                    int offset = stoi(crop_str.substr(pos + 1));
+
+                    InsertCsvData(offset, hm);
+
+                    if(Settings.m_Benchmarking){
+
+                        Utils::Repl::Print("INSERT SUCCESS");
+
+                    }
+
                 } else if (input.starts_with(".insert_data")) {
                     int hm = std::stoi(input.substr(13, input.length() - 13));
 

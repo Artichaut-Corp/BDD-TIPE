@@ -10,7 +10,6 @@
 #include <chrono>
 #include <cstddef>
 #include <fstream>
-#include <functional>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -24,7 +23,7 @@ namespace Database::QueryPlanning {
 
 ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, Database::Parsing::ColumnName* colonne, std::unordered_map<std::string, TableNamesSet*>& variation_of_tablename_to_main_table_name)
 {
-    ColonneNamesSet* standard_name = nullptr;
+    ColonneNamesSet* standard_name;
 
     if (colonne->HaveTable()) {
         if (!variation_of_tablename_to_main_table_name.contains(colonne->GetTable())) {
@@ -39,9 +38,7 @@ ColonneNamesSet* ConvertToStandardColumnName(TableNamesSet& NomTablePrincipale, 
     } else {
         // la colonne n'as pas de nom de table, on en conclut que c'est une colonne de la table principale, il faut donc rajouter le nom de cette table à son identifiant
 
-        standard_name = new ColonneNamesSet(colonne->getColumnName(),
-            colonne->GetAlias(),
-            NomTablePrincipale);
+        standard_name = new ColonneNamesSet(colonne->getColumnName(), colonne->GetAlias(), NomTablePrincipale);
     }
 
     return standard_name;
@@ -76,7 +73,6 @@ void ConversionEnArbre_ET_excution(Database::Parsing::SelectStmt* Selection, Sto
     auto colonnes_de_retour = std::make_unique<std::vector<ReturnType>>();
 
     std::unordered_map<std::string, std::unordered_set<ColonneNamesSet*>*> TableNameToColumnList;
-
     // Could be rewritten to use unique_ptr
     auto UsefullColumnForAggrAndOutput = std::make_unique<std::unordered_set<const ColonneNamesSet*>>();
 

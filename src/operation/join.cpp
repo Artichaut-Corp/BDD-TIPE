@@ -15,28 +15,28 @@ MetaTable* Join::ExecNaif(MetaTable* meta_table1, MetaTable* meta_table2)
 {
     // stocke tout les couple de ligne valide
     auto couple_valides = std::make_pair(std::make_unique<std::vector<int>>(), std::make_unique<std::vector<int>>());
-    if(!(meta_table1->Columnsize()==0 ||meta_table2->Columnsize()==0) ){
+    if (!(meta_table1->Columnsize() == 0 || meta_table2->Columnsize() == 0)) {
 
-    
-    auto val1 = meta_table1->GetValue(m_ColumnName1, 0);
-    auto val2 = meta_table2->GetValue(m_ColumnName2, 0);
+        auto val1 = meta_table1->GetValue(m_ColumnName1, 0);
+        auto val2 = meta_table2->GetValue(m_ColumnName2, 0);
 
-    int MT1size = meta_table1->Columnsize();
-    int MT2size = meta_table2->Columnsize();
-    for (int i = 0; i < MT1size; i++) {
+        int MT1size = meta_table1->Columnsize();
+        int MT2size = meta_table2->Columnsize();
+        for (int i = 0; i < MT1size; i++) {
 
-        val1 = meta_table1->GetValue(m_ColumnName1, i);
+            val1 = meta_table1->GetValue(m_ColumnName1, i);
 
-        for (int j = 0; j < MT2size; j++) {
+            for (int j = 0; j < MT2size; j++) {
 
-            val2 = meta_table2->GetValue(m_ColumnName2, j);
+                val2 = meta_table2->GetValue(m_ColumnName2, j);
 
-            if (m_Comps.Eval(val1, val2)) {
-                couple_valides.first->push_back(i);
-                couple_valides.second->push_back(j);
+                if (m_Comps.Eval(val1, val2)) {
+                    couple_valides.first->push_back(i);
+                    couple_valides.second->push_back(j);
+                }
             }
         }
-    }}
+    }
 
     meta_table1->AppliqueOrdre(*couple_valides.first.get());
 
@@ -60,58 +60,57 @@ MetaTable* Join::ExecTrier(MetaTable* meta_table1, MetaTable* meta_table2)
 {
     // stocke tout les couple de ligne valide
     auto couple_valides = std::make_pair(std::make_unique<std::vector<int>>(), std::make_unique<std::vector<int>>());
-    if(!(meta_table1->Columnsize()==0 ||meta_table2->Columnsize()==0) ){
+    if (!(meta_table1->Columnsize() == 0 || meta_table2->Columnsize() == 0)) {
 
-    // --- Étape 0 : Trier chacune des MetaTable en fonction de la colonne---
-    meta_table1->Sort(m_ColumnName1);
+        // --- Étape 0 : Trier chacune des MetaTable en fonction de la colonne---
+        meta_table1->Sort(m_ColumnName1);
 
-    meta_table2->Sort(m_ColumnName2);
+        meta_table2->Sort(m_ColumnName2);
 
-    int pos1 = 0;
-    int pos2 = 0;
-    auto val1 = meta_table1->GetValue(m_ColumnName1, pos1);
-    auto val2 = meta_table2->GetValue(m_ColumnName2, pos2);
+        int pos1 = 0;
+        int pos2 = 0;
+        auto val1 = meta_table1->GetValue(m_ColumnName1, pos1);
+        auto val2 = meta_table2->GetValue(m_ColumnName2, pos2);
 
-    int MT1size = meta_table1->Columnsize();
-    int MT2size = meta_table2->Columnsize();
-    while (pos1 < MT1size-1 && pos2 < MT2size-1) {
+        int MT1size = meta_table1->Columnsize();
+        int MT2size = meta_table2->Columnsize();
+        while (pos1 < MT1size - 1 && pos2 < MT2size - 1) {
 
-
-        if (val1 < val2) {
-            pos1++;
-            val1 = meta_table1->GetValue(m_ColumnName1, pos1);
-
-        } else if (val1 > val2) {
-            pos2++;
-            val2 = meta_table2->GetValue(m_ColumnName2, pos2);
-
-        } else {
-            auto mainval = val1;
-            int pos1deb = pos1;
-            int pos2deb = pos2;
-            while (val1 == mainval) {
-                if (pos1 >= MT1size-1) {
-                    break;
-                }
+            if (val1 < val2) {
                 pos1++;
                 val1 = meta_table1->GetValue(m_ColumnName1, pos1);
-            }
-            while (val2 == mainval) {
-                if (pos2 >= MT2size-1) {
-                    break;
-                }
+
+            } else if (val1 > val2) {
                 pos2++;
                 val2 = meta_table2->GetValue(m_ColumnName2, pos2);
-            }
 
-            for (int i = pos1deb; i < pos1; i++) {
-                for (int j = pos2deb; j < pos2; j++) {
-                    couple_valides.first->push_back(i);
-                    couple_valides.second->push_back(j);
+            } else {
+                auto mainval = val1;
+                int pos1deb = pos1;
+                int pos2deb = pos2;
+                while (val1 == mainval) {
+                    if (pos1 >= MT1size - 1) {
+                        break;
+                    }
+                    pos1++;
+                    val1 = meta_table1->GetValue(m_ColumnName1, pos1);
+                }
+                while (val2 == mainval) {
+                    if (pos2 >= MT2size - 1) {
+                        break;
+                    }
+                    pos2++;
+                    val2 = meta_table2->GetValue(m_ColumnName2, pos2);
+                }
+
+                for (int i = pos1deb; i < pos1; i++) {
+                    for (int j = pos2deb; j < pos2; j++) {
+                        couple_valides.first->push_back(i);
+                        couple_valides.second->push_back(j);
+                    }
                 }
             }
         }
-    }
     }
     meta_table1->AppliqueOrdre(*couple_valides.first.get());
 
@@ -137,23 +136,23 @@ MetaTable* Join::ExecGrouByStyle(MetaTable* meta_table1, MetaTable* meta_table2)
     auto couple_valides = std::make_pair(std::make_unique<std::vector<int>>(), std::make_unique<std::vector<int>>());
 
     std::unordered_map<ColumnData, std::vector<int>> map_col;
-    if(!(meta_table1->Columnsize()==0 ||meta_table2->Columnsize()==0) ){
+    if (!(meta_table1->Columnsize() == 0 || meta_table2->Columnsize() == 0)) {
 
-    int MT1size = meta_table1->Columnsize();
-    int MT2size = meta_table2->Columnsize();
+        int MT1size = meta_table1->Columnsize();
+        int MT2size = meta_table2->Columnsize();
 
-    for (int i = 0; i < MT1size; i++) {
-        map_col[meta_table1->GetValue(m_ColumnName1, i)].push_back(i);
-    }
-
-    for (int i = 0; i < MT2size; i++) {
-        auto result = map_col[meta_table2->GetValue(m_ColumnName2, i)];
-        for (auto j : result) {
-
-            couple_valides.first->push_back(j);
-            couple_valides.second->push_back(i);
+        for (int i = 0; i < MT1size; i++) {
+            map_col[meta_table1->GetValue(m_ColumnName1, i)].push_back(i);
         }
-    }
+
+        for (int i = 0; i < MT2size; i++) {
+            auto result = map_col[meta_table2->GetValue(m_ColumnName2, i)];
+            for (auto j : result) {
+
+                couple_valides.first->push_back(j);
+                couple_valides.second->push_back(i);
+            }
+        }
     }
     meta_table1->AppliqueOrdre(*couple_valides.first.get());
 
@@ -174,7 +173,7 @@ MetaTable* Join::ExecGrouByStyle(MetaTable* meta_table1, MetaTable* meta_table2)
 
 int Join::CardExecNaif(MetaTable* meta_table1, MetaTable* meta_table2, int size_sample_1, int size_sample_2)
 {
-    
+
     auto Sample1 = meta_table1->GetSampleFromColumn(m_ColumnName1, size_sample_1);
 
     auto Sample2 = meta_table2->GetSampleFromColumn(m_ColumnName2, size_sample_2);
