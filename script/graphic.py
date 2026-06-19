@@ -6,9 +6,9 @@ import os
 OUTPUT_DIR = "./pres/eliott/ressource/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 colors = plt.cm.tab10.colors
-courbes = []  # pour stocker toutes les courbes (x, y)
+courbes = []  
 # Fichier CSV
-CSV_FILE = "script/data.csv"  # <-- mets le vrai chemin
+CSV_FILE = "script/data.csv"  
 
 # Paramètres à considérer pour le regroupement
 GROUP_COLS = [

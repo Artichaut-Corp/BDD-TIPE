@@ -946,7 +946,6 @@ void Clause::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
     m_ColumnUsed->clear();
 
     auto& left = m_Lhs;
-            std::cout<<"zerg"<<std::endl;
 
     if (std::holds_alternative<std::unique_ptr<QueryPlanning::ColonneNamesSet>>(left)) {
 
@@ -960,7 +959,6 @@ void Clause::FormatColumnName(QueryPlanning::TableNamesSet* NomTablePrincipale)
 
         m_ColumnUsed->insert(left_col.get());
     }
-            std::cout<<"rzegrege"<<std::endl;
 
     auto& right = m_Rhs;
 

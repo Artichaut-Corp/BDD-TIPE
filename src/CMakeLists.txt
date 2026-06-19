@@ -17,8 +17,8 @@ add_executable(bdd_tipe main.cpp)
 
 target_link_libraries(bdd_tipe PUBLIC bdd_tipe_lib)
 
-target_compile_options(bdd_tipe PRIVATE -fsanitize=address -fno-omit-frame-pointer)
-target_link_options(bdd_tipe PRIVATE -fsanitize=address)
+target_compile_options(bdd_tipe PRIVATE      -fno-omit-frame-pointer)
+target_link_options(bdd_tipe PRIVATE )
 
 # Enable gperftools profiling
 option(USE_GPERFTOOLS "Use Google Performance Tools" ON)
