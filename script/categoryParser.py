@@ -4,15 +4,14 @@ import re
 sql_file = "/home/eliott/fichier/WikipediaDump/Fr/frwiki-20251101-category.sql"
 csv_file = "script/table/category.csv"
 
-# ←←← DÉFINIS ICI LES NOMS DE COLONNES DANS L’ORDRE
 column_names = ["cat_id", "cat_title", "cat_pages", "cat_subcats", "cat_files"]
 
 tuple_pattern = re.compile(r"\((.*?)\)", re.DOTALL)
 
 field_pattern = re.compile(
     r"""
-    '([^'\\]*(?:\\.[^'\\]*)*)' |   # 1: quoted field
-    ([^,]+)                       # 2: unquoted field (numbers, NULL)
+    '([^'\\]*(?:\\.[^'\\]*)*)' | 
+    ([^,]+)                      
     """,
     re.VERBOSE,
 )

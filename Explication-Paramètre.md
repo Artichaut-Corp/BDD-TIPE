@@ -1,9 +1,9 @@
-SelectionDescent -> si ce paramètre vaut 1, les selections sont descendu le plus possible dans le plan
+SelectionDescent -> si ce paramètre vaut 1, les sélections sont descendues le plus possible dans le plan
 
-PronfMode -> si il vaut 0 le join éxécuté dans tout les cas est le produit cartésien, si il vaut 2 c'est un pré-tri des colonne , si il vaut 3, il utilise une map
+PronfMode -> si il vaut 0 le join exécuté dans tous les cas est le produit cartésien, s'il vaut 2, c'est un pré-tri des colonne, s'il vaut 3, il utilise une map
 
-InsertProj -> si il vaut 1 : Insère des projection avant chaque selection et jointure, pour minimiser le plus possible les élément manipuler à chaque étape de l'éxécution
+InsertProj -> si il vaut 1 : Insère des projections avant chaque sélection et jointure, pour minimiser le plus possible les éléments manipulés à chaque étape de l'exécution
 
-OptimizeBinaryExpression -> si il vaut 1 : ordonne les comparaisons dans les séléctions en fonction de la séléctivité de chacune des comparaison, utilisant le côté parresseux d'une condition
+OptimizeBinaryExpression -> s'il vaut 1 : ordonne les comparaisons dans les sélections en fonction de la sélectivité de chacune des comparaisons, utilisant le côté paresseux d'une condition
 
-QueryJoinOrdering -> Si il vaut 1 on estime le rapport de cardinalité (RC : le nombre de ligne issue de la jointure divisé par le produit du nombre de ligne des deux table) puis on effectue les jointures de la plus petite RC à la plus grande
+QueryJoinOrdering -> S'il vaut 1 on estime le rapport de cardinalité (RC : le nombre de lignes issu de la jointure divisé par le produit du nombre de lignes des deux tables) puis on effectue les jointures de la plus petite RC à la plus grande

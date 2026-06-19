@@ -1,10 +1,9 @@
 
 import socket
 
-HOST = "127.0.0.1"  # Adresse du serveur
-PORT = 8080         # Même port que le serveur
+HOST = "127.0.0.1"  
+PORT = 8080        
 
-# Créer le socket
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Connexion

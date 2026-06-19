@@ -21,41 +21,31 @@ Structure du projet
     └─ pres /           Contient les diaporama et le code de ceux-ci qui ont été présenté aux professeur validant notre projet
 
 
-Features
---------
- 
-- [x] Parser SQL (Il manque 'UPDATE' et 'INSERT')
-- [ ] Optimisée pour la lecture
-- [ ] Vector Processing
-- [ ] Late Materialization
-- [ ] Compression adaptée au type
-- [ ] Hash
-
 
 Installation
 -----
-Il faut télécharger et démarrer le projet: 
+Il faut télécharger et démarrer le projet : 
     1) créer un dossier build
     2) lancer "cmake ..  -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DCMAKE_BUILD_TYPE=Debug"
     3) lancer "make all"
 
-Pour le lancer il suffit de d'éxécuter  ./src/bdd_tipe dans le dossier build
+Pour le lancer, il suffit d'exécuter  ./src/bdd_tipe dans le dossier build
 
-Une fois lancé, vous aurez accès la REPL, un fichier main.db seras créé, il est propre à notre projet et inutilisable par tout autre SGBD
+Une fois lancé, vous aurez accès la REPL, un fichier main.db sera créé, il est propre à notre projet et inutilisable par tout autre SGBD.
 
-Vous devrez insérez les donnée à partir de la REPL, pour cela veuillez lancer les transaction présente dans le fichier res/requests.sql .
+Vous devrez insérer les donnée à partir de la REPL, pour cela, veuillez lancer les transactions présente dans le fichier res/requests.sql .
 
-Des exemples de requête que l'on traite actuelement sont présenté dans ce même fichier res/requests.sql
+Des exemples de requête que l'on traite actuellement sont présentés dans ce même fichier res/requests.sql
 
-Si vous voulez sauvegarder l'insertions des valeurs dans le fichier, il faut quitter la REPL en appuyant sur entrée après la fin de vos test
+Si vous voulez sauvegarder les insertions des valeurs dans le fichier, il faut quitter la REPL en appuyant sur entrée après la fin de votre test.
 
 TODO
 ----
 
 - [x] Parser -> réécrire toutes les structures: plutôt Ok, il reste des constructeurs et des champs à implémenter selon 
-[la documentation sqlite](https://www.sqlite.org/lang_keywords.html). Réalisé en Janvier 2025
-- [x] Parser -> créer les méthode et implémenter la fonction Parser::Parse(). Réalisé en Février 2025
-- [x] BDD -> Implémentation des opérations de sélection, projection, jointures et fonctions aggrégatives
+[la documentation sqlite](https://www.sqlite.org/lang_keywords.html). Réalisé en janvier 2025
+- [x] Parser -> créer les méthode et implémenter la fonction Parser::Parse(). Réalisé en février 2025
+- [x] BDD -> Implémentation des opérations de sélection, projection, jointures et fonctions agrégatives
 - [x] BDD -> Créer les plans de requête 
 - [x] BDD -> Comment organiser les données dans le fichier contenant la BDD (csv / json / vraie solution) 
 - [x] Interface -> Présenter et recevoir les données
@@ -65,35 +55,35 @@ TODO
 Traitement d'une requête SQL depuis la REPL jusqu'au résultat
 ----------
 
-Tout d'abord la requête sql passe par le lexer, il vérifie la syntaxe global de la requête, et transforme les élément clef en token.
+Tout d'abord la requête SQL passe par le lexer, il vérifie la syntaxe globale de la requête, et transforme les éléments clef en token.
 
-Ensuite le Parser regroupe les token en différent objet : la partie entre le select et le from, les différent join, sur quelle colonne se fait le Group by ...
+Ensuite le Parser regroupe les tokens en différent objet : la partie entre le select et le 'from', les différents 'join', sur quelle colonne se fait le Group by, etc
 
 Ces objets sont transmis à L'Algebrizer.
 
-Celui-ci reprend les différentes parties pour extraire les élement utiles, par exemple il liste les colonne utilisé et qui seront donc à charger, ou encore créer les objet qui appliqueront le group-by.
+Celui-ci reprend les différentes parties pour extraire les éléments utiles, par exemple, il liste les colonnes utilisées et qui seront donc à charger, ou encore créer les objets qui appliqueront le group-by.
 
-Il créer ensuite un premier plan, très naïf en fonction de l'ordre de join qui lui ont été transmis, il créer ensuite les tables, et les charges dans la RAM.
+Il crée ensuite un premier plan, très naïf en fonction de l'ordre des 'join' qui lui ont été transmis, il crée ensuite les tables et les charges dans la RAM.
 
-En fonction des parametres fourni dans le fichier Parametre.toml, différente heuristique et optimisation du plan vont s'éxécuté, chacune afficheras les modifications appliqué sur le plan.
+En fonction des paramètres fournie dans le fichier script/Parametre.toml, différentes heuristiques et optimisations du plan vont s'exécuté, chacune affichera les modifications appliquées sur le plan.
 
-Le plan est ensuite éxécuté par un parcours en profondeur détaillé dans src/data_process_system/explication.txt
+Le plan est ensuite exécuté par un parcours en profondeur détaillé dans src/data_process_system/explication.txt
 
-Ensuite, si il y as des opération d'agrégation, une partie spécialement concu pour ce cas s'éxécute, elle applique (si il existe) le group by, via une map à plusieurs clef adapté de la bibliothèque RobinHoodMap, ensuite applique les order By et enfin les limit.
+Ensuite, s'il y a des opérations d'agrégation, une partie spécialement conçue pour ce cas s'exécuté, elle applique (s'il existe) le group by, via une MAP à plusieurs clefs adapté de la bibliothèque RobinHoodMap, ensuite applique les order By et enfin les 'limit'.
 
-Ensuite, l'affichage de la table obtenue à la fin s'éxécute
+Ensuite, l'affichage de la table obtenue à la fin s'exécute.
 
 
 
 Plus d'information
 ------
-Pour plus de détail, une explication des différent paramètre est fourni dans Explication-Paramètre/md
+Pour plus de détail, une explication des différents paramètre est fourni dans Explication-Paramètre/md
 
-Une explication de la gestion mémoire des tables dans le cadre d'une requête sql de type select est décrite dans /src/data_process_system/explication.txt
+Une explication de la gestion mémoire des tables dans le cadre d'une requête SQL de type select est décrite dans /src/data_process_system/explication.txt
 
-Une liste d'erreur trouvé et d'optimisation prévue est décrite dans ToDo.txt
+Une liste d'erreur trouvée et d'optimisation prévue est décrite dans ToDo.txt
 
-Nos note de première lecture sur certain papier décrivant les SGBD colonne sont présente dans notes.md
+Nos notes de première lecture sur certain papier décrivant les SGBD colonne sont présentes dans notes.md
 
 
 
