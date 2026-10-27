@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <format>
+#include <span>
 #include <memory>
 #include <optional>
 #include <stdexcept>
