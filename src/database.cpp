@@ -6,6 +6,8 @@
 #include <fstream>
 #include <numeric>
 #include <ostream>
+#include <string>
+#include <sstream>
 
 namespace Database {
 
